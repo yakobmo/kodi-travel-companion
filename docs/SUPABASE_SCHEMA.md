@@ -62,8 +62,8 @@ Next:
 
 1. Keep the file driver as local fallback. Done.
 2. Implement a Supabase storage driver beside the existing file driver. Done.
-3. Run API build, local smoke, public deploy, and public smoke again. Next.
-4. Switch production storage only after the full runtime driver passes QA.
+3. Run API build, local smoke, public deploy, and public smoke again. Done.
+4. Switch production storage only after the full runtime driver passes QA. Done.
 
 ## Environment Contract
 
@@ -195,6 +195,7 @@ Project: kodi-travel-companion
 URL: https://szlziurxfvjnqzjwrhlq.supabase.co
 Schema applied: 2026-06-24
 Live bridge verified: 2026-06-25
+Production storage active: 2026-06-25
 ```
 
 No Supabase keys are committed to this repository.

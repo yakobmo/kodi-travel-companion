@@ -82,7 +82,7 @@ PB is a separate product and must remain untouched.
 7. Configure Render server-only Supabase variables. Done.
 8. Verify Supabase bridge write/read from the live Render service. Done.
 9. Add a Supabase storage driver beside the current file driver. Done.
-10. Switch production storage only after the full runtime driver passes QA. Next.
+10. Switch production storage only after the full runtime driver passes QA. Done.
 
 ## Required Secrets Later
 
@@ -120,7 +120,7 @@ Current Render state:
 - Service ID: `srv-d8u2lr0js32c73cajpqg`
 - Public URL: `https://kodi-travel-companion.onrender.com`
 - Status: live
-- Last public smoke: passed on `2026-06-24`
+- Last public smoke: passed on `2026-06-25`
 
 Current Supabase state:
 
@@ -130,7 +130,8 @@ Current Supabase state:
 - Render environment variables: configured with server-only Supabase URL, service-role key, DB URL, and migration admin token
 - Guarded grants endpoint: passed on `2026-06-25`
 - Bridge verification from live Render service: write/read passed on `2026-06-25`
-- Runtime driver: implemented; production selects Supabase automatically when server credentials exist, with `STORAGE_DRIVER=file` available as fallback override
+- Runtime driver: Supabase active in production on `2026-06-25`
+- Production storage smoke: write/read passed, then demo state reset back to clean startup data
 
 ## QA
 
