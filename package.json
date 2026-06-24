@@ -10,7 +10,8 @@
   "scripts": {
     "qa": "powershell -ExecutionPolicy Bypass -File scripts/qa.ps1",
     "dev": "echo \"Run apps separately after dependencies are installed\"",
-    "build": "echo \"Build scripts will be enabled after dependency install\""
+    "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
+    "start": "npm run start --workspace apps/api"
   },
   "engines": {
     "node": ">=20"

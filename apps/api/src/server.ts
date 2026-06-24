@@ -1,4 +1,5 @@
 import express from "express";
+import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
 import { loadDemoTripMembers, resetDemoTripMembers, updateDemoMemberLocation } from "./data/localMembers.js";
@@ -14,6 +15,7 @@ import { canMemberRunAgentAction, isAgentActionType } from "./permissions/agentA
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
+const webDistDir = process.env.WEB_DIST_DIR ?? fileURLToPath(new URL("../../web/dist", import.meta.url));
 
 function isConversationMessage(value: unknown) {
   if (!value || typeof value !== "object") {
@@ -562,6 +564,17 @@ app.post("/api/agent/message", (req, res) => {
       permissionPolicy
     })
   });
+});
+
+app.use(express.static(webDistDir));
+
+app.get(/.*/, (req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    next();
+    return;
+  }
+
+  res.sendFile("index.html", { root: webDistDir });
 });
 
 app.listen(port, () => {
