@@ -1,5 +1,5 @@
 import type { TripMemberLocationView } from "../domain/types.js";
-import { loadDemoStorage, saveDemoStorage } from "./demoStorage.js";
+import { loadDemoStorage, loadDemoStorageAsync, saveDemoStorage, saveDemoStorageAsync } from "./demoStorage.js";
 
 const DEMO_GROUP_ID = "group_family_greece_demo";
 const UPDATED_AT = "2026-06-23T09:00:00.000Z";
@@ -126,9 +126,22 @@ export function loadDemoTripMembers(): TripMemberLocationView[] {
   return structuredClone(getStoredOrInitialMembers());
 }
 
+async function getStoredOrInitialMembersAsync() {
+  return (await loadDemoStorageAsync()).members ?? initialDemoMembers;
+}
+
+export async function loadDemoTripMembersAsync(): Promise<TripMemberLocationView[]> {
+  return structuredClone(await getStoredOrInitialMembersAsync());
+}
+
 export function resetDemoTripMembers() {
   saveDemoStorage({ members: null });
   return loadDemoTripMembers();
+}
+
+export async function resetDemoTripMembersAsync() {
+  await saveDemoStorageAsync({ members: null });
+  return loadDemoTripMembersAsync();
 }
 
 export function updateDemoMemberLocation(input: {
@@ -166,5 +179,43 @@ export function updateDemoMemberLocation(input: {
   };
 
   saveDemoStorage({ members: demoMembers });
+  return { ok: true as const, member: structuredClone(demoMembers[memberIndex]) };
+}
+
+export async function updateDemoMemberLocationAsync(input: {
+  memberId: string;
+  lat: number;
+  lng: number;
+  accuracyMeters?: number;
+}) {
+  const demoMembers = await loadDemoTripMembersAsync();
+  const memberIndex = demoMembers.findIndex((item) => item.member.id === input.memberId);
+
+  if (memberIndex < 0) {
+    return { ok: false as const, error: "member_not_found" };
+  }
+
+  const member = demoMembers[memberIndex];
+  if (member.consent.state !== "enabled") {
+    return { ok: false as const, error: "location_sharing_not_enabled" };
+  }
+
+  const updatedAt = new Date().toISOString();
+  demoMembers[memberIndex] = {
+    ...member,
+    liveLocation: {
+      memberId: member.member.id,
+      tripGroupId: member.member.tripGroupId,
+      lat: input.lat,
+      lng: input.lng,
+      accuracyMeters: input.accuracyMeters,
+      updatedAt,
+      source: "gps"
+    },
+    displayLabel: "GPS ׳׳™׳©׳™",
+    updatedMinutesAgo: 0
+  };
+
+  await saveDemoStorageAsync({ members: demoMembers });
   return { ok: true as const, member: structuredClone(demoMembers[memberIndex]) };
 }

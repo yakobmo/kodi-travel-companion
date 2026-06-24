@@ -72,7 +72,11 @@ const storagePath = join(process.cwd(), ".data", "demo-state.json");
 const DEMO_STORAGE_KEY = "group_family_greece_demo";
 
 function getRequestedStorageDriver(): StorageDriverName {
-  return process.env.STORAGE_DRIVER === "supabase" ? "supabase" : "file";
+  if (process.env.STORAGE_DRIVER === "supabase" || process.env.STORAGE_DRIVER === "file") {
+    return process.env.STORAGE_DRIVER;
+  }
+
+  return process.env.NODE_ENV === "production" && hasSupabaseServerConfig() ? "supabase" : "file";
 }
 
 function hasSupabaseServerConfig() {
@@ -261,18 +265,22 @@ export async function verifySupabaseBridgeStorage() {
 
 export function getDemoStorageMetadata() {
   const requestedDriver = getRequestedStorageDriver();
+  const supabaseConfigured = hasSupabaseServerConfig();
+  const activeDriver = requestedDriver === "supabase" && supabaseConfigured ? "supabase" : "file";
 
   return {
-    driver: "file",
+    driver: activeDriver,
     requestedDriver,
     storagePath,
-    supabaseConfigured: hasSupabaseServerConfig(),
-    supabaseBridgeReady: requestedDriver === "supabase" && hasSupabaseServerConfig(),
-    realtimeReady: false,
+    supabaseConfigured,
+    supabaseBridgeReady: supabaseConfigured,
+    realtimeReady: activeDriver === "supabase",
     migrationTarget: "managed_db_plus_realtime",
     note:
-      requestedDriver === "supabase"
-        ? "Supabase bridge storage can be verified separately; the live MVP still uses file storage until all read/write paths are migrated."
+      activeDriver === "supabase"
+        ? "Supabase bridge storage is active for the MVP demo."
+        : requestedDriver === "supabase"
+          ? "Supabase storage was requested, but server configuration is missing; file storage is active as fallback."
         : "File storage is active for the MVP demo."
   };
 }

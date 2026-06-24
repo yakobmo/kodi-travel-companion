@@ -60,9 +60,9 @@ Completed:
 
 Next:
 
-1. Implement a Supabase storage driver beside the existing file driver.
-2. Keep the file driver as local fallback.
-3. Run API build, local smoke, public deploy, and public smoke again.
+1. Keep the file driver as local fallback. Done.
+2. Implement a Supabase storage driver beside the existing file driver. Done.
+3. Run API build, local smoke, public deploy, and public smoke again. Next.
 4. Switch production storage only after the full runtime driver passes QA.
 
 ## Environment Contract
@@ -73,13 +73,15 @@ Local development should keep:
 STORAGE_DRIVER=file
 ```
 
-Production should switch only after the Supabase runtime driver exists:
+Production selects Supabase automatically when `NODE_ENV=production` and server credentials exist. It can also be forced with:
 
 ```text
 STORAGE_DRIVER=supabase
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
+
+Use `STORAGE_DRIVER=file` only as an explicit production fallback.
 
 `SUPABASE_SERVICE_ROLE_KEY` is server-only and must live only in Render environment variables or a local uncommitted `.env` file.
 
@@ -91,7 +93,7 @@ Current status endpoint:
 GET /api/trips/demo/storage
 ```
 
-This endpoint intentionally keeps `driver: "file"` and `realtimeReady: false` until the Supabase runtime driver is implemented and verified.
+This endpoint reports the active driver. With `STORAGE_DRIVER=supabase` and valid server credentials, it reports `driver: "supabase"` and `realtimeReady: true`.
 
 Runtime readiness check:
 
@@ -115,7 +117,7 @@ Bridge write/read verification:
 POST /api/trips/demo/storage/supabase-bridge/verify
 ```
 
-This endpoint verifies that the backend can write and read the temporary `demo_storage_states` bridge table. The live app still uses file storage until all data paths are migrated.
+This endpoint verifies that the backend can write and read the temporary `demo_storage_states` bridge table. The live app uses this same table when `STORAGE_DRIVER=supabase`.
 
 ## Automated Schema Apply
 

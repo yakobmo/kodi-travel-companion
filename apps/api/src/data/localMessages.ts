@@ -1,4 +1,10 @@
-import { loadDemoStorage, saveDemoStorage, type StoredDemoMessage } from "./demoStorage.js";
+import {
+  loadDemoStorage,
+  loadDemoStorageAsync,
+  saveDemoStorage,
+  saveDemoStorageAsync,
+  type StoredDemoMessage
+} from "./demoStorage.js";
 
 const DEMO_GROUP_ID = "group_family_greece_demo";
 const INITIAL_CREATED_AT = "2026-06-23T09:00:00.000Z";
@@ -54,9 +60,22 @@ export function loadDemoTripMessages(): StoredDemoMessage[] {
   return structuredClone(getStoredOrInitialMessages());
 }
 
+async function getStoredOrInitialMessagesAsync() {
+  return (await loadDemoStorageAsync()).messages ?? initialDemoMessages;
+}
+
+export async function loadDemoTripMessagesAsync(): Promise<StoredDemoMessage[]> {
+  return structuredClone(await getStoredOrInitialMessagesAsync());
+}
+
 export function resetDemoTripMessages() {
   saveDemoStorage({ messages: null });
   return loadDemoTripMessages();
+}
+
+export async function resetDemoTripMessagesAsync() {
+  await saveDemoStorageAsync({ messages: null });
+  return loadDemoTripMessagesAsync();
 }
 
 export function appendDemoTripMessage(input: {
@@ -79,5 +98,28 @@ export function appendDemoTripMessage(input: {
 
   const nextMessages = [...currentMessages, nextMessage].slice(-80);
   saveDemoStorage({ messages: nextMessages });
+  return structuredClone(nextMessage);
+}
+
+export async function appendDemoTripMessageAsync(input: {
+  author: string;
+  text: string;
+  memberId?: string;
+  source?: StoredDemoMessage["source"];
+}) {
+  const currentMessages = await loadDemoTripMessagesAsync();
+  const source = input.source ?? "member";
+  const nextMessage: StoredDemoMessage = {
+    id: createMessageId(source),
+    tripGroupId: DEMO_GROUP_ID,
+    author: input.author,
+    text: input.text,
+    memberId: input.memberId,
+    source,
+    createdAt: new Date().toISOString()
+  };
+
+  const nextMessages = [...currentMessages, nextMessage].slice(-80);
+  await saveDemoStorageAsync({ messages: nextMessages });
   return structuredClone(nextMessage);
 }

@@ -421,7 +421,10 @@ if (-not $serverSource.Contains("resetDemoTripSetupState")) {
   throw "API server is missing the demo setup state reset for deterministic smoke tests."
 }
 
-if (-not $serverSource.Contains("const tripState = req.body?.tripState ?? buildDemoTripState()")) {
+if (
+  -not $serverSource.Contains("const tripState = req.body?.tripState ?? buildDemoTripState()") -and
+  -not $serverSource.Contains("const tripState = req.body?.tripState ?? (await buildDemoTripStateAsync())")
+) {
   throw "Kodi agent endpoint must attach TripState context when the client does not send one."
 }
 

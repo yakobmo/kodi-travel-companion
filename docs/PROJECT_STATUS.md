@@ -34,14 +34,16 @@ Implemented locally:
 - Supabase SQL schema for the first DB/realtime gate.
 - Supabase storage configuration gate through `.env.example` and `/api/trips/demo/storage`.
 - Supabase bridge verification endpoint for safe write/read testing before switching live storage.
+- Supabase-backed demo storage driver behind `STORAGE_DRIVER=supabase`.
 
 ## Current Storage
 
-The MVP currently uses a local file driver:
+The MVP supports two storage modes:
 
-- Driver: `file`
-- State file: `.data/demo-state.json`
-- Realtime: not ready
+- `file`: local fallback using `.data/demo-state.json`
+- `supabase`: server-side storage through `public.demo_storage_states`
+- Production default: Supabase when server credentials exist; `STORAGE_DRIVER=file` can force fallback.
+- Realtime: ready only when `STORAGE_DRIVER=supabase`
 - Migration target: managed DB plus realtime
 
 The API exposes this through:
@@ -55,7 +57,7 @@ The endpoint now reports:
 - Active driver: `file`
 - Requested driver: `file` or `supabase`
 - Whether server-side Supabase configuration is present
-- Realtime readiness, still `false` until the Supabase runtime driver is implemented
+- Realtime readiness for the active driver
 
 ## Recommended Production Architecture
 
@@ -79,8 +81,8 @@ PB is a separate product and must remain untouched.
 6. Apply `supabase/schema.sql` for groups, members, messages, places, live locations, destinations, routes, and route stops. Done.
 7. Configure Render server-only Supabase variables. Done.
 8. Verify Supabase bridge write/read from the live Render service. Done.
-9. Add a Supabase storage driver beside the current file driver. Next.
-10. Switch production storage only after the full runtime driver passes QA.
+9. Add a Supabase storage driver beside the current file driver. Done.
+10. Switch production storage only after the full runtime driver passes QA. Next.
 
 ## Required Secrets Later
 
@@ -128,7 +130,7 @@ Current Supabase state:
 - Render environment variables: configured with server-only Supabase URL, service-role key, DB URL, and migration admin token
 - Guarded grants endpoint: passed on `2026-06-25`
 - Bridge verification from live Render service: write/read passed on `2026-06-25`
-- Runtime driver: not switched yet; live app intentionally remains on file storage until the Supabase driver is implemented and tested
+- Runtime driver: implemented; production selects Supabase automatically when server credentials exist, with `STORAGE_DRIVER=file` available as fallback override
 
 ## QA
 

@@ -1,8 +1,18 @@
 import type { TripSetupState, TripSetupSubmission, TripSetupStep } from "../domain/types.js";
-import { loadDemoStorage, saveDemoStorage, type StoredDemoSetup } from "./demoStorage.js";
+import {
+  loadDemoStorage,
+  loadDemoStorageAsync,
+  saveDemoStorage,
+  saveDemoStorageAsync,
+  type StoredDemoSetup
+} from "./demoStorage.js";
 
 function getSavedDemoSetup(): StoredDemoSetup | null {
   return loadDemoStorage().setup;
+}
+
+async function getSavedDemoSetupAsync(): Promise<StoredDemoSetup | null> {
+  return (await loadDemoStorageAsync()).setup;
 }
 
 function isGoogleMapsViewingLink(value: string) {
@@ -40,6 +50,10 @@ function getStepStatus(step: TripSetupStep, setupCompleted: boolean): "done" | "
 
 export function buildDemoTripSetupState(): TripSetupState {
   const savedDemoSetup = getSavedDemoSetup();
+  return buildDemoTripSetupStateFromSavedSetup(savedDemoSetup);
+}
+
+function buildDemoTripSetupStateFromSavedSetup(savedDemoSetup: StoredDemoSetup | null): TripSetupState {
   const readiness = getSetupReadiness(savedDemoSetup);
   const setupCompleted = areAllReadinessItemsDone(readiness);
   const importedPlacesCount = readiness.hasGoogleSource ? 108 : 0;
@@ -126,7 +140,27 @@ export function saveDemoTripSetupState(submission: TripSetupSubmission) {
   return buildDemoTripSetupState();
 }
 
+export async function saveDemoTripSetupStateAsync(submission: TripSetupSubmission) {
+  await saveDemoStorageAsync({
+    setup: {
+      ...submission,
+      savedAt: new Date().toISOString()
+    }
+  });
+
+  return buildDemoTripSetupStateAsync();
+}
+
 export function resetDemoTripSetupState() {
   saveDemoStorage({ setup: null });
   return buildDemoTripSetupState();
+}
+
+export async function resetDemoTripSetupStateAsync() {
+  await saveDemoStorageAsync({ setup: null });
+  return buildDemoTripSetupStateAsync();
+}
+
+export async function buildDemoTripSetupStateAsync(): Promise<TripSetupState> {
+  return buildDemoTripSetupStateFromSavedSetup(await getSavedDemoSetupAsync());
 }

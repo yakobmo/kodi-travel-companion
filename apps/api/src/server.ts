@@ -2,15 +2,35 @@ import express from "express";
 import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
-import { loadDemoTripMembers, resetDemoTripMembers, updateDemoMemberLocation } from "./data/localMembers.js";
-import { appendDemoTripMessage, loadDemoTripMessages, resetDemoTripMessages } from "./data/localMessages.js";
-import { buildDemoTripSetupState, resetDemoTripSetupState, saveDemoTripSetupState } from "./data/localSetupState.js";
+import {
+  loadDemoTripMembersAsync,
+  resetDemoTripMembersAsync,
+  updateDemoMemberLocationAsync
+} from "./data/localMembers.js";
+import {
+  appendDemoTripMessageAsync,
+  loadDemoTripMessagesAsync,
+  resetDemoTripMessagesAsync
+} from "./data/localMessages.js";
+import {
+  buildDemoTripSetupStateAsync,
+  resetDemoTripSetupStateAsync,
+  saveDemoTripSetupStateAsync
+} from "./data/localSetupState.js";
 import { getDemoStorageMetadata, verifySupabaseBridgeStorage } from "./data/demoStorage.js";
 import { checkSupabaseRuntime } from "./data/supabaseStatus.js";
 import { applySupabaseServiceRoleGrants, isValidMigrationAdminToken } from "./data/supabaseMigrationAdmin.js";
-import { loadDemoGroupDestination, resetDemoGroupDestination, saveDemoGroupDestination } from "./data/localGroupDestination.js";
-import { loadDemoGroupRoute, resetDemoGroupRoute, saveDemoGroupRoute } from "./data/localGroupRoute.js";
-import { buildDemoTripState } from "./data/localTripState.js";
+import {
+  loadDemoGroupDestinationAsync,
+  resetDemoGroupDestinationAsync,
+  saveDemoGroupDestinationAsync
+} from "./data/localGroupDestination.js";
+import {
+  loadDemoGroupRouteAsync,
+  resetDemoGroupRouteAsync,
+  saveDemoGroupRouteAsync
+} from "./data/localGroupRoute.js";
+import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext } from "./agent/kodi.js";
 import { canMemberRunAgentAction, isAgentActionType } from "./permissions/agentActions.js";
@@ -91,18 +111,18 @@ app.get("/api/trips/demo/places", (_req, res) => {
   });
 });
 
-app.get("/api/trips/demo/members", (_req, res) => {
-  const members = loadDemoTripMembers();
+app.get("/api/trips/demo/members", async (_req, res) => {
+  const members = await loadDemoTripMembersAsync();
   res.json({
     tripGroupId: "group_family_greece_demo",
     members
   });
 });
 
-app.get("/api/trips/demo/messages", (_req, res) => {
+app.get("/api/trips/demo/messages", async (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
-    messages: loadDemoTripMessages()
+    messages: await loadDemoTripMessagesAsync()
   });
 });
 
@@ -143,21 +163,21 @@ app.post("/api/admin/supabase/apply-grants", async (req, res) => {
   });
 });
 
-app.get("/api/trips/demo/group-destination", (_req, res) => {
+app.get("/api/trips/demo/group-destination", async (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
-    destination: loadDemoGroupDestination()
+    destination: await loadDemoGroupDestinationAsync()
   });
 });
 
-app.get("/api/trips/demo/group-route", (_req, res) => {
+app.get("/api/trips/demo/group-route", async (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
-    route: loadDemoGroupRoute()
+    route: await loadDemoGroupRouteAsync()
   });
 });
 
-app.post("/api/trips/demo/group-destination", (req, res) => {
+app.post("/api/trips/demo/group-destination", async (req, res) => {
   const { member, placeId } = req.body ?? {};
 
   if (!member || typeof member !== "object") {
@@ -200,7 +220,7 @@ app.post("/api/trips/demo/group-destination", (req, res) => {
     return;
   }
 
-  const destination = saveDemoGroupDestination({
+  const destination = await saveDemoGroupDestinationAsync({
     tripGroupId: "group_family_greece_demo",
     placeId: place.id,
     placeName: place.name,
@@ -218,7 +238,7 @@ app.post("/api/trips/demo/group-destination", (req, res) => {
   });
 });
 
-app.post("/api/trips/demo/group-route", (req, res) => {
+app.post("/api/trips/demo/group-route", async (req, res) => {
   const { member, placeIds, title } = req.body ?? {};
 
   if (!member || typeof member !== "object") {
@@ -285,7 +305,7 @@ app.post("/api/trips/demo/group-route", (req, res) => {
     return;
   }
 
-  const route = saveDemoGroupRoute({
+  const route = await saveDemoGroupRouteAsync({
     tripGroupId: "group_family_greece_demo",
     routeId: `route_${Date.now()}`,
     title: typeof title === "string" && title.trim().length > 0 ? title.trim() : "מסלול קבוצתי מוצע",
@@ -304,7 +324,7 @@ app.post("/api/trips/demo/group-route", (req, res) => {
   });
 });
 
-app.post("/api/trips/demo/group-route/progress", (req, res) => {
+app.post("/api/trips/demo/group-route/progress", async (req, res) => {
   const { member } = req.body ?? {};
 
   if (!member || typeof member !== "object") {
@@ -336,7 +356,7 @@ app.post("/api/trips/demo/group-route/progress", (req, res) => {
     return;
   }
 
-  const currentRoute = loadDemoGroupRoute();
+  const currentRoute = await loadDemoGroupRouteAsync();
   if (!currentRoute) {
     res.status(404).json({ error: "group route not found" });
     return;
@@ -353,7 +373,7 @@ app.post("/api/trips/demo/group-route/progress", (req, res) => {
   const nextActiveStopIndex = routeCompleted
     ? currentRoute.activeStopIndex
     : Math.min(currentRoute.activeStopIndex + 1, currentRoute.stops.length - 1);
-  const route = saveDemoGroupRoute({
+  const route = await saveDemoGroupRouteAsync({
     ...currentRoute,
     completedStopIds,
     activeStopIndex: nextActiveStopIndex,
@@ -368,7 +388,7 @@ app.post("/api/trips/demo/group-route/progress", (req, res) => {
   });
 });
 
-app.post("/api/trips/demo/messages", (req, res) => {
+app.post("/api/trips/demo/messages", async (req, res) => {
   const { author, text, memberId, source } = req.body ?? {};
 
   if (typeof author !== "string" || author.trim().length < 1) {
@@ -393,7 +413,7 @@ app.post("/api/trips/demo/messages", (req, res) => {
 
   res.json({
     tripGroupId: "group_family_greece_demo",
-    message: appendDemoTripMessage({
+    message: await appendDemoTripMessageAsync({
       author: author.trim(),
       text: text.trim(),
       memberId,
@@ -402,7 +422,7 @@ app.post("/api/trips/demo/messages", (req, res) => {
   });
 });
 
-app.post("/api/trips/demo/members/:memberId/location", (req, res) => {
+app.post("/api/trips/demo/members/:memberId/location", async (req, res) => {
   const { memberId } = req.params;
   const { lat, lng, accuracyMeters } = req.body ?? {};
 
@@ -416,7 +436,7 @@ app.post("/api/trips/demo/members/:memberId/location", (req, res) => {
     return;
   }
 
-  const result = updateDemoMemberLocation({ memberId, lat, lng, accuracyMeters });
+  const result = await updateDemoMemberLocationAsync({ memberId, lat, lng, accuracyMeters });
 
   if (!result.ok) {
     res.status(result.error === "member_not_found" ? 404 : 403).json({ error: result.error });
@@ -429,15 +449,15 @@ app.post("/api/trips/demo/members/:memberId/location", (req, res) => {
   });
 });
 
-app.get("/api/trips/demo/state", (_req, res) => {
-  res.json(buildDemoTripState());
+app.get("/api/trips/demo/state", async (_req, res) => {
+  res.json(await buildDemoTripStateAsync());
 });
 
-app.get("/api/trips/demo/setup", (_req, res) => {
-  res.json(buildDemoTripSetupState());
+app.get("/api/trips/demo/setup", async (_req, res) => {
+  res.json(await buildDemoTripSetupStateAsync());
 });
 
-app.post("/api/trips/demo/setup", (req, res) => {
+app.post("/api/trips/demo/setup", async (req, res) => {
   const { tripName, firstMemberName, firstMemberAge, googleLink, aiPlanConfirmed, locationConsentExplained } =
     req.body ?? {};
 
@@ -467,7 +487,7 @@ app.post("/api/trips/demo/setup", (req, res) => {
   }
 
   res.json(
-    saveDemoTripSetupState({
+    await saveDemoTripSetupStateAsync({
       tripName: tripName.trim(),
       firstMemberName: firstMemberName.trim(),
       firstMemberAge,
@@ -478,12 +498,12 @@ app.post("/api/trips/demo/setup", (req, res) => {
   );
 });
 
-app.delete("/api/trips/demo/setup", (_req, res) => {
-  resetDemoTripMembers();
-  resetDemoTripMessages();
-  resetDemoGroupDestination();
-  resetDemoGroupRoute();
-  res.json(resetDemoTripSetupState());
+app.delete("/api/trips/demo/setup", async (_req, res) => {
+  await resetDemoTripMembersAsync();
+  await resetDemoTripMessagesAsync();
+  await resetDemoGroupDestinationAsync();
+  await resetDemoGroupRouteAsync();
+  res.json(await resetDemoTripSetupStateAsync());
 });
 
 app.post("/api/navigation/links", (req, res) => {
@@ -543,7 +563,7 @@ app.post("/api/trips/demo/agent-actions/authorize", (req, res) => {
   res.json(payload);
 });
 
-app.post("/api/agent/message", (req, res) => {
+app.post("/api/agent/message", async (req, res) => {
   const { message, member, recentMessages, context, tripGroupId } = req.body ?? {};
 
   if (typeof message !== "string" || message.trim().length === 0) {
@@ -571,7 +591,7 @@ app.post("/api/agent/message", (req, res) => {
     return;
   }
 
-  const tripState = req.body?.tripState ?? buildDemoTripState();
+  const tripState = req.body?.tripState ?? (await buildDemoTripStateAsync());
   const permissionPolicy =
     context && typeof context === "object"
       ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
