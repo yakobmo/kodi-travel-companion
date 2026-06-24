@@ -32,6 +32,7 @@ Implemented locally:
 - Group route creation, active stop, navigation to active stop, progress, and completion.
 - Storage driver contract that prepares a future DB/realtime migration.
 - Supabase SQL schema for the first DB/realtime gate.
+- Supabase storage configuration gate through `.env.example` and `/api/trips/demo/storage`.
 
 ## Current Storage
 
@@ -47,6 +48,13 @@ The API exposes this through:
 ```text
 GET /api/trips/demo/storage
 ```
+
+The endpoint now reports:
+
+- Active driver: `file`
+- Requested driver: `file` or `supabase`
+- Whether server-side Supabase configuration is present
+- Realtime readiness, still `false` until the Supabase runtime driver is implemented
 
 ## Recommended Production Architecture
 

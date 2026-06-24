@@ -76,3 +76,11 @@ SUPABASE_SERVICE_ROLE_KEY=
 `SUPABASE_SERVICE_ROLE_KEY` is server-only and must live only in Render environment variables or a local uncommitted `.env` file.
 
 Do not expose it through any `VITE_*` variable.
+
+Current status endpoint:
+
+```text
+GET /api/trips/demo/storage
+```
+
+This endpoint intentionally keeps `driver: "file"` and `realtimeReady: false` until the Supabase runtime driver is implemented and verified.
