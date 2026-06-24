@@ -10,6 +10,8 @@ $requiredFiles = @(
   "DEVELOPMENT_WORKFLOW.md",
   "supabase/schema.sql",
   "docs/SUPABASE_SCHEMA.md",
+  "scripts/apply-supabase-schema.mjs",
+  "scripts/apply-supabase-schema.ps1",
   "scripts/dev-api.ps1",
   "scripts/dev-web.ps1",
   "scripts/smoke-local.mjs",
@@ -19,6 +21,7 @@ $requiredFiles = @(
   "apps/api/src/agent/kodi.ts",
   "apps/api/src/domain/types.ts",
   "apps/api/src/data/demoStorage.ts",
+  "apps/api/src/data/supabaseStatus.ts",
   "apps/api/src/data/localMessages.ts",
   "apps/api/src/data/localMembers.ts",
   "apps/api/src/data/localPlaces.ts",
@@ -290,6 +293,10 @@ if (-not $serverSource.Contains("/api/trips/demo/storage") -or -not $serverSourc
   throw "API server must expose demo storage metadata for DB/realtime migration readiness."
 }
 
+if (-not $serverSource.Contains("/api/trips/demo/storage/supabase-check") -or -not $serverSource.Contains("checkSupabaseRuntime")) {
+  throw "API server must expose a safe Supabase runtime readiness check before switching storage drivers."
+}
+
 if (-not $serverSource.Contains("/api/trips/demo/agent-actions/authorize")) {
   throw "API server is missing the agent action authorization endpoint."
 }
@@ -466,6 +473,10 @@ foreach ($requiredTable in @(
   }
 }
 
+if (-not $supabaseSchemaSource.Contains("public.demo_storage_states")) {
+  throw "Supabase schema must include the demo storage bridge table before enabling the runtime driver."
+}
+
 foreach ($realtimeTable in @(
   "group_messages",
   "live_locations",
@@ -487,6 +498,11 @@ foreach ($requiredEnvName in @("STORAGE_DRIVER=file", "SUPABASE_URL=", "SUPABASE
   if (-not $envExampleSource.Contains($requiredEnvName)) {
     throw ".env.example is missing Supabase environment contract: $requiredEnvName"
   }
+}
+
+$schemaScriptSource = Get-Content (Join-Path $root "scripts\apply-supabase-schema.mjs") -Raw
+if (-not $schemaScriptSource.Contains("SUPABASE_DB_URL") -or -not $schemaScriptSource.Contains("demo_storage_states")) {
+  throw "Automated Supabase schema script must read SUPABASE_DB_URL and verify the bridge table."
 }
 
 if (-not $serverSource.Contains("Access-Control-Allow-Origin")) {

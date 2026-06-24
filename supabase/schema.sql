@@ -164,6 +164,12 @@ create table if not exists public.group_route_stops (
   unique (route_id, place_id)
 );
 
+create table if not exists public.demo_storage_states (
+  storage_key text primary key,
+  state jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists trip_members_trip_group_id_idx on public.trip_members(trip_group_id);
 create index if not exists trip_places_trip_group_id_idx on public.trip_places(trip_group_id);
 create index if not exists trip_places_type_idx on public.trip_places(type);
@@ -171,6 +177,7 @@ create index if not exists group_messages_trip_created_idx on public.group_messa
 create index if not exists live_locations_trip_group_id_idx on public.live_locations(trip_group_id);
 create index if not exists group_routes_trip_group_id_idx on public.group_routes(trip_group_id);
 create index if not exists group_route_stops_route_order_idx on public.group_route_stops(route_id, stop_order);
+create index if not exists demo_storage_states_updated_at_idx on public.demo_storage_states(updated_at desc);
 
 do $$
 begin

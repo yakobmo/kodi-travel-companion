@@ -11,9 +11,13 @@
     "qa": "powershell -ExecutionPolicy Bypass -File scripts/qa.ps1",
     "dev": "echo \"Run apps separately after dependencies are installed\"",
     "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
-    "start": "npm run start --workspace apps/api"
+    "start": "npm run start --workspace apps/api",
+    "db:apply-schema": "node scripts/apply-supabase-schema.mjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "postgres": "^3.4.9"
   }
 }

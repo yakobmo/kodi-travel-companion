@@ -20,6 +20,7 @@ The schema covers:
 - Group chat messages.
 - Active group destination.
 - Group routes and route stops.
+- A temporary `demo_storage_states` JSONB bridge table for the first runtime storage driver.
 
 ## Realtime Tables
 
@@ -51,7 +52,7 @@ Browser clients must not receive service-role credentials.
 
 After a Supabase project is created:
 
-1. Apply `supabase/schema.sql` in the Supabase SQL Editor.
+1. Apply `supabase/schema.sql` with `scripts/apply-supabase-schema.ps1`.
 2. Add server-only Render environment variables.
 3. Implement a Supabase storage driver beside the existing file driver.
 4. Keep the file driver as local fallback.
@@ -84,6 +85,36 @@ GET /api/trips/demo/storage
 ```
 
 This endpoint intentionally keeps `driver: "file"` and `realtimeReady: false` until the Supabase runtime driver is implemented and verified.
+
+Runtime readiness check:
+
+```text
+GET /api/trips/demo/storage/supabase-check
+```
+
+This endpoint checks only whether the backend has Supabase server configuration and can see the bridge table. It does not expose keys.
+
+## Automated Schema Apply
+
+Preferred command:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/apply-supabase-schema.ps1
+```
+
+The script reads one local-only secret:
+
+```text
+SUPABASE_DB_URL=
+```
+
+or:
+
+```text
+DATABASE_URL=
+```
+
+It does not print the connection string and it verifies `public.demo_storage_states` after applying the schema.
 
 ## Current Project
 
