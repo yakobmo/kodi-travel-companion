@@ -501,6 +501,15 @@ if (-not $supabaseSchemaSource.Contains("enable row level security")) {
   throw "Supabase schema must enable RLS before production use."
 }
 
+if (-not $supabaseSchemaSource.Contains("grant all privileges on all tables in schema public to service_role")) {
+  throw "Supabase schema must grant service_role access for backend-only storage."
+}
+
+$supabaseStatusSource = Get-Content (Join-Path $root "apps\api\src\data\supabaseStatus.ts") -Raw
+if (-not $supabaseStatusSource.Contains("keyRole") -or -not $supabaseStatusSource.Contains("decodeJwtPayload")) {
+  throw "Supabase status must report the configured key role without exposing the key."
+}
+
 $envExampleSource = Get-Content (Join-Path $root ".env.example") -Raw
 foreach ($requiredEnvName in @("STORAGE_DRIVER=file", "SUPABASE_URL=", "SUPABASE_SERVICE_ROLE_KEY=")) {
   if (-not $envExampleSource.Contains($requiredEnvName)) {

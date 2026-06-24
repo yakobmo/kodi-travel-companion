@@ -4,6 +4,7 @@ export interface SupabaseRuntimeStatus {
   configured: boolean;
   urlPresent: boolean;
   serviceRoleKeyPresent: boolean;
+  keyRole?: string;
   reachable: boolean;
   bridgeTableReady: boolean;
   checkedAt: string;
@@ -17,17 +18,34 @@ function getSupabaseConfig() {
   };
 }
 
+function decodeJwtPayload(token: string) {
+  const [, payload] = token.split(".");
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, "=");
+    return JSON.parse(Buffer.from(paddedPayload, "base64").toString("utf8")) as { role?: unknown };
+  } catch {
+    return null;
+  }
+}
+
 export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
   const checkedAt = new Date().toISOString();
   const { url, serviceRoleKey } = getSupabaseConfig();
   const urlPresent = Boolean(url);
   const serviceRoleKeyPresent = Boolean(serviceRoleKey);
+  const keyRole = serviceRoleKey ? String(decodeJwtPayload(serviceRoleKey)?.role ?? "unknown") : undefined;
 
   if (!url || !serviceRoleKey) {
     return {
       configured: false,
       urlPresent,
       serviceRoleKeyPresent,
+      keyRole,
       reachable: false,
       bridgeTableReady: false,
       checkedAt
@@ -48,6 +66,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
         configured: true,
         urlPresent,
         serviceRoleKeyPresent,
+        keyRole,
         reachable: true,
         bridgeTableReady: false,
         checkedAt,
@@ -59,6 +78,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       configured: true,
       urlPresent,
       serviceRoleKeyPresent,
+      keyRole,
       reachable: true,
       bridgeTableReady: true,
       checkedAt
@@ -68,6 +88,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       configured: true,
       urlPresent,
       serviceRoleKeyPresent,
+      keyRole,
       reachable: false,
       bridgeTableReady: false,
       checkedAt,

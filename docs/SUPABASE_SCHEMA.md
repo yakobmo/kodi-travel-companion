@@ -94,6 +94,14 @@ GET /api/trips/demo/storage/supabase-check
 
 This endpoint checks only whether the backend has Supabase server configuration and can see the bridge table. It does not expose keys.
 
+It also reports the JWT role embedded in the configured key, for example:
+
+```text
+keyRole: service_role
+```
+
+If it reports `anon`, the wrong Supabase key was configured in Render.
+
 Bridge write/read verification:
 
 ```text

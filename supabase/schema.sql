@@ -238,6 +238,15 @@ alter table public.group_messages enable row level security;
 alter table public.group_destinations enable row level security;
 alter table public.group_routes enable row level security;
 alter table public.group_route_stops enable row level security;
+alter table public.demo_storage_states enable row level security;
+
+grant usage on schema public to service_role;
+grant all privileges on all tables in schema public to service_role;
+grant all privileges on all sequences in schema public to service_role;
+alter default privileges in schema public grant all privileges on tables to service_role;
+alter default privileges in schema public grant all privileges on sequences to service_role;
+
+notify pgrst, 'reload schema';
 
 -- MVP note:
 -- RLS policies are intentionally not opened here.
