@@ -20,6 +20,8 @@ const DEMO_SOURCE_ID = "source_google_maps_place_list_demo";
 
 const placesPathCandidates = [
   process.env.TRIP_PLACES_JSON,
+  path.resolve(process.cwd(), "data/demo-google-places.json"),
+  path.resolve(process.cwd(), "../../data/demo-google-places.json"),
   path.resolve(process.cwd(), "work/spikes/google-place-list/out/places.json"),
   path.resolve(process.cwd(), "../work/spikes/google-place-list/out/places.json"),
   path.resolve(process.cwd(), "../../work/spikes/google-place-list/out/places.json"),

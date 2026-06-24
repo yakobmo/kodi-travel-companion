@@ -1,0 +1,1616 @@
+[
+  {
+    "id": "1486677374736450871:2211595056354325483",
+    "sourceIndex": 0,
+    "name": "Averof 12",
+    "note": "",
+    "address": "Averof 12, Athina 104 33, יוון",
+    "lat": 37.9891138,
+    "lng": 23.7286964,
+    "googleIds": [
+      "1486677374736450871",
+      "2211595056354325483"
+    ],
+    "placePath": "/g/11dznxyvss",
+    "type": "attraction"
+  },
+  {
+    "id": "1394979828863038067:4276476451525207232",
+    "sourceIndex": 1,
+    "name": "Lake sources Louros River",
+    "note": "",
+    "address": "Βουλιάστα 455 00, יוון",
+    "lat": 39.432220799999996,
+    "lng": 20.841057,
+    "googleIds": [
+      "1394979828863038067",
+      "4276476451525207232"
+    ],
+    "placePath": "/g/11g897fbb4",
+    "type": "water"
+  },
+  {
+    "id": "1394909065140720887:-332196840074241480",
+    "sourceIndex": 2,
+    "name": "Taxiarches Hotel",
+    "note": "",
+    "address": "Aristi 440 04, יוון",
+    "lat": 39.935888,
+    "lng": 20.670744,
+    "googleIds": [
+      "1394909065140720887",
+      "-332196840074241480"
+    ],
+    "placePath": "/g/1ttrt_9x",
+    "type": "lodging"
+  },
+  {
+    "id": "1394162659482154903:-339510780614016053",
+    "sourceIndex": 3,
+    "name": "Guesthouse Arsenis",
+    "note": "",
+    "address": "",
+    "lat": 39.708436299999995,
+    "lng": 21.6547458,
+    "googleIds": [
+      "1394162659482154903",
+      "-339510780614016053"
+    ],
+    "placePath": "",
+    "type": "lodging"
+  },
+  {
+    "id": "1394928751819965097:937914136712603974",
+    "sourceIndex": 4,
+    "name": "Stone Forest",
+    "note": "",
+    "address": "Kentriko Zagori 440 07, יוון",
+    "lat": 39.892939299999995,
+    "lng": 20.74326,
+    "googleIds": [
+      "1394928751819965097",
+      "937914136712603974"
+    ],
+    "placePath": "/g/11b6j4dcbj",
+    "type": "attraction"
+  },
+  {
+    "id": "1394987418184870831:-243357718130674646",
+    "sourceIndex": 5,
+    "name": "Georgaras Accommodation",
+    "note": "",
+    "address": "Epar.Od. Artas - Ioanninon, Platanoussa 440 13, יוון",
+    "lat": 39.4208401,
+    "lng": 21.015550599999997,
+    "googleIds": [
+      "1394987418184870831",
+      "-243357718130674646"
+    ],
+    "placePath": "/g/11vdh5b0j4",
+    "type": "lodging"
+  },
+  {
+    "id": "1393771519166933077:-7965769090959758120",
+    "sourceIndex": 6,
+    "name": "Pozar Baths",
+    "note": "",
+    "address": "Pozar Baths 584 00, יוון",
+    "lat": 40.9708073,
+    "lng": 21.9153396,
+    "googleIds": [
+      "1393771519166933077",
+      "-7965769090959758120"
+    ],
+    "placePath": "/g/120pgjyk",
+    "type": "water"
+  },
+  {
+    "id": "1394906645963933019:-4728248738888782416",
+    "sourceIndex": 7,
+    "name": "גשר קלידוניה",
+    "note": "התחלת מסלול רגלי",
+    "address": "Kleidonia 441 00, יוון",
+    "lat": 39.967709899999996,
+    "lng": 20.6633809,
+    "googleIds": [
+      "1394906645963933019",
+      "-4728248738888782416"
+    ],
+    "placePath": "/g/12hmxdm7b",
+    "type": "attraction"
+  },
+  {
+    "id": "1394910269705021183:4357956812582886245",
+    "sourceIndex": 8,
+    "name": "גשר אריסטי (גשר פפיגו)",
+    "note": "",
+    "address": "Epar.Od. Kalpakiou-Papigkou 126, Aristi 440 04, יוון",
+    "lat": 39.944611699999996,
+    "lng": 20.6874543,
+    "googleIds": [
+      "1394910269705021183",
+      "4357956812582886245"
+    ],
+    "placePath": "/g/11q35y7j01",
+    "type": "attraction"
+  },
+  {
+    "id": "1394909122021011049:-9014968602580660431",
+    "sourceIndex": 9,
+    "name": "Voidomatis Trail",
+    "note": "",
+    "address": "Epar.Od. Kalpakiou-Papigkou 126, Aristi 440 04, יוון",
+    "lat": 39.9469549,
+    "lng": 20.687648799999998,
+    "googleIds": [
+      "1394909122021011049",
+      "-9014968602580660431"
+    ],
+    "placePath": "/g/11gb3m0srm",
+    "type": "attraction"
+  },
+  {
+    "id": "1394930618818121001:4242576102165626632",
+    "sourceIndex": 10,
+    "name": "Voidomatis Springs",
+    "note": "",
+    "address": "Kentriko Zagori 440 10, יוון",
+    "lat": 39.9456962,
+    "lng": 20.7154012,
+    "googleIds": [
+      "1394930618818121001",
+      "4242576102165626632"
+    ],
+    "placePath": "/g/11g6njtv3z",
+    "type": "water"
+  },
+  {
+    "id": "1394928988248354995:3137740615332386678",
+    "sourceIndex": 11,
+    "name": "Kokkorou ancient stone bridge",
+    "note": "",
+    "address": "Epar.Od. Asfaka - Vrisochoriou, Zagori 440 07, יוון",
+    "lat": 39.862114,
+    "lng": 20.7753752,
+    "googleIds": [
+      "1394928988248354995",
+      "3137740615332386678"
+    ],
+    "placePath": "/g/12hn57690",
+    "type": "attraction"
+  },
+  {
+    "id": "1394926382994905921:-5151187888707825209",
+    "sourceIndex": 12,
+    "name": "Kapetan Arkouda Bridge",
+    "note": "",
+    "address": "Επαρ. Οδ. Ασφάκας - Βρυσοχωρίου, 440 07, יוון",
+    "lat": 39.8549627,
+    "lng": 20.774148699999998,
+    "googleIds": [
+      "1394926382994905921",
+      "-5151187888707825209"
+    ],
+    "placePath": "/g/11dxm1wrk7",
+    "type": "attraction"
+  },
+  {
+    "id": "1394929213561733349:-677886208630965994",
+    "sourceIndex": 13,
+    "name": "Mylos Bridge(Mylos = Mill - Water Mill)",
+    "note": "",
+    "address": "Kipoi 440 10, יוון",
+    "lat": 39.8615391,
+    "lng": 20.7949399,
+    "googleIds": [
+      "1394929213561733349",
+      "-677886208630965994"
+    ],
+    "placePath": "/g/11dxdf3wmq",
+    "type": "water"
+  },
+  {
+    "id": "1394926212936940007:360495970669744208",
+    "sourceIndex": 14,
+    "name": "Kipoi",
+    "note": "",
+    "address": "Kipoi 440 10, יוון",
+    "lat": 39.8642073,
+    "lng": 20.792365,
+    "googleIds": [
+      "1394926212936940007",
+      "360495970669744208"
+    ],
+    "placePath": "/m/04y8zsd",
+    "type": "attraction"
+  },
+  {
+    "id": "1394926197243553979:-3897646940096511913",
+    "sourceIndex": 15,
+    "name": "Λίμνη του Άγιου",
+    "note": "",
+    "address": "Τοπική Κοινότητα Κήπων, Timfi 440 10, יוון",
+    "lat": 39.8448448,
+    "lng": 20.8126201,
+    "googleIds": [
+      "1394926197243553979",
+      "-3897646940096511913"
+    ],
+    "placePath": "/g/11l2p21jgz",
+    "type": "attraction"
+  },
+  {
+    "id": "1394929067420064321:1538111714767788894",
+    "sourceIndex": 16,
+    "name": "Plakidas Bridge",
+    "note": "",
+    "address": "Epar.Od. Metsovou-Kipon, Kipi 440 10, יוון",
+    "lat": 39.8617333,
+    "lng": 20.7862968,
+    "googleIds": [
+      "1394929067420064321",
+      "1538111714767788894"
+    ],
+    "placePath": "/g/11h4q7vclm",
+    "type": "attraction"
+  },
+  {
+    "id": "1395636520519550919:-2187019086911891517",
+    "sourceIndex": 17,
+    "name": "גשר ריו-אנטיריו",
+    "note": "",
+    "address": "Gefira Charilaos Trikoupis, 300 20, יוון",
+    "lat": 38.320558,
+    "lng": 21.7732991,
+    "googleIds": [
+      "1395636520519550919",
+      "-2187019086911891517"
+    ],
+    "placePath": "/m/03ccmt",
+    "type": "attraction"
+  },
+  {
+    "id": "1488175320683974097:5354949150092531325",
+    "sourceIndex": 18,
+    "name": "ΞΕΝΟΔΟΧΕΙΟ DAMOUCHARI, ΕΣΤΙΑΤΟΡΙΟ ΤΟ ΚΑΡΑΓΑΤΣΙ, ΒΑΪΝΟΠΟΥΛΟΣ ΑΠΟΣΤΟΛΟΣ",
+    "note": "",
+    "address": "ΜΑΓΝΗΣΙΑ 370 12, יוון",
+    "lat": 39.404681599999996,
+    "lng": 23.1799946,
+    "googleIds": [
+      "1488175320683974097",
+      "5354949150092531325"
+    ],
+    "placePath": "/g/12q4xgq7z",
+    "type": "attraction"
+  },
+  {
+    "id": "1488175321102640877:3479267130652158343",
+    "sourceIndex": 19,
+    "name": "Argyroyla Damouchari Studios",
+    "note": "",
+    "address": "Νταμούχαρη, Ntamouchari, יוון",
+    "lat": 39.404489,
+    "lng": 23.179914399999998,
+    "googleIds": [
+      "1488175321102640877",
+      "3479267130652158343"
+    ],
+    "placePath": "/g/11c1v4zbyv",
+    "type": "lodging"
+  },
+  {
+    "id": "1488175320816049237:5748990616218872490",
+    "sourceIndex": 20,
+    "name": "Pelion Scout",
+    "note": "",
+    "address": "Located at Hotel Marabou, Chorefto 370 01, יוון",
+    "lat": 39.4486255,
+    "lng": 23.1274195,
+    "googleIds": [
+      "1488175320816049237",
+      "5748990616218872490"
+    ],
+    "placePath": "/g/1pp2twngq",
+    "type": "lodging"
+  },
+  {
+    "id": "1394235142358034625:-7405662994519338303",
+    "sourceIndex": 21,
+    "name": "רמה מרקס Rema Marks",
+    "note": "",
+    "address": "Theodoriana 470 45, יוון",
+    "lat": 39.426429999999996,
+    "lng": 21.216396,
+    "googleIds": [
+      "1394235142358034625",
+      "-7405662994519338303"
+    ],
+    "placePath": "/g/11fktgnyv3",
+    "type": "attraction"
+  },
+  {
+    "id": "1394235399964445485:-6839616151062680568",
+    "sourceIndex": 22,
+    "name": "Acheloos beach",
+    "note": "",
+    "address": "Unnamed Road, Kentrika Tzoumerka 470 45, יוון",
+    "lat": 39.3879854,
+    "lng": 21.273989399999998,
+    "googleIds": [
+      "1394235399964445485",
+      "-6839616151062680568"
+    ],
+    "placePath": "/g/11h_d8mrhf",
+    "type": "water"
+  },
+  {
+    "id": "1486627797008342113:4085351859683767210",
+    "sourceIndex": 23,
+    "name": "נמל התעופה הבינלאומי אתונה-אלפתריוס וניזלוס",
+    "note": "",
+    "address": "נמל התעופה הבינלאומי אתונה-אלפתריוס וניזלוס (ATH), Attiki Odos, Spata 19019, יוון",
+    "lat": 37.936175,
+    "lng": 23.9465255,
+    "googleIds": [
+      "1486627797008342113",
+      "4085351859683767210"
+    ],
+    "placePath": "",
+    "type": "transport"
+  },
+  {
+    "id": "1394250073799620071:-8642888245339382352",
+    "sourceIndex": 24,
+    "name": "La Godru Αρλετος Κώστας",
+    "note": "",
+    "address": "Kalarites 440 01, יוון",
+    "lat": 39.582929,
+    "lng": 21.124861,
+    "googleIds": [
+      "1394250073799620071",
+      "-8642888245339382352"
+    ],
+    "placePath": "/g/1ygvszyr6",
+    "type": "attraction"
+  },
+  {
+    "id": "1394242891806847389:-4354137385278341132",
+    "sourceIndex": 25,
+    "name": "Orizontes Tzoumerkon Hotel Resort",
+    "note": "",
+    "address": "Tsopelas, Pramanta 440 01, יוון",
+    "lat": 39.518161,
+    "lng": 21.120722,
+    "googleIds": [
+      "1394242891806847389",
+      "-4354137385278341132"
+    ],
+    "placePath": "/g/11xfpq99p",
+    "type": "lodging"
+  },
+  {
+    "id": "1394995682187221323:-8599735009199543275",
+    "sourceIndex": 26,
+    "name": "Hotel Marathia",
+    "note": "לינה לילה ראשון25.8",
+    "address": "Zoni G, Epar.Od. Artas - Chanopoulou 143, Chanopoulo 482 00, יוון",
+    "lat": 39.1962972,
+    "lng": 20.9428271,
+    "googleIds": [
+      "1394995682187221323",
+      "-8599735009199543275"
+    ],
+    "placePath": "/g/11btwv104p",
+    "type": "lodging"
+  },
+  {
+    "id": "1394986648726663053:4007692876164298395",
+    "sourceIndex": 27,
+    "name": "Agnanta",
+    "note": "",
+    "address": "Agnanta 470 43, יוון",
+    "lat": 39.4558062,
+    "lng": 21.033343,
+    "googleIds": [
+      "1394986648726663053",
+      "4007692876164298395"
+    ],
+    "placePath": "/g/11vzb6g5q_",
+    "type": "attraction"
+  },
+  {
+    "id": "1394213295562095281:-3515844336527382051",
+    "sourceIndex": 28,
+    "name": "Σαν Παραμύθι",
+    "note": "",
+    "address": "Φιλύρα 421 00, יוון",
+    "lat": 39.489992,
+    "lng": 21.605321399999998,
+    "googleIds": [
+      "1394213295562095281",
+      "-3515844336527382051"
+    ],
+    "placePath": "/g/11pk9ftns6",
+    "type": "attraction"
+  },
+  {
+    "id": "1394211023355759367:-2790263635574111671",
+    "sourceIndex": 29,
+    "name": "Arched Bridge of Portaikos River at Pyli",
+    "note": "",
+    "address": "22ο χλμ. της εθνικής οδού Τρικάλων - Άρτας, Pili 420 32, יוון",
+    "lat": 39.4605452,
+    "lng": 21.6004,
+    "googleIds": [
+      "1394211023355759367",
+      "-2790263635574111671"
+    ],
+    "placePath": "/g/11b6gppqxs",
+    "type": "water"
+  },
+  {
+    "id": "39.492771,21.610599:39°29'34.0\"N 21°36'38.2\"E",
+    "sourceIndex": 30,
+    "name": "39°29'34.0\"N 21°36'38.2\"E",
+    "note": "26.8  עד 30.6 וילה",
+    "address": "",
+    "lat": 39.492771,
+    "lng": 21.610599,
+    "googleIds": [],
+    "placePath": "",
+    "type": "lodging"
+  },
+  {
+    "id": "1488278338527548815:230901009874333731",
+    "sourceIndex": 31,
+    "name": "Makrinitsa",
+    "note": "",
+    "address": "Makrinitsa 370 11, יוון",
+    "lat": 39.401737499999996,
+    "lng": 22.9877729,
+    "googleIds": [
+      "1488278338527548815",
+      "230901009874333731"
+    ],
+    "placePath": "/m/02jgvm",
+    "type": "attraction"
+  },
+  {
+    "id": "1488173753409109149:-6922865032703278795",
+    "sourceIndex": 32,
+    "name": "מפלים קטנים לפיקניק",
+    "note": "",
+    "address": "ΕΟ Τσαγκαράδας Χορευτού 58, Kissos 370 12, יוון",
+    "lat": 39.3979916,
+    "lng": 23.129263299999998,
+    "googleIds": [
+      "1488173753409109149",
+      "-6922865032703278795"
+    ],
+    "placePath": "/g/11d_0_vg6n",
+    "type": "water"
+  },
+  {
+    "id": "1394241446061790913:-1409934414608796349",
+    "sourceIndex": 33,
+    "name": "מפלי סודה",
+    "note": "",
+    "address": "Theodoriana 470 45, יוון",
+    "lat": 39.4402233,
+    "lng": 21.1890969,
+    "googleIds": [
+      "1394241446061790913",
+      "-1409934414608796349"
+    ],
+    "placePath": "/g/11g9mfpcmc",
+    "type": "water"
+  },
+  {
+    "id": "1394244422374243983:4768768098375452810",
+    "sourceIndex": 34,
+    "name": "Kefalovryso Waterfall",
+    "note": "",
+    "address": "Kefalovryso, Pramanta 440 01, יוון",
+    "lat": 39.4997974,
+    "lng": 21.1267712,
+    "googleIds": [
+      "1394244422374243983",
+      "4768768098375452810"
+    ],
+    "placePath": "/g/11kqr3tqmw",
+    "type": "water"
+  },
+  {
+    "id": "1394250867008151733:733822868339216283",
+    "sourceIndex": 35,
+    "name": "Kalarites - Syrrako Trail",
+    "note": "כפר יפה",
+    "address": "Kalarites 440 01, יוון",
+    "lat": 39.58549,
+    "lng": 21.119219899999997,
+    "googleIds": [
+      "1394250867008151733",
+      "733822868339216283"
+    ],
+    "placePath": "/g/11h7z9h131",
+    "type": "attraction"
+  },
+  {
+    "id": "1394250527693995353:-6614908035898234935",
+    "sourceIndex": 36,
+    "name": "Syrrako",
+    "note": "לבקר בכפר",
+    "address": "Syrrako 440 01, יוון",
+    "lat": 39.5944192,
+    "lng": 21.1076724,
+    "googleIds": [
+      "1394250527693995353",
+      "-6614908035898234935"
+    ],
+    "placePath": "/m/0dtn9l",
+    "type": "attraction"
+  },
+  {
+    "id": "1394250802921317775:-964494181285083040",
+    "sourceIndex": 37,
+    "name": "תצפית אגיוס גאורגיוס",
+    "note": "",
+    "address": "Unnamed Road, Voria Tzoumerka 440 01, יוון",
+    "lat": 39.5758113,
+    "lng": 21.108621,
+    "googleIds": [
+      "1394250802921317775",
+      "-964494181285083040"
+    ],
+    "placePath": "/g/11j1g555z8",
+    "type": "attraction"
+  },
+  {
+    "id": "1394250164826928461:3948130543277789388",
+    "sourceIndex": 38,
+    "name": "מנזר קיפינס",
+    "note": "",
+    "address": "North Tzoumerka 440 01, יוון",
+    "lat": 39.5675375,
+    "lng": 21.1301937,
+    "googleIds": [
+      "1394250164826928461",
+      "3948130543277789388"
+    ],
+    "placePath": "/g/1tjh1jh_",
+    "type": "attraction"
+  },
+  {
+    "id": "1394996402074904365:-7307381329573143209",
+    "sourceIndex": 39,
+    "name": "Ammotopos",
+    "note": "",
+    "address": "Ammotopos 482 00, יוון",
+    "lat": 39.270857199999995,
+    "lng": 20.94138,
+    "googleIds": [
+      "1394996402074904365",
+      "-7307381329573143209"
+    ],
+    "placePath": "/g/120p464z",
+    "type": "attraction"
+  },
+  {
+    "id": "1395019726386686981:-5761369782777867569",
+    "sourceIndex": 40,
+    "name": "Arta's Bridge",
+    "note": "",
+    "address": "Thiakogianni 14, Arta 471 00, יוון",
+    "lat": 39.1517438,
+    "lng": 20.9745855,
+    "googleIds": [
+      "1395019726386686981",
+      "-5761369782777867569"
+    ],
+    "placePath": "/m/0bgc5h",
+    "type": "attraction"
+  },
+  {
+    "id": "1394986624812583605:5207719702562623572",
+    "sourceIndex": 41,
+    "name": "Plaka Arched Bridge",
+    "note": "",
+    "address": "Unnamed Road, Voria Tzoumerka 470 43, יוון",
+    "lat": 39.460566299999996,
+    "lng": 21.0301068,
+    "googleIds": [
+      "1394986624812583605",
+      "5207719702562623572"
+    ],
+    "placePath": "/m/012rcjv4",
+    "type": "attraction"
+  },
+  {
+    "id": "1398200666556983221:-4453452844573512851",
+    "sourceIndex": 42,
+    "name": "Blue Caves Zakynthos",
+    "note": "",
+    "address": "Porthmos Zakinthou, יוון",
+    "lat": 37.9303439,
+    "lng": 20.7052518,
+    "googleIds": [
+      "1398200666556983221",
+      "-4453452844573512851"
+    ],
+    "placePath": "/g/11bvt2ff8f",
+    "type": "attraction"
+  },
+  {
+    "id": "1486678304777834521:6000933845702424728",
+    "sourceIndex": 43,
+    "name": "Fishing Mania",
+    "note": "",
+    "address": "",
+    "lat": 37.906821699999995,
+    "lng": 23.739354499999997,
+    "googleIds": [
+      "1486678304777834521",
+      "6000933845702424728"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394931712448060377:2705214140569520065",
+    "sourceIndex": 44,
+    "name": "Οβίρες Ρογκοβού",
+    "note": "",
+    "address": "Papingo 440 16, יוון",
+    "lat": 39.9735221,
+    "lng": 20.7253573,
+    "googleIds": [
+      "1394931712448060377",
+      "2705214140569520065"
+    ],
+    "placePath": "/g/11mdh_1kgr",
+    "type": "attraction"
+  },
+  {
+    "id": "1514081998235514577:-5249457699130881581",
+    "sourceIndex": 45,
+    "name": "Hidden Waterfall",
+    "note": "",
+    "address": "",
+    "lat": 31.4576389,
+    "lng": 35.363497599999995,
+    "googleIds": [
+      "1514081998235514577",
+      "-5249457699130881581"
+    ],
+    "placePath": "/g/11c1wwmcp5",
+    "type": "water"
+  },
+  {
+    "id": "1488227762755170679:-6490089077846098297",
+    "sourceIndex": 46,
+    "name": "Pagasetic Gulf",
+    "note": "",
+    "address": "Pagasetic Gulf, יוון",
+    "lat": 39.2292403,
+    "lng": 22.9535409,
+    "googleIds": [
+      "1488227762755170679",
+      "-6490089077846098297"
+    ],
+    "placePath": "/m/02j2tb",
+    "type": "attraction"
+  },
+  {
+    "id": "1488163701193591897:5449255265696248753",
+    "sourceIndex": 47,
+    "name": "Mylopotamos Beach",
+    "note": "",
+    "address": "96G3+25, Mouresi 370 12, יוון",
+    "lat": 39.375003299999996,
+    "lng": 23.202978299999998,
+    "googleIds": [
+      "1488163701193591897",
+      "5449255265696248753"
+    ],
+    "placePath": "/g/11xvdpyxfl",
+    "type": "water"
+  },
+  {
+    "id": "1394241853339938409:7711359928109284635",
+    "sourceIndex": 48,
+    "name": "Tzoumerka Waterfalls",
+    "note": "מפלי צומhttps://lh3.googleusercontent.com/p/AF1QipNQhIyOn-04rBX3N2hbhUhObsJ4uIcVhD8H17da=w128-h92-k-noרקה",
+    "address": "μονοπ. Καταράκτη Τζουμέρκων, Kentrika Tzoumerka 470 43, יוון",
+    "lat": 39.4579939,
+    "lng": 21.1241269,
+    "googleIds": [
+      "1394241853339938409",
+      "7711359928109284635"
+    ],
+    "placePath": "/g/11dxl80lmy",
+    "type": "water"
+  },
+  {
+    "id": "1394250087389210479:1072194960175489297",
+    "sourceIndex": 49,
+    "name": "מפליי קויאסה",
+    "note": "שוב לצומרקה [ כן, ממש גן עדן של מים ] בדרך לכפר קאלאריטס על הכביש אחרי מנזר קיפינה שגם הוא חובה, מתחיל מסלול הליכה קצר של כ 20 דקות ומגוון של מפלי מים בתוך היער העבותי, קל לפספס את הפנייה למסלול ההליכה, ראו מידע נרחב ל המפלים בעמוד קויסאה באתר איי יוון, כך או כך לכו בשביל עד למפל הראשון והשני, גם כאן התלבשו היטב, הלחות והמים הזורמים מכל הכיוונים הם גן עדן גם לנחשים וזוחלים אחרים [ רובם לא ארסיים] אבל רק ליתר בטחון, מסלול הליכה מקסים זה כולל גם מעבר על גשר ברזל מעל שצף מים שממש בא לכם לקפוץ פנימה, תענוג של מקום כמו כל חבל צומרקה. עוד מידע על קויאסה",
+    "address": "Kalarrites 440 01, יוון",
+    "lat": 39.578766,
+    "lng": 21.124399999999998,
+    "googleIds": [
+      "1394250087389210479",
+      "1072194960175489297"
+    ],
+    "placePath": "/g/11d_y8mqy9",
+    "type": "water"
+  },
+  {
+    "id": "1394934322817787971:360495970669714944",
+    "sourceIndex": 50,
+    "name": "Iliochori",
+    "note": "חוזרים לצפון יוון ושוב לכפרי זגוריה, הדובדבן שבקצת של הטבע הבתולי של יוון, איליוכורי הם סדרה של מספר מפלים שגם הם מסתיימים בבריכות מים בצבעים של טורקיז וגם אליהם ניתן להגיע ע\"י הליכה במסלול הליכה בתוך היעד העבותי [ הצטיידו גם בנעלי הליכה טובות] כי מעט רטוב ולח כאן ויש גם הרבה בעלי חיים שנח להם בסביבה מעולה זו, מסלול ההליכה אינו קשה אך ההגעה לאיליוחורי עצמה [ גם של של כפר] דורשת נסיעה של כ 40 קות מהאיזור המתוייר יותר של מרכז זגוריה וקניון ויקוס, למעשה מפלי המים של איליוחורי מצויים בצפון מזרח זגוריה [",
+    "address": "Iliochori 440 10, יוון",
+    "lat": 39.980156199999996,
+    "lng": 20.910290399999997,
+    "googleIds": [
+      "1394934322817787971",
+      "360495970669714944"
+    ],
+    "placePath": "/m/05z57d",
+    "type": "water"
+  },
+  {
+    "id": "1394931046476406963:108236480573988455",
+    "sourceIndex": 51,
+    "name": "Papingo Rock Pools",
+    "note": "",
+    "address": "Papingo 440 04, יוון",
+    "lat": 39.973348099999995,
+    "lng": 20.7255568,
+    "googleIds": [
+      "1394931046476406963",
+      "108236480573988455"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1393788429336558155:6638714539778552662",
+    "sourceIndex": 52,
+    "name": "Waterfalls of Edessa",
+    "note": "אדסה הוא אולי המפל המפורסם ביותר ביוון והוא מצוי דרומית לעיר אדסה שבחבל מקדוניהף גם במסגרת טיול בצפון יוון תוכלו להגיע אליו וגם במסגרת של יום טיול מסלוניקי ניתן להגיע למפל זה בקלות בעזרת שילוט נגיש וקל מכל הכניסות לעיר אדסה, מדובר במפל השופע ביותר ביוון, לא מדובר רק במפל אחד אלה בסדרה של מפלים עם שביל הליכה בינהם וגם מאחוריהם, כן אתם נכנסים למסלול הליכה קצר והמים עוברים מול פרצופכם כאשר מסלול ההליכה חפור בתוך הסלע כשהמפל לפניכם, מחזה מרענן ועוצמתי למדי, המפל מקבל מים ממספר מיקומים ומעיינות ביוון ובמקדוניה ונחשב כאמור למפל המפורסם ביותר ביוון. עוד מידע על אדסה",
+    "address": "Tsimiski 2, Edessa 582 00, יוון",
+    "lat": 40.8038958,
+    "lng": 22.0560284,
+    "googleIds": [
+      "1393788429336558155",
+      "6638714539778552662"
+    ],
+    "placePath": "/g/11gm9df1d6",
+    "type": "water"
+  },
+  {
+    "id": "1394242155490451863:-402729303227340409",
+    "sourceIndex": 53,
+    "name": "Katarraktis",
+    "note": "מפל קטרקטיס ניתן להגעה עם רכב ממש עד למפל, תוכלו לקרא מידע נוסף על מפל מים זה בגובה 80 מטר בעמוד קטאראקטיס שבאתר איי יוון הישראלי, קטראקטיס הכפר הוא אחד הכפרים היפים ביותר בצפון יוון באותה נשיפה עם הכפרים פפיגו, סיראקו, קאלאריטס, פרמנטה",
+    "address": "Katarraktis 470 43, יוון",
+    "lat": 39.4490985,
+    "lng": 21.1021385,
+    "googleIds": [
+      "1394242155490451863",
+      "-402729303227340409"
+    ],
+    "placePath": "/g/121qfwr1",
+    "type": "water"
+  },
+  {
+    "id": "1488278776023797357:-3917608750265213394",
+    "sourceIndex": 54,
+    "name": "Δολώματα & Είδη Αλιείας ο 'Αλέκος'",
+    "note": "",
+    "address": "Pirassou 20, Volos 383 34, יוון",
+    "lat": 39.3616838,
+    "lng": 22.9377097,
+    "googleIds": [
+      "1488278776023797357",
+      "-3917608750265213394"
+    ],
+    "placePath": "/g/11n0pg73k7",
+    "type": "attraction"
+  },
+  {
+    "id": "1488277334226982657:7397331081474999286",
+    "sourceIndex": 55,
+    "name": "Donax Fishing Store",
+    "note": "",
+    "address": "Κροκίου 2 &, Grigoriou Lampraki, Volos 383 34, יוון",
+    "lat": 39.361779999999996,
+    "lng": 22.9342219,
+    "googleIds": [
+      "1488277334226982657",
+      "7397331081474999286"
+    ],
+    "placePath": "/g/11_sndv3f",
+    "type": "attraction"
+  },
+  {
+    "id": "1488187580352402471:444412862743953002",
+    "sourceIndex": 56,
+    "name": "Labinou beach",
+    "note": "",
+    "address": "Labinou beach, Afetes 370 12, יוון",
+    "lat": 39.3608471,
+    "lng": 23.213060199999997,
+    "googleIds": [
+      "1488187580352402471",
+      "444412862743953002"
+    ],
+    "placePath": "/g/11c555418m",
+    "type": "water"
+  },
+  {
+    "id": "1488164108765503659:-4326577746537340023",
+    "sourceIndex": 57,
+    "name": "sea ​​cave of Panagia Megalomata",
+    "note": "",
+    "address": "Mouresi, יוון",
+    "lat": 39.3911774,
+    "lng": 23.192662799999997,
+    "googleIds": [
+      "1488164108765503659",
+      "-4326577746537340023"
+    ],
+    "placePath": "/g/11g697_7n5",
+    "type": "attraction"
+  },
+  {
+    "id": "1488175415999904699:7673065662807169928",
+    "sourceIndex": 58,
+    "name": "Plaka Beach",
+    "note": "",
+    "address": "Plaka Beach, Mouresi 370 12, יוון",
+    "lat": 39.4226175,
+    "lng": 23.1566919,
+    "googleIds": [
+      "1488175415999904699",
+      "7673065662807169928"
+    ],
+    "placePath": "/g/11cncr3zl6",
+    "type": "water"
+  },
+  {
+    "id": "1488175346987960635:-7602260948733919979",
+    "sourceIndex": 59,
+    "name": "Papa Nero Beach",
+    "note": "",
+    "address": "Papa Nero Beach, יוון",
+    "lat": 39.4091386,
+    "lng": 23.1688168,
+    "googleIds": [
+      "1488175346987960635",
+      "-7602260948733919979"
+    ],
+    "placePath": "/g/11cndbhyyt",
+    "type": "water"
+  },
+  {
+    "id": "1488175723131666009:-2489308312107030086",
+    "sourceIndex": 60,
+    "name": "Ag. Kiriaki",
+    "note": "",
+    "address": "Ag. Kiriaki, Tsagkarada 370 12, יוון",
+    "lat": 39.3942979,
+    "lng": 23.1812833,
+    "googleIds": [
+      "1488175723131666009",
+      "-2489308312107030086"
+    ],
+    "placePath": "/g/119vmlf5l",
+    "type": "attraction"
+  },
+  {
+    "id": "1488175866145038359:-2229566664727275747",
+    "sourceIndex": 61,
+    "name": "Tsagarada - Xourichti old bridge",
+    "note": "",
+    "address": "Mouresi 370 12, יוון",
+    "lat": 39.3686837,
+    "lng": 23.1744989,
+    "googleIds": [
+      "1488175866145038359",
+      "-2229566664727275747"
+    ],
+    "placePath": "/g/11cs179rct",
+    "type": "attraction"
+  },
+  {
+    "id": "1488175674569464821:-2286279944272030345",
+    "sourceIndex": 62,
+    "name": "העץ המפורסם בן 1500 שנה",
+    "note": "",
+    "address": "EO Neochoriou Tsagkaradas 26, Tsagkarada 370 12, יוון",
+    "lat": 39.386944799999995,
+    "lng": 23.174417,
+    "googleIds": [
+      "1488175674569464821",
+      "-2286279944272030345"
+    ],
+    "placePath": "/g/11c3sq_1rs",
+    "type": "attraction"
+  },
+  {
+    "id": "1488183491312407463:-1131320541569313740",
+    "sourceIndex": 63,
+    "name": "Ξενωνας Νιμπη",
+    "note": "מלון 7 לספטמבר עד 9 ספטמבר",
+    "address": "",
+    "lat": 39.2955119,
+    "lng": 23.1282587,
+    "googleIds": [
+      "1488183491312407463",
+      "-1131320541569313740"
+    ],
+    "placePath": "",
+    "type": "lodging"
+  },
+  {
+    "id": "1488175305384763501:-2405102966130976547",
+    "sourceIndex": 64,
+    "name": "Damouchari Castle",
+    "note": "",
+    "address": "",
+    "lat": 39.4047548,
+    "lng": 23.181246299999998,
+    "googleIds": [
+      "1488175305384763501",
+      "-2405102966130976547"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1488174694741176725:-8526308596839219061",
+    "sourceIndex": 65,
+    "name": "Damouchari (ntamouhari) view point",
+    "note": "",
+    "address": "",
+    "lat": 39.3998963,
+    "lng": 23.181804099999997,
+    "googleIds": [
+      "1488174694741176725",
+      "-8526308596839219061"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "39.3934722,23.1727778:39°23'36.5\"N 23°10'22.0\"E",
+    "sourceIndex": 66,
+    "name": "39°23'36.5\"N 23°10'22.0\"E",
+    "note": "",
+    "address": "",
+    "lat": 39.3934722,
+    "lng": 23.1727778,
+    "googleIds": [],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394928848956111597:3685911850954146124",
+    "sourceIndex": 67,
+    "name": "En Chora Vezitsa",
+    "note": "30לאוגוסט עד 3ספטמבר לינה",
+    "address": "",
+    "lat": 39.8735699,
+    "lng": 20.7526223,
+    "googleIds": [
+      "1394928848956111597",
+      "3685911850954146124"
+    ],
+    "placePath": "",
+    "type": "lodging"
+  },
+  {
+    "id": "1394957568265606569:4011326333978524740",
+    "sourceIndex": 68,
+    "name": "Anemotrypa Stalactite Cave",
+    "note": "",
+    "address": "",
+    "lat": 39.5132281,
+    "lng": 21.0869917,
+    "googleIds": [
+      "1394957568265606569",
+      "4011326333978524740"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394958454578276695:-6448119166469660119",
+    "sourceIndex": 69,
+    "name": "Klifkis Waterfall",
+    "note": "",
+    "address": "",
+    "lat": 39.4964352,
+    "lng": 21.0084581,
+    "googleIds": [
+      "1394958454578276695",
+      "-6448119166469660119"
+    ],
+    "placePath": "",
+    "type": "water"
+  },
+  {
+    "id": "1394250652904385611:667608139577094965",
+    "sourceIndex": 70,
+    "name": "Kouiassa Waterfalls",
+    "note": "",
+    "address": "",
+    "lat": 39.581544099999995,
+    "lng": 21.117328,
+    "googleIds": [
+      "1394250652904385611",
+      "667608139577094965"
+    ],
+    "placePath": "",
+    "type": "water"
+  },
+  {
+    "id": "1394947903919707171:5875838046916102334",
+    "sourceIndex": 71,
+    "name": "Φαράγγι Δέος",
+    "note": "",
+    "address": "P3HM+7G, Egnatia 442 00, יוון",
+    "lat": 39.7282203,
+    "lng": 21.0838151,
+    "googleIds": [
+      "1394947903919707171",
+      "5875838046916102334"
+    ],
+    "placePath": "/g/11t6mw2f_j",
+    "type": "attraction"
+  },
+  {
+    "id": "1488183768411772771:2651831484537971266",
+    "sourceIndex": 72,
+    "name": "Pelion Boats",
+    "note": "",
+    "address": "",
+    "lat": 39.290343799999995,
+    "lng": 23.142540399999998,
+    "googleIds": [
+      "1488183768411772771",
+      "2651831484537971266"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1488196835560659741:-2622333212696125782",
+    "sourceIndex": 73,
+    "name": "Paou Boats - Rent a boat in Pelion",
+    "note": "",
+    "address": "",
+    "lat": 39.2005974,
+    "lng": 23.198747899999997,
+    "googleIds": [
+      "1488196835560659741",
+      "-2622333212696125782"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1488184354796700637:3445222143041059498",
+    "sourceIndex": 74,
+    "name": "Pelion Rent A Boat",
+    "note": "",
+    "address": "",
+    "lat": 39.3086695,
+    "lng": 23.0996369,
+    "googleIds": [
+      "1488184354796700637",
+      "3445222143041059498"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1488184413562410271:-590293800320400506",
+    "sourceIndex": 75,
+    "name": "Pelion Boats Adventure",
+    "note": "",
+    "address": "",
+    "lat": 39.3075499,
+    "lng": 23.1121163,
+    "googleIds": [
+      "1488184413562410271",
+      "-590293800320400506"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394162862317880783:6914695393883906041",
+    "sourceIndex": 76,
+    "name": "Main Observation Deck of Meteora",
+    "note": "",
+    "address": "Kalabaka 422 00, יוון",
+    "lat": 39.7192801,
+    "lng": 21.6370082,
+    "googleIds": [
+      "1394162862317880783",
+      "6914695393883906041"
+    ],
+    "placePath": "/g/11c5b6h2xg",
+    "type": "attraction"
+  },
+  {
+    "id": "1394162846102511895:8493630276537474071",
+    "sourceIndex": 77,
+    "name": "Monastery of the Holy Trinity",
+    "note": "",
+    "address": "Kalabaka 422 00, יוון",
+    "lat": 39.7131354,
+    "lng": 21.6358012,
+    "googleIds": [
+      "1394162846102511895",
+      "8493630276537474071"
+    ],
+    "placePath": "/m/0h3wfr8",
+    "type": "attraction"
+  },
+  {
+    "id": "1394162760264507437:8519350754938583493",
+    "sourceIndex": 78,
+    "name": "Holy Monastery Ypapanti",
+    "note": "",
+    "address": "Meteoron, Kalampaka 422 00, יוון",
+    "lat": 39.7336396,
+    "lng": 21.630945999999998,
+    "googleIds": [
+      "1394162760264507437",
+      "8519350754938583493"
+    ],
+    "placePath": "/g/11cn98z5v4",
+    "type": "attraction"
+  },
+  {
+    "id": "1394162787777166721:1320951050310840479",
+    "sourceIndex": 79,
+    "name": "Psaropetra Viewpoint",
+    "note": "",
+    "address": "Políchni 422 00, יוון",
+    "lat": 39.729663599999995,
+    "lng": 21.642273199999998,
+    "googleIds": [
+      "1394162787777166721",
+      "1320951050310840479"
+    ],
+    "placePath": "/g/11sswxrnw3",
+    "type": "attraction"
+  },
+  {
+    "id": "1394162803393677853:3147073817191655510",
+    "sourceIndex": 80,
+    "name": "Holy Monastery of the Great Meteoron - Transfiguration of the Saviour",
+    "note": "",
+    "address": "G, Kalampaka 422 00, יוון",
+    "lat": 39.726336599999996,
+    "lng": 21.6263372,
+    "googleIds": [
+      "1394162803393677853",
+      "3147073817191655510"
+    ],
+    "placePath": "/m/0v1_wrr",
+    "type": "attraction"
+  },
+  {
+    "id": "1394162854580922691:4206720266063091141",
+    "sourceIndex": 81,
+    "name": "Holy Monastery of Rousanos - Saint Barbara",
+    "note": "",
+    "address": "Μετεώρων, Kalampaka 422 00, יוון",
+    "lat": 39.721574,
+    "lng": 21.6319069,
+    "googleIds": [
+      "1394162854580922691",
+      "4206720266063091141"
+    ],
+    "placePath": "/g/12338f80",
+    "type": "attraction"
+  },
+  {
+    "id": "1394162803542228793:8153676780058456831",
+    "sourceIndex": 82,
+    "name": "מטאורה",
+    "note": "",
+    "address": "Kalabaka 422 00, יוון",
+    "lat": 39.7217044,
+    "lng": 21.6305896,
+    "googleIds": [
+      "1394162803542228793",
+      "8153676780058456831"
+    ],
+    "placePath": "/m/012d9z",
+    "type": "attraction"
+  },
+  {
+    "id": "1393763801634590707:-3287725389194435706",
+    "sourceIndex": 83,
+    "name": "Edessa",
+    "note": "",
+    "address": "Edessa 582 00, יוון",
+    "lat": 40.8016803,
+    "lng": 22.0439798,
+    "googleIds": [
+      "1393763801634590707",
+      "-3287725389194435706"
+    ],
+    "placePath": "/m/0fzsqt",
+    "type": "attraction"
+  },
+  {
+    "id": "1394931829059480107:-1527863983155157200",
+    "sourceIndex": 84,
+    "name": "הפארק הלאומי ויקוס-אאוס",
+    "note": "",
+    "address": "Μικρό Πάπιγκο 440 04, יוון",
+    "lat": 39.9811607,
+    "lng": 20.7502302,
+    "googleIds": [
+      "1394931829059480107",
+      "-1527863983155157200"
+    ],
+    "placePath": "/m/04_kq6",
+    "type": "attraction"
+  },
+  {
+    "id": "1394928812576101353:-8735423715830378153",
+    "sourceIndex": 85,
+    "name": "קניון ויקוס, זגורוכוריה.",
+    "note": "",
+    "address": "Monodendri 440 07, יוון",
+    "lat": 39.918340799999996,
+    "lng": 20.747910599999997,
+    "googleIds": [
+      "1394928812576101353",
+      "-8735423715830378153"
+    ],
+    "placePath": "/m/064r97l",
+    "type": "attraction"
+  },
+  {
+    "id": "1394254757909996925:3340156326968275726",
+    "sourceIndex": 86,
+    "name": "Metsovo Square",
+    "note": "",
+    "address": "Unnamed Road, Metsovo 442 00, יוון",
+    "lat": 39.7696745,
+    "lng": 21.1829578,
+    "googleIds": [
+      "1394254757909996925",
+      "3340156326968275726"
+    ],
+    "placePath": "/g/11hcvzvqr4",
+    "type": "attraction"
+  },
+  {
+    "id": "1394963926524365149:738732097491133886",
+    "sourceIndex": 87,
+    "name": "Rafting Active Nature -ΖΑΓΟΡΙΑ",
+    "note": "",
+    "address": "",
+    "lat": 39.9728298,
+    "lng": 20.6603531,
+    "googleIds": [
+      "1394963926524365149",
+      "738732097491133886"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394011567106398185:-3936379770378074772",
+    "sourceIndex": 88,
+    "name": "Xtremeway Outdoors on Mount Olympus, Greece ''Live The Experience''",
+    "note": "",
+    "address": "",
+    "lat": 39.976135899999996,
+    "lng": 22.6511218,
+    "googleIds": [
+      "1394011567106398185",
+      "-3936379770378074772"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1393993403217022143:5543056261549025851",
+    "sourceIndex": 89,
+    "name": "Adventure in Greece outdoor activities",
+    "note": "",
+    "address": "",
+    "lat": 39.9286222,
+    "lng": 22.5623966,
+    "googleIds": [
+      "1393993403217022143",
+      "5543056261549025851"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1488260602854334957:-6700975531799420307",
+    "sourceIndex": 90,
+    "name": "Canyoning Mountain Escapes",
+    "note": "",
+    "address": "",
+    "lat": 39.390823,
+    "lng": 23.168108,
+    "googleIds": [
+      "1488260602854334957",
+      "-6700975531799420307"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394324971394049963:-7830001707928078931",
+    "sourceIndex": 91,
+    "name": "Greek Adventure - Experience A Different Side Of Greece",
+    "note": "",
+    "address": "",
+    "lat": 39.8830246,
+    "lng": 20.7458888,
+    "googleIds": [
+      "1394324971394049963",
+      "-7830001707928078931"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394986649546231739:-429579142512222239",
+    "sourceIndex": 92,
+    "name": "Rafting Ioannina - Άραχθος",
+    "note": "",
+    "address": "",
+    "lat": 39.4557694,
+    "lng": 21.0343542,
+    "googleIds": [
+      "1394986649546231739",
+      "-429579142512222239"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394907958187542033:5124900093180876754",
+    "sourceIndex": 93,
+    "name": "Via Natura Voidomatis Rafting Base",
+    "note": "",
+    "address": "",
+    "lat": 39.9693046,
+    "lng": 20.6610464,
+    "googleIds": [
+      "1394907958187542033",
+      "5124900093180876754"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394964682729839469:1959358816452092157",
+    "sourceIndex": 94,
+    "name": "AlpineZone",
+    "note": "",
+    "address": "",
+    "lat": 39.6346932,
+    "lng": 20.859547499999998,
+    "googleIds": [
+      "1394964682729839469",
+      "1959358816452092157"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394932777131616623:-394863022618122407",
+    "sourceIndex": 95,
+    "name": "extreme-rafting",
+    "note": "",
+    "address": "",
+    "lat": 39.968062499999995,
+    "lng": 20.7173125,
+    "googleIds": [
+      "1394932777131616623",
+      "-394863022618122407"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394906632600633117:-2212492242567639821",
+    "sourceIndex": 96,
+    "name": "Trekking Hellas Ioannina Rafting Base",
+    "note": "",
+    "address": "",
+    "lat": 39.9694998,
+    "lng": 20.6561955,
+    "googleIds": [
+      "1394906632600633117",
+      "-2212492242567639821"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1489591487073590363:8789951521527076549",
+    "sourceIndex": 97,
+    "name": "Forestis outdoor activities",
+    "note": "",
+    "address": "",
+    "lat": 41.267311299999996,
+    "lng": 24.4898666,
+    "googleIds": [
+      "1489591487073590363",
+      "8789951521527076549"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1489610740858751559:-2703369923713642729",
+    "sourceIndex": 98,
+    "name": "Riverland outdoor activities",
+    "note": "",
+    "address": "",
+    "lat": 41.0867228,
+    "lng": 24.7814582,
+    "googleIds": [
+      "1489610740858751559",
+      "-2703369923713642729"
+    ],
+    "placePath": "",
+    "type": "water"
+  },
+  {
+    "id": "1394986652608627635:-4651572833573317252",
+    "sourceIndex": 99,
+    "name": "Via Natura Rafting Tzoumerka",
+    "note": "",
+    "address": "",
+    "lat": 39.4529059,
+    "lng": 21.0348209,
+    "googleIds": [
+      "1394986652608627635",
+      "-4651572833573317252"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394909063146229965:1503451817388486026",
+    "sourceIndex": 100,
+    "name": "Rafting Ioannina",
+    "note": "",
+    "address": "Αρίστη 440 04, Epar.Od. Kalpakiou-Papigkou 126, Ιωάννινα 455 00, יוון",
+    "lat": 39.9360217,
+    "lng": 20.672745799999998,
+    "googleIds": [
+      "1394909063146229965",
+      "1503451817388486026"
+    ],
+    "placePath": "/g/11cmcg5qh8",
+    "type": "attraction"
+  },
+  {
+    "id": "1394909064302537643:5039684661329498990",
+    "sourceIndex": 101,
+    "name": "Rafting Ζαγοροχώρια",
+    "note": "",
+    "address": "",
+    "lat": 39.9358396,
+    "lng": 20.6707836,
+    "googleIds": [
+      "1394909064302537643",
+      "5039684661329498990"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394931111205611295:545008222668878762",
+    "sourceIndex": 102,
+    "name": "Papigo Rafting",
+    "note": "",
+    "address": "",
+    "lat": 39.9675963,
+    "lng": 20.7177308,
+    "googleIds": [
+      "1394931111205611295",
+      "545008222668878762"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394907522652590557:4657412854307627042",
+    "sourceIndex": 103,
+    "name": "ALPINE ZONE rafting Voidomatis",
+    "note": "",
+    "address": "XM95+W7, Konitsa 440 12, יוון",
+    "lat": 39.9698717,
+    "lng": 20.658159299999998,
+    "googleIds": [
+      "1394907522652590557",
+      "4657412854307627042"
+    ],
+    "placePath": "/g/11xmx3hv2n",
+    "type": "attraction"
+  },
+  {
+    "id": "1488164189536906013:-7155962942143837114",
+    "sourceIndex": 104,
+    "name": "Fakistra waterfall",
+    "note": "",
+    "address": "",
+    "lat": 39.3890841,
+    "lng": 23.1922996,
+    "googleIds": [
+      "1488164189536906013",
+      "-7155962942143837114"
+    ],
+    "placePath": "",
+    "type": "water"
+  },
+  {
+    "id": "1488164080625200125:-831881133081353125",
+    "sourceIndex": 105,
+    "name": "Paralia Fakistra",
+    "note": "",
+    "address": "",
+    "lat": 39.3897842,
+    "lng": 23.1932208,
+    "googleIds": [
+      "1488164080625200125",
+      "-831881133081353125"
+    ],
+    "placePath": "",
+    "type": "attraction"
+  },
+  {
+    "id": "1394986621267225077:7865845845995156984",
+    "sourceIndex": 106,
+    "name": "ALPINE ZONE (Άραχθος)",
+    "note": "",
+    "address": "Chrisostomou Smirnis 1, Ioannina 453 32, יוון",
+    "lat": 39.457949,
+    "lng": 21.032488,
+    "googleIds": [
+      "1394986621267225077",
+      "7865845845995156984"
+    ],
+    "placePath": "/g/1ptxshby4",
+    "type": "attraction"
+  },
+  {
+    "id": "1394965573581392913:5015014804881954667",
+    "sourceIndex": 107,
+    "name": "Rafting Zagoroxoria",
+    "note": "",
+    "address": "Anexartisias, Ioannina 454 44, יוון",
+    "lat": 39.6699181,
+    "lng": 20.8524206,
+    "googleIds": [
+      "1394965573581392913",
+      "5015014804881954667"
+    ],
+    "placePath": "/g/11hdy27kqd",
+    "type": "attraction"
+  }
+]
