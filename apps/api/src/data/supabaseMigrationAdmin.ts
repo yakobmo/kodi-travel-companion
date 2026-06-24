@@ -1,0 +1,80 @@
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import postgres from "postgres";
+
+const grantsSqlPath = fileURLToPath(new URL("../../../../supabase/service-role-grants.sql", import.meta.url));
+
+export interface SupabaseGrantApplyResult {
+  configured: boolean;
+  authorized: boolean;
+  applied: boolean;
+  verified: boolean;
+  checkedAt: string;
+  error?: string;
+}
+
+export function isValidMigrationAdminToken(input: string | undefined) {
+  return Boolean(process.env.MIGRATION_ADMIN_TOKEN && input && input === process.env.MIGRATION_ADMIN_TOKEN);
+}
+
+function getDatabaseUrl() {
+  return process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+}
+
+export async function applySupabaseServiceRoleGrants(): Promise<SupabaseGrantApplyResult> {
+  const checkedAt = new Date().toISOString();
+  const databaseUrl = getDatabaseUrl();
+
+  if (!databaseUrl) {
+    return {
+      configured: false,
+      authorized: true,
+      applied: false,
+      verified: false,
+      checkedAt,
+      error: "missing_SUPABASE_DB_URL_or_DATABASE_URL"
+    };
+  }
+
+  const sql = postgres(databaseUrl, {
+    ssl: "require",
+    max: 1,
+    idle_timeout: 5,
+    connect_timeout: 20
+  });
+
+  try {
+    await sql.unsafe(await readFile(grantsSqlPath, "utf8"));
+    const rows = await sql`
+      select
+        has_schema_privilege('service_role', 'public', 'USAGE') as schema_usage,
+        has_table_privilege('service_role', 'public.demo_storage_states', 'SELECT') as can_select,
+        has_table_privilege('service_role', 'public.demo_storage_states', 'INSERT') as can_insert,
+        has_table_privilege('service_role', 'public.demo_storage_states', 'UPDATE') as can_update
+    `;
+    const verification = rows[0];
+    const verified = Boolean(
+      verification?.schema_usage && verification?.can_select && verification?.can_insert && verification?.can_update
+    );
+
+    return {
+      configured: true,
+      authorized: true,
+      applied: true,
+      verified,
+      checkedAt,
+      error: verified ? undefined : "service_role_grant_verification_failed"
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      authorized: true,
+      applied: false,
+      verified: false,
+      checkedAt,
+      error: error instanceof Error ? error.message : "unknown_grant_apply_error"
+    };
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
+}

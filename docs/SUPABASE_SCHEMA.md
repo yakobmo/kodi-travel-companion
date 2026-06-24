@@ -140,6 +140,30 @@ It does not print the connection string and it verifies `public.demo_storage_sta
 
 The grants script verifies that `service_role` can select, insert and update the bridge table.
 
+## Guarded Remote Grants Endpoint
+
+For Render automation, the API exposes a guarded endpoint:
+
+```text
+POST /api/admin/supabase/apply-grants
+Header: x-kodi-admin-token: <MIGRATION_ADMIN_TOKEN>
+```
+
+It runs only `supabase/service-role-grants.sql`; it does not accept arbitrary SQL from the request body.
+
+Required Render-only environment variables:
+
+```text
+SUPABASE_DB_URL=
+MIGRATION_ADMIN_TOKEN=
+```
+
+After running it, verify:
+
+```text
+POST /api/trips/demo/storage/supabase-bridge/verify
+```
+
 ## Current Project
 
 The Supabase project was created and the schema was applied successfully:

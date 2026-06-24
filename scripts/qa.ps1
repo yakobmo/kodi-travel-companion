@@ -24,6 +24,7 @@ $requiredFiles = @(
   "apps/api/src/domain/types.ts",
   "apps/api/src/data/demoStorage.ts",
   "apps/api/src/data/supabaseStatus.ts",
+  "apps/api/src/data/supabaseMigrationAdmin.ts",
   "apps/api/src/data/localMessages.ts",
   "apps/api/src/data/localMembers.ts",
   "apps/api/src/data/localPlaces.ts",
@@ -303,6 +304,10 @@ if (-not $serverSource.Contains("/api/trips/demo/storage/supabase-bridge/verify"
   throw "API server must expose a safe Supabase bridge verification endpoint before switching live storage."
 }
 
+if (-not $serverSource.Contains("/api/admin/supabase/apply-grants") -or -not $serverSource.Contains("x-kodi-admin-token")) {
+  throw "API server must expose the Supabase grants endpoint only behind an admin token."
+}
+
 if (-not $serverSource.Contains("/api/trips/demo/agent-actions/authorize")) {
   throw "API server is missing the agent action authorization endpoint."
 }
@@ -522,6 +527,15 @@ foreach ($requiredEnvName in @("STORAGE_DRIVER=file", "SUPABASE_URL=", "SUPABASE
   if (-not $envExampleSource.Contains($requiredEnvName)) {
     throw ".env.example is missing Supabase environment contract: $requiredEnvName"
   }
+}
+
+if (-not $envExampleSource.Contains("MIGRATION_ADMIN_TOKEN=")) {
+  throw ".env.example must include MIGRATION_ADMIN_TOKEN for guarded migration automation."
+}
+
+$migrationAdminSource = Get-Content (Join-Path $root "apps\api\src\data\supabaseMigrationAdmin.ts") -Raw
+if (-not $migrationAdminSource.Contains("MIGRATION_ADMIN_TOKEN") -or -not $migrationAdminSource.Contains("service-role-grants.sql")) {
+  throw "Supabase migration admin must be guarded by MIGRATION_ADMIN_TOKEN and run only the grants file."
 }
 
 $schemaScriptSource = Get-Content (Join-Path $root "scripts\apply-supabase-schema.mjs") -Raw

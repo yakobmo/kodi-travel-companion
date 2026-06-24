@@ -7,6 +7,7 @@ import { appendDemoTripMessage, loadDemoTripMessages, resetDemoTripMessages } fr
 import { buildDemoTripSetupState, resetDemoTripSetupState, saveDemoTripSetupState } from "./data/localSetupState.js";
 import { getDemoStorageMetadata, verifySupabaseBridgeStorage } from "./data/demoStorage.js";
 import { checkSupabaseRuntime } from "./data/supabaseStatus.js";
+import { applySupabaseServiceRoleGrants, isValidMigrationAdminToken } from "./data/supabaseMigrationAdmin.js";
 import { loadDemoGroupDestination, resetDemoGroupDestination, saveDemoGroupDestination } from "./data/localGroupDestination.js";
 import { loadDemoGroupRoute, resetDemoGroupRoute, saveDemoGroupRoute } from "./data/localGroupRoute.js";
 import { buildDemoTripState } from "./data/localTripState.js";
@@ -123,6 +124,22 @@ app.post("/api/trips/demo/storage/supabase-bridge/verify", async (_req, res) => 
   res.json({
     tripGroupId: "group_family_greece_demo",
     bridge: await verifySupabaseBridgeStorage()
+  });
+});
+
+app.post("/api/admin/supabase/apply-grants", async (req, res) => {
+  const token = req.headers["x-kodi-admin-token"];
+  const normalizedToken = Array.isArray(token) ? token[0] : token;
+
+  if (!isValidMigrationAdminToken(normalizedToken)) {
+    res.status(403).json({
+      error: "admin_token_required"
+    });
+    return;
+  }
+
+  res.json({
+    supabase: await applySupabaseServiceRoleGrants()
   });
 });
 

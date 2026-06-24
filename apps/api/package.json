@@ -15,6 +15,7 @@
     "dotenv": "latest",
     "express": "latest",
     "openai": "latest",
+    "postgres": "^3.4.9",
     "zod": "latest"
   },
   "devDependencies": {
