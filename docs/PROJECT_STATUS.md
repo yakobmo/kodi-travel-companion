@@ -135,7 +135,7 @@ Current Supabase state:
 - Runtime driver: Supabase active in production on `2026-06-25`
 - Production storage smoke: write/read passed, then demo state reset back to clean startup data
 - First relational table migration: group messages use `group_messages`; public write/read smoke passed on `2026-06-25`
-- Second relational table migration: member roster and live locations use relational tables; public smoke pending deploy
+- Second relational table migration: member roster and live locations use relational tables; public smoke passed on `2026-06-25`
 - Remaining demo state still uses the JSON bridge until migrated
 
 ## QA
