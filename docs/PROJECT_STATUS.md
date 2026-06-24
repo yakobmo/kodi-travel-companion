@@ -100,6 +100,14 @@ Current local Git state:
 
 The app is prepared for a single Render web service. The API serves both `/api/*` and the built React app from the same service.
 
+Current Render state:
+
+- Service name: `kodi-travel-companion`
+- Service ID: `srv-d8u2lr0js32c73cajpqg`
+- Public URL: `https://kodi-travel-companion.onrender.com`
+- Status: live
+- Last public smoke: passed on `2026-06-24`
+
 ## QA
 
 Before every commit:

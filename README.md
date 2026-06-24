@@ -109,6 +109,10 @@ Local URLs:
 - API health: `http://127.0.0.1:3001/api/health`
 - Demo places: `http://127.0.0.1:3001/api/trips/demo/places`
 
+Public MVP URL:
+
+- `https://kodi-travel-companion.onrender.com`
+
 ## Important Docs
 
 Repository-local docs:

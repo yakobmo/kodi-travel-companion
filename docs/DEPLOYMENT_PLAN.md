@@ -32,7 +32,20 @@ https://github.com/yakobmo/kodi-travel-companion
 
 ## Render Plan
 
-After GitHub is connected:
+Render is now connected as a new service:
+
+- Service name: `kodi-travel-companion`
+- Service ID: `srv-d8u2lr0js32c73cajpqg`
+- Public URL: `https://kodi-travel-companion.onrender.com`
+- Status: live
+- Last verified at: `2026-06-24`
+
+Post-deploy smoke passed:
+
+- `/` returned HTTP 200.
+- `/api/health` returned HTTP 200 with `{"ok":true,"service":"ai-travel-companion-api","version":"0.1.0"}`.
+
+Render setup rules:
 
 1. Create a new Render service.
 2. Connect it to the new travel-app repository.
