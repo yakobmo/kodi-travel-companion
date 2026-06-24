@@ -120,6 +120,7 @@ Repository-local docs:
 - `docs/PROJECT_STATUS.md`
 - `docs/ARCHITECTURE_LINKS.md`
 - `docs/DEPLOYMENT_PLAN.md`
+- `docs/SUPABASE_SCHEMA.md`
 
 The original planning docs in the Codex workspace live one directory above this project:
 

@@ -8,6 +8,8 @@ $requiredFiles = @(
   ".env.example",
   "README.md",
   "DEVELOPMENT_WORKFLOW.md",
+  "supabase/schema.sql",
+  "docs/SUPABASE_SCHEMA.md",
   "scripts/dev-api.ps1",
   "scripts/dev-web.ps1",
   "scripts/smoke-local.mjs",
@@ -441,6 +443,39 @@ if (-not $storageSource.Contains("DemoStorageDriver") -or -not $storageSource.Co
 
 if (-not $storageSource.Contains("migrationTarget") -or -not $storageSource.Contains("realtimeReady")) {
   throw "Demo storage metadata must describe DB/realtime migration readiness."
+}
+
+$supabaseSchemaSource = Get-Content (Join-Path $root "supabase\schema.sql") -Raw
+foreach ($requiredTable in @(
+  "trip_groups",
+  "trip_members",
+  "trip_places",
+  "location_sharing_consents",
+  "live_locations",
+  "group_messages",
+  "group_destinations",
+  "group_routes",
+  "group_route_stops"
+)) {
+  if (-not $supabaseSchemaSource.Contains("public.$requiredTable")) {
+    throw "Supabase schema is missing table: $requiredTable"
+  }
+}
+
+foreach ($realtimeTable in @(
+  "group_messages",
+  "live_locations",
+  "group_destinations",
+  "group_routes",
+  "group_route_stops"
+)) {
+  if (-not $supabaseSchemaSource.Contains("alter publication supabase_realtime add table public.$realtimeTable")) {
+    throw "Supabase schema must publish realtime table: $realtimeTable"
+  }
+}
+
+if (-not $supabaseSchemaSource.Contains("enable row level security")) {
+  throw "Supabase schema must enable RLS before production use."
 }
 
 if (-not $serverSource.Contains("Access-Control-Allow-Origin")) {

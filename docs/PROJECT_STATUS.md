@@ -31,6 +31,7 @@ Implemented locally:
 - Group destination approval.
 - Group route creation, active stop, navigation to active stop, progress, and completion.
 - Storage driver contract that prepares a future DB/realtime migration.
+- Supabase SQL schema for the first DB/realtime gate.
 
 ## Current Storage
 
@@ -66,7 +67,7 @@ PB is a separate product and must remain untouched.
 3. Configure Render as a new service.
 4. Run public smoke tests after deploy.
 5. Create a Supabase project.
-6. Add schema for groups, members, messages, places, live locations, destinations, routes, and route stops.
+6. Apply `supabase/schema.sql` for groups, members, messages, places, live locations, destinations, routes, and route stops.
 7. Add a Supabase storage driver beside the current file driver.
 8. Add production environment variables.
 
