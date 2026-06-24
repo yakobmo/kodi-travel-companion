@@ -366,12 +366,13 @@ if (-not $demoStorageSource.Contains(".data") -or -not $demoStorageSource.Contai
   throw "Demo storage must write to the local .data demo-state.json file."
 }
 
-if (-not $demoStorageSource.Contains("STORAGE_DRIVER") -or -not $demoStorageSource.Contains("SUPABASE_SERVICE_ROLE_KEY")) {
-  throw "Demo storage metadata must expose the future Supabase storage driver configuration gate."
+$supabaseClientSource = Get-Content (Join-Path $root "apps\api\src\data\supabaseClient.ts") -Raw
+if (-not $demoStorageSource.Contains("STORAGE_DRIVER") -or -not $supabaseClientSource.Contains("SUPABASE_SERVICE_ROLE_KEY")) {
+  throw "Demo storage metadata must expose the Supabase storage driver configuration gate."
 }
 
 if (-not $demoStorageSource.Contains("loadDemoStorageAsync") -or -not $demoStorageSource.Contains("saveDemoStorageAsync")) {
-  throw "Demo storage must include async bridge functions before Supabase migration."
+  throw "Demo storage must include async bridge functions for Supabase migration."
 }
 
 if (-not $demoStorageSource.Contains("messages: StoredDemoMessage[] | null")) {
@@ -381,6 +382,10 @@ if (-not $demoStorageSource.Contains("messages: StoredDemoMessage[] | null")) {
 $localMessagesSource = Get-Content (Join-Path $root "apps\api\src\data\localMessages.ts") -Raw
 if (-not $localMessagesSource.Contains("initialDemoMessages") -or -not $localMessagesSource.Contains("appendDemoTripMessage")) {
   throw "Demo messages data layer must provide initial messages and append persisted messages."
+}
+
+if (-not $localMessagesSource.Contains("group_messages") -or -not $localMessagesSource.Contains("DEMO_TRIP_GROUP_UUID")) {
+  throw "Demo messages must use the relational Supabase group_messages table when Supabase storage is active."
 }
 
 $agentActionsSource = Get-Content (Join-Path $root "apps\api\src\permissions\agentActions.ts") -Raw

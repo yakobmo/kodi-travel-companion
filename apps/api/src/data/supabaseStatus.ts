@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "./supabaseClient.js";
 
 export interface SupabaseRuntimeStatus {
   configured: boolean;
@@ -53,12 +53,10 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
   }
 
   try {
-    const supabase = createClient(url, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
-    });
+    const supabase = createSupabaseServerClient();
+    if (!supabase) {
+      throw new Error("missing_supabase_server_client");
+    }
     const { error } = await supabase.from("demo_storage_states").select("storage_key", { count: "exact", head: true });
 
     if (error) {

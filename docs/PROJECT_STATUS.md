@@ -35,6 +35,7 @@ Implemented locally:
 - Supabase storage configuration gate through `.env.example` and `/api/trips/demo/storage`.
 - Supabase bridge verification endpoint for safe write/read testing before switching live storage.
 - Supabase-backed demo storage driver behind `STORAGE_DRIVER=supabase`.
+- Group chat messages backed by the relational `group_messages` table when Supabase is active.
 
 ## Current Storage
 
@@ -132,6 +133,7 @@ Current Supabase state:
 - Bridge verification from live Render service: write/read passed on `2026-06-25`
 - Runtime driver: Supabase active in production on `2026-06-25`
 - Production storage smoke: write/read passed, then demo state reset back to clean startup data
+- First relational table migration: group messages use `group_messages`; remaining demo state still uses the JSON bridge until migrated
 
 ## QA
 

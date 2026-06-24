@@ -196,6 +196,7 @@ URL: https://szlziurxfvjnqzjwrhlq.supabase.co
 Schema applied: 2026-06-24
 Live bridge verified: 2026-06-25
 Production storage active: 2026-06-25
+First relational runtime path: group_messages
 ```
 
 No Supabase keys are committed to this repository.

@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TripMemberLocationView, TripSetupSubmission } from "../domain/types.js";
+import { createSupabaseServerClient, hasSupabaseServerConfig } from "./supabaseClient.js";
 
 export interface StoredDemoMessage {
   id: string;
@@ -79,21 +80,9 @@ function getRequestedStorageDriver(): StorageDriverName {
   return process.env.NODE_ENV === "production" && hasSupabaseServerConfig() ? "supabase" : "file";
 }
 
-function hasSupabaseServerConfig() {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
-
-function createSupabaseServerClient(): SupabaseClient | null {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return null;
-  }
-
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
-  });
+export function getActiveDemoStorageDriverName(): StorageDriverName {
+  const requestedDriver = getRequestedStorageDriver();
+  return requestedDriver === "supabase" && hasSupabaseServerConfig() ? "supabase" : "file";
 }
 
 function createEmptyState(): DemoStorageState {
@@ -266,7 +255,7 @@ export async function verifySupabaseBridgeStorage() {
 export function getDemoStorageMetadata() {
   const requestedDriver = getRequestedStorageDriver();
   const supabaseConfigured = hasSupabaseServerConfig();
-  const activeDriver = requestedDriver === "supabase" && supabaseConfigured ? "supabase" : "file";
+  const activeDriver = getActiveDemoStorageDriverName();
 
   return {
     driver: activeDriver,
