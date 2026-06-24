@@ -4,15 +4,56 @@
 
 create extension if not exists "pgcrypto";
 
-create type public.member_role as enum ('owner', 'admin', 'member', 'viewer');
-create type public.place_type as enum ('lodging', 'attraction', 'water', 'food', 'transport', 'stop', 'unknown');
-create type public.visit_state as enum ('unvisited', 'visited', 'skipped', 'favorite');
-create type public.location_sharing_state as enum ('enabled', 'disabled', 'pending');
-create type public.message_source as enum ('member', 'agent', 'system');
-create type public.route_status as enum ('draft', 'approved', 'completed');
-create type public.location_source as enum ('gps', 'demo', 'manual');
+do $$
+begin
+  create type public.member_role as enum ('owner', 'admin', 'member', 'viewer');
+exception
+  when duplicate_object then null;
+end $$;
 
-create table public.trip_groups (
+do $$
+begin
+  create type public.place_type as enum ('lodging', 'attraction', 'water', 'food', 'transport', 'stop', 'unknown');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.visit_state as enum ('unvisited', 'visited', 'skipped', 'favorite');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.location_sharing_state as enum ('enabled', 'disabled', 'pending');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.message_source as enum ('member', 'agent', 'system');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.route_status as enum ('draft', 'approved', 'completed');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type public.location_source as enum ('gps', 'demo', 'manual');
+exception
+  when duplicate_object then null;
+end $$;
+
+create table if not exists public.trip_groups (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   google_source_url text,
@@ -22,7 +63,7 @@ create table public.trip_groups (
   updated_at timestamptz not null default now()
 );
 
-create table public.trip_members (
+create table if not exists public.trip_members (
   id uuid primary key default gen_random_uuid(),
   trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
   display_name text not null,
@@ -36,12 +77,19 @@ create table public.trip_members (
   updated_at timestamptz not null default now()
 );
 
-alter table public.trip_groups
-  add constraint trip_groups_owner_member_fk
-  foreign key (owner_member_id) references public.trip_members(id)
-  deferrable initially deferred;
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'trip_groups_owner_member_fk'
+  ) then
+    alter table public.trip_groups
+      add constraint trip_groups_owner_member_fk
+      foreign key (owner_member_id) references public.trip_members(id)
+      deferrable initially deferred;
+  end if;
+end $$;
 
-create table public.trip_places (
+create table if not exists public.trip_places (
   id uuid primary key default gen_random_uuid(),
   trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
   source_id text,
@@ -61,14 +109,14 @@ create table public.trip_places (
   check ((lat is null and lng is null) or (lat between -90 and 90 and lng between -180 and 180))
 );
 
-create table public.location_sharing_consents (
+create table if not exists public.location_sharing_consents (
   member_id uuid primary key references public.trip_members(id) on delete cascade,
   trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
   state public.location_sharing_state not null default 'pending',
   updated_at timestamptz not null default now()
 );
 
-create table public.live_locations (
+create table if not exists public.live_locations (
   member_id uuid primary key references public.trip_members(id) on delete cascade,
   trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
   lat double precision not null check (lat between -90 and 90),
@@ -78,7 +126,7 @@ create table public.live_locations (
   updated_at timestamptz not null default now()
 );
 
-create table public.group_messages (
+create table if not exists public.group_messages (
   id uuid primary key default gen_random_uuid(),
   trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
   member_id uuid references public.trip_members(id) on delete set null,
@@ -88,14 +136,14 @@ create table public.group_messages (
   created_at timestamptz not null default now()
 );
 
-create table public.group_destinations (
+create table if not exists public.group_destinations (
   trip_group_id uuid primary key references public.trip_groups(id) on delete cascade,
   place_id uuid not null references public.trip_places(id) on delete cascade,
   set_by_member_id uuid not null references public.trip_members(id),
   set_at timestamptz not null default now()
 );
 
-create table public.group_routes (
+create table if not exists public.group_routes (
   id uuid primary key default gen_random_uuid(),
   trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
   title text not null,
@@ -106,7 +154,7 @@ create table public.group_routes (
   updated_at timestamptz not null default now()
 );
 
-create table public.group_route_stops (
+create table if not exists public.group_route_stops (
   id uuid primary key default gen_random_uuid(),
   route_id uuid not null references public.group_routes(id) on delete cascade,
   place_id uuid not null references public.trip_places(id) on delete cascade,
@@ -116,19 +164,63 @@ create table public.group_route_stops (
   unique (route_id, place_id)
 );
 
-create index trip_members_trip_group_id_idx on public.trip_members(trip_group_id);
-create index trip_places_trip_group_id_idx on public.trip_places(trip_group_id);
-create index trip_places_type_idx on public.trip_places(type);
-create index group_messages_trip_created_idx on public.group_messages(trip_group_id, created_at desc);
-create index live_locations_trip_group_id_idx on public.live_locations(trip_group_id);
-create index group_routes_trip_group_id_idx on public.group_routes(trip_group_id);
-create index group_route_stops_route_order_idx on public.group_route_stops(route_id, stop_order);
+create index if not exists trip_members_trip_group_id_idx on public.trip_members(trip_group_id);
+create index if not exists trip_places_trip_group_id_idx on public.trip_places(trip_group_id);
+create index if not exists trip_places_type_idx on public.trip_places(type);
+create index if not exists group_messages_trip_created_idx on public.group_messages(trip_group_id, created_at desc);
+create index if not exists live_locations_trip_group_id_idx on public.live_locations(trip_group_id);
+create index if not exists group_routes_trip_group_id_idx on public.group_routes(trip_group_id);
+create index if not exists group_route_stops_route_order_idx on public.group_route_stops(route_id, stop_order);
 
-alter publication supabase_realtime add table public.group_messages;
-alter publication supabase_realtime add table public.live_locations;
-alter publication supabase_realtime add table public.group_destinations;
-alter publication supabase_realtime add table public.group_routes;
-alter publication supabase_realtime add table public.group_route_stops;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'group_messages'
+  ) then
+    alter publication supabase_realtime add table public.group_messages;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'live_locations'
+  ) then
+    alter publication supabase_realtime add table public.live_locations;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'group_destinations'
+  ) then
+    alter publication supabase_realtime add table public.group_destinations;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'group_routes'
+  ) then
+    alter publication supabase_realtime add table public.group_routes;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'group_route_stops'
+  ) then
+    alter publication supabase_realtime add table public.group_route_stops;
+  end if;
+end $$;
 
 alter table public.trip_groups enable row level security;
 alter table public.trip_members enable row level security;
