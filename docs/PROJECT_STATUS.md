@@ -62,7 +62,7 @@ PB is a separate product and must remain untouched.
 ## Next Infrastructure Steps
 
 1. Create a new GitHub repository for this app.
-2. Push this project as the first commit.
+2. Connect the local `main` branch to that new repository.
 3. Create a Supabase project.
 4. Add schema for groups, members, messages, places, live locations, destinations, routes, and route stops.
 5. Add a Supabase storage driver beside the current file driver.
@@ -80,6 +80,21 @@ Do not commit these to Git:
 - `OPENAI_API_KEY`
 - `GOOGLE_MAPS_API_KEY`
 - Google OAuth credentials
+
+## GitHub and Render Boundary
+
+The existing PB Trading Cockpit repository and Render service are separate and must remain untouched:
+
+- `https://github.com/yakobmo/pb-pro-trading-cockpit`
+- `https://pb-pro-trading-cockpit.onrender.com`
+
+This travel app needs its own new GitHub repository and its own new Render service.
+
+Current local Git state:
+
+- Branch: `main`
+- Initial commit: `3f0d825 Initial AI travel companion MVP`
+- Remote: not configured yet
 
 ## QA
 
