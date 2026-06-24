@@ -71,14 +71,16 @@ PB is a separate product and must remain untouched.
 
 ## Next Infrastructure Steps
 
-1. Create a new GitHub repository for this app.
-2. Connect the local `main` branch to that new repository.
-3. Configure Render as a new service.
-4. Run public smoke tests after deploy.
-5. Create a Supabase project.
-6. Apply `supabase/schema.sql` for groups, members, messages, places, live locations, destinations, routes, and route stops.
-7. Add a Supabase storage driver beside the current file driver.
-8. Add production environment variables.
+1. Create a new GitHub repository for this app. Done.
+2. Connect the local `main` branch to that new repository. Done.
+3. Configure Render as a new service. Done.
+4. Run public smoke tests after deploy. Done.
+5. Create a Supabase project. Done.
+6. Apply `supabase/schema.sql` for groups, members, messages, places, live locations, destinations, routes, and route stops. Done.
+7. Configure Render server-only Supabase variables. Done.
+8. Verify Supabase bridge write/read from the live Render service. Done.
+9. Add a Supabase storage driver beside the current file driver. Next.
+10. Switch production storage only after the full runtime driver passes QA.
 
 ## Required Secrets Later
 
@@ -104,7 +106,7 @@ Current local Git state:
 
 - Branch: `main`
 - Initial commit: `3f0d825 Initial AI travel companion MVP`
-- Latest pushed commit: `5dbb07f Prepare single-service Render deploy`
+- Latest pushed commit: `43d58e5 Add guarded Supabase grants automation endpoint`
 - Remote: `https://github.com/yakobmo/kodi-travel-companion.git`
 - Remote status: `origin/main` verified
 
@@ -123,8 +125,10 @@ Current Supabase state:
 - Project name: `kodi-travel-companion`
 - Project URL: `https://szlziurxfvjnqzjwrhlq.supabase.co`
 - Schema: applied successfully through Supabase SQL Editor on `2026-06-24`
-- Runtime driver: not connected yet
-- Render environment variables: not configured yet
+- Render environment variables: configured with server-only Supabase URL, service-role key, DB URL, and migration admin token
+- Guarded grants endpoint: passed on `2026-06-25`
+- Bridge verification from live Render service: write/read passed on `2026-06-25`
+- Runtime driver: not switched yet; live app intentionally remains on file storage until the Supabase driver is implemented and tested
 
 ## QA
 

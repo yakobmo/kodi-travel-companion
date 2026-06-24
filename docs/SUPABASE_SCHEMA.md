@@ -50,13 +50,20 @@ Browser clients must not receive service-role credentials.
 
 ## Next Implementation Gate
 
-After a Supabase project is created:
+Completed:
 
-1. Apply `supabase/schema.sql` with `scripts/apply-supabase-schema.ps1`.
-2. Add server-only Render environment variables.
-3. Implement a Supabase storage driver beside the existing file driver.
-4. Keep the file driver as local fallback.
-5. Run API build, local smoke, public deploy, and public smoke again.
+1. Supabase project created.
+2. `supabase/schema.sql` applied.
+3. Server-only Render environment variables added.
+4. Guarded Render grants endpoint verified.
+5. Live Render service verified write/read access to `demo_storage_states`.
+
+Next:
+
+1. Implement a Supabase storage driver beside the existing file driver.
+2. Keep the file driver as local fallback.
+3. Run API build, local smoke, public deploy, and public smoke again.
+4. Switch production storage only after the full runtime driver passes QA.
 
 ## Environment Contract
 
@@ -164,14 +171,28 @@ After running it, verify:
 POST /api/trips/demo/storage/supabase-bridge/verify
 ```
 
+Production verification passed on `2026-06-25`:
+
+```text
+POST /api/admin/supabase/apply-grants
+Result: configured=true, authorized=true, applied=true, verified=true
+
+GET /api/trips/demo/storage/supabase-check
+Result: keyRole=service_role, reachable=true, bridgeTableReady=true
+
+POST /api/trips/demo/storage/supabase-bridge/verify
+Result: writable=true, readable=true
+```
+
 ## Current Project
 
-The Supabase project was created and the schema was applied successfully:
+The Supabase project was created and the live Render service can now access it through server-only credentials:
 
 ```text
 Project: kodi-travel-companion
 URL: https://szlziurxfvjnqzjwrhlq.supabase.co
-Applied: 2026-06-24
+Schema applied: 2026-06-24
+Live bridge verified: 2026-06-25
 ```
 
 No Supabase keys are committed to this repository.
