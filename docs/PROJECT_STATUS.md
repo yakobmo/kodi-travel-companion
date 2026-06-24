@@ -133,7 +133,8 @@ Current Supabase state:
 - Bridge verification from live Render service: write/read passed on `2026-06-25`
 - Runtime driver: Supabase active in production on `2026-06-25`
 - Production storage smoke: write/read passed, then demo state reset back to clean startup data
-- First relational table migration: group messages use `group_messages`; remaining demo state still uses the JSON bridge until migrated
+- First relational table migration: group messages use `group_messages`; public write/read smoke passed on `2026-06-25`
+- Remaining demo state still uses the JSON bridge until migrated
 
 ## QA
 

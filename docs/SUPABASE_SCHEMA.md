@@ -197,6 +197,7 @@ Schema applied: 2026-06-24
 Live bridge verified: 2026-06-25
 Production storage active: 2026-06-25
 First relational runtime path: group_messages
+group_messages public smoke: 2026-06-25
 ```
 
 No Supabase keys are committed to this repository.
