@@ -84,3 +84,15 @@ GET /api/trips/demo/storage
 ```
 
 This endpoint intentionally keeps `driver: "file"` and `realtimeReady: false` until the Supabase runtime driver is implemented and verified.
+
+## Current Project
+
+The Supabase project was created and the schema was applied successfully:
+
+```text
+Project: kodi-travel-companion
+URL: https://szlziurxfvjnqzjwrhlq.supabase.co
+Applied: 2026-06-24
+```
+
+No Supabase keys are committed to this repository.

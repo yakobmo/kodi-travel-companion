@@ -117,6 +117,14 @@ Current Render state:
 - Status: live
 - Last public smoke: passed on `2026-06-24`
 
+Current Supabase state:
+
+- Project name: `kodi-travel-companion`
+- Project URL: `https://szlziurxfvjnqzjwrhlq.supabase.co`
+- Schema: applied successfully through Supabase SQL Editor on `2026-06-24`
+- Runtime driver: not connected yet
+- Render environment variables: not configured yet
+
 ## QA
 
 Before every commit:
