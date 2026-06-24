@@ -56,3 +56,23 @@ After a Supabase project is created:
 3. Implement a Supabase storage driver beside the existing file driver.
 4. Keep the file driver as local fallback.
 5. Run API build, local smoke, public deploy, and public smoke again.
+
+## Environment Contract
+
+Local development should keep:
+
+```text
+STORAGE_DRIVER=file
+```
+
+Production should switch only after the Supabase runtime driver exists:
+
+```text
+STORAGE_DRIVER=supabase
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` is server-only and must live only in Render environment variables or a local uncommitted `.env` file.
+
+Do not expose it through any `VITE_*` variable.

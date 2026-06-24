@@ -65,7 +65,17 @@ export interface DemoStorageDriver {
   save(update: Partial<Omit<DemoStorageState, "version" | "updatedAt">>): DemoStorageState;
 }
 
+type StorageDriverName = "file" | "supabase";
+
 const storagePath = join(process.cwd(), ".data", "demo-state.json");
+
+function getRequestedStorageDriver(): StorageDriverName {
+  return process.env.STORAGE_DRIVER === "supabase" ? "supabase" : "file";
+}
+
+function hasSupabaseServerConfig() {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
 
 function createEmptyState(): DemoStorageState {
   return {
@@ -124,10 +134,18 @@ export function saveDemoStorage(update: Partial<Omit<DemoStorageState, "version"
 }
 
 export function getDemoStorageMetadata() {
+  const requestedDriver = getRequestedStorageDriver();
+
   return {
     driver: "file",
+    requestedDriver,
     storagePath,
+    supabaseConfigured: hasSupabaseServerConfig(),
     realtimeReady: false,
-    migrationTarget: "managed_db_plus_realtime"
+    migrationTarget: "managed_db_plus_realtime",
+    note:
+      requestedDriver === "supabase"
+        ? "Supabase schema gate exists, but the runtime driver is not implemented yet; file storage remains active."
+        : "File storage is active for the MVP demo."
   };
 }

@@ -348,6 +348,10 @@ if (-not $demoStorageSource.Contains(".data") -or -not $demoStorageSource.Contai
   throw "Demo storage must write to the local .data demo-state.json file."
 }
 
+if (-not $demoStorageSource.Contains("STORAGE_DRIVER") -or -not $demoStorageSource.Contains("SUPABASE_SERVICE_ROLE_KEY")) {
+  throw "Demo storage metadata must expose the future Supabase storage driver configuration gate."
+}
+
 if (-not $demoStorageSource.Contains("messages: StoredDemoMessage[] | null")) {
   throw "Demo storage must include persisted group chat messages."
 }
@@ -476,6 +480,13 @@ foreach ($realtimeTable in @(
 
 if (-not $supabaseSchemaSource.Contains("enable row level security")) {
   throw "Supabase schema must enable RLS before production use."
+}
+
+$envExampleSource = Get-Content (Join-Path $root ".env.example") -Raw
+foreach ($requiredEnvName in @("STORAGE_DRIVER=file", "SUPABASE_URL=", "SUPABASE_SERVICE_ROLE_KEY=")) {
+  if (-not $envExampleSource.Contains($requiredEnvName)) {
+    throw ".env.example is missing Supabase environment contract: $requiredEnvName"
+  }
 }
 
 if (-not $serverSource.Contains("Access-Control-Allow-Origin")) {
