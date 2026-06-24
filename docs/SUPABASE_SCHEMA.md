@@ -118,6 +118,12 @@ Preferred command:
 powershell -ExecutionPolicy Bypass -File scripts/apply-supabase-schema.ps1
 ```
 
+If only service-role permissions need repair:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/apply-supabase-grants.ps1
+```
+
 The script reads one local-only secret:
 
 ```text
@@ -131,6 +137,8 @@ DATABASE_URL=
 ```
 
 It does not print the connection string and it verifies `public.demo_storage_states` after applying the schema.
+
+The grants script verifies that `service_role` can select, insert and update the bridge table.
 
 ## Current Project
 

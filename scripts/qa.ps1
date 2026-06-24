@@ -12,6 +12,8 @@ $requiredFiles = @(
   "docs/SUPABASE_SCHEMA.md",
   "scripts/apply-supabase-schema.mjs",
   "scripts/apply-supabase-schema.ps1",
+  "scripts/apply-supabase-grants.mjs",
+  "scripts/apply-supabase-grants.ps1",
   "scripts/dev-api.ps1",
   "scripts/dev-web.ps1",
   "scripts/smoke-local.mjs",
@@ -505,6 +507,11 @@ if (-not $supabaseSchemaSource.Contains("grant all privileges on all tables in s
   throw "Supabase schema must grant service_role access for backend-only storage."
 }
 
+$supabaseGrantsSource = Get-Content (Join-Path $root "supabase\service-role-grants.sql") -Raw
+if (-not $supabaseGrantsSource.Contains("grant all privileges on all tables in schema public to service_role")) {
+  throw "Supabase grants file must grant service_role access for backend-only storage."
+}
+
 $supabaseStatusSource = Get-Content (Join-Path $root "apps\api\src\data\supabaseStatus.ts") -Raw
 if (-not $supabaseStatusSource.Contains("keyRole") -or -not $supabaseStatusSource.Contains("decodeJwtPayload")) {
   throw "Supabase status must report the configured key role without exposing the key."
@@ -520,6 +527,11 @@ foreach ($requiredEnvName in @("STORAGE_DRIVER=file", "SUPABASE_URL=", "SUPABASE
 $schemaScriptSource = Get-Content (Join-Path $root "scripts\apply-supabase-schema.mjs") -Raw
 if (-not $schemaScriptSource.Contains("SUPABASE_DB_URL") -or -not $schemaScriptSource.Contains("demo_storage_states")) {
   throw "Automated Supabase schema script must read SUPABASE_DB_URL and verify the bridge table."
+}
+
+$grantsScriptSource = Get-Content (Join-Path $root "scripts\apply-supabase-grants.mjs") -Raw
+if (-not $grantsScriptSource.Contains("has_table_privilege") -or -not $grantsScriptSource.Contains("service_role")) {
+  throw "Automated Supabase grants script must verify service_role table privileges."
 }
 
 if (-not $serverSource.Contains("Access-Control-Allow-Origin")) {

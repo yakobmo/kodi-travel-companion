@@ -12,7 +12,8 @@
     "dev": "echo \"Run apps separately after dependencies are installed\"",
     "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
     "start": "npm run start --workspace apps/api",
-    "db:apply-schema": "node scripts/apply-supabase-schema.mjs"
+    "db:apply-schema": "node scripts/apply-supabase-schema.mjs",
+    "db:apply-grants": "node scripts/apply-supabase-grants.mjs"
   },
   "engines": {
     "node": ">=20"
