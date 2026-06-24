@@ -63,12 +63,12 @@ PB is a separate product and must remain untouched.
 
 1. Create a new GitHub repository for this app.
 2. Connect the local `main` branch to that new repository.
-3. Create a Supabase project.
-4. Add schema for groups, members, messages, places, live locations, destinations, routes, and route stops.
-5. Add a Supabase storage driver beside the current file driver.
-6. Configure Render as a new service.
-7. Add Render environment variables.
-8. Run public smoke tests after deploy.
+3. Configure Render as a new service.
+4. Run public smoke tests after deploy.
+5. Create a Supabase project.
+6. Add schema for groups, members, messages, places, live locations, destinations, routes, and route stops.
+7. Add a Supabase storage driver beside the current file driver.
+8. Add production environment variables.
 
 ## Required Secrets Later
 
@@ -94,7 +94,11 @@ Current local Git state:
 
 - Branch: `main`
 - Initial commit: `3f0d825 Initial AI travel companion MVP`
-- Remote: not configured yet
+- Latest pushed commit: `5dbb07f Prepare single-service Render deploy`
+- Remote: `https://github.com/yakobmo/kodi-travel-companion.git`
+- Remote status: `origin/main` verified
+
+The app is prepared for a single Render web service. The API serves both `/api/*` and the built React app from the same service.
 
 ## QA
 

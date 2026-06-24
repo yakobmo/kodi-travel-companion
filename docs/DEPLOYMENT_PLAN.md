@@ -15,27 +15,20 @@ Existing PB assets are protected:
 
 - Branch: `main`
 - Initial commit: `3f0d825 Initial AI travel companion MVP`
+- Render preparation commit: `5dbb07f Prepare single-service Render deploy`
+- GitHub repository: `https://github.com/yakobmo/kodi-travel-companion`
+- Remote: `origin`
 - QA passed before the initial commit.
 - Build passed for both API and web before the initial commit.
 - Local smoke test passed before the initial commit.
 
 ## Next Step
 
-Create a new GitHub repository for this app, then connect it as the remote origin.
+Create a new Render web service for this app from:
 
-Recommended repository names:
-
-- `ai-travel-companion`
-- `kodi-travel-companion`
-
-After the new repository exists:
-
-```powershell
-git remote add origin https://github.com/yakobmo/ai-travel-companion.git
-git push -u origin main
+```text
+https://github.com/yakobmo/kodi-travel-companion
 ```
-
-If a different repository name is chosen, use that repository URL instead.
 
 ## Render Plan
 
