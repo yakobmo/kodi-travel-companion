@@ -357,8 +357,12 @@ if (-not $localMembersSource.Contains("location_sharing_not_enabled")) {
   throw "Demo member data layer must block location updates for members without sharing consent."
 }
 
-if (-not $localMembersSource.Contains("saveDemoStorage")) {
-  throw "Demo member data layer must persist location updates through demo storage."
+if (-not $localMembersSource.Contains("live_locations") -or -not $localMembersSource.Contains("location_sharing_consents")) {
+  throw "Demo member data layer must use relational Supabase member, consent, and live location tables when Supabase storage is active."
+}
+
+if (-not $localMembersSource.Contains("saveDemoStorage") -or -not $localMembersSource.Contains("updateSupabaseMemberLocation")) {
+  throw "Demo member data layer must persist location updates through Supabase with file fallback."
 }
 
 $demoStorageSource = Get-Content (Join-Path $root "apps\api\src\data\demoStorage.ts") -Raw

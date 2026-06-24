@@ -7,7 +7,7 @@ import {
   type StoredDemoMessage
 } from "./demoStorage.js";
 import { DEMO_GROUP_ID, DEMO_TRIP_GROUP_UUID, demoMemberUuidById } from "./demoRelationalIds.js";
-import { createSupabaseServerClient } from "./supabaseClient.js";
+import { ensureDemoRelationalBase } from "./demoRelationalSeed.js";
 
 const INITIAL_CREATED_AT = "2026-06-23T09:00:00.000Z";
 
@@ -65,75 +65,7 @@ interface SupabaseGroupMessageRow {
 }
 
 async function ensureDemoTripGroupForMessages() {
-  const supabase = createSupabaseServerClient();
-  if (!supabase) {
-    return null;
-  }
-
-  const { error } = await supabase.from("trip_groups").upsert({
-    id: DEMO_TRIP_GROUP_UUID,
-    name: "צפון יוון",
-    google_source_url: "https://maps.app.goo.gl/MspoN6j9CJDyGmtb8",
-    google_source_state: "demo_link_ready",
-    updated_at: new Date().toISOString()
-  });
-
-  if (error) {
-    throw new Error(`Supabase demo trip group seed failed: ${error.message}`);
-  }
-
-  const { error: membersError } = await supabase.from("trip_members").upsert([
-    {
-      id: demoMemberUuidById.dad,
-      trip_group_id: DEMO_TRIP_GROUP_UUID,
-      display_name: "אבא",
-      role: "admin",
-      can_chat_with_agent: true,
-      can_mark_visited: true,
-      can_manage_places: true,
-      can_manage_members: false,
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: demoMemberUuidById.mom,
-      trip_group_id: DEMO_TRIP_GROUP_UUID,
-      display_name: "אמא",
-      role: "owner",
-      can_chat_with_agent: true,
-      can_mark_visited: true,
-      can_manage_places: true,
-      can_manage_members: true,
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: demoMemberUuidById.noa,
-      trip_group_id: DEMO_TRIP_GROUP_UUID,
-      display_name: "נועה",
-      role: "member",
-      can_chat_with_agent: true,
-      can_mark_visited: false,
-      can_manage_places: false,
-      can_manage_members: false,
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: demoMemberUuidById.grandma,
-      trip_group_id: DEMO_TRIP_GROUP_UUID,
-      display_name: "סבתא",
-      role: "viewer",
-      can_chat_with_agent: true,
-      can_mark_visited: false,
-      can_manage_places: false,
-      can_manage_members: false,
-      updated_at: new Date().toISOString()
-    }
-  ]);
-
-  if (membersError) {
-    throw new Error(`Supabase demo members seed failed: ${membersError.message}`);
-  }
-
-  return supabase;
+  return ensureDemoRelationalBase();
 }
 
 function mapSupabaseMessage(row: SupabaseGroupMessageRow): StoredDemoMessage {

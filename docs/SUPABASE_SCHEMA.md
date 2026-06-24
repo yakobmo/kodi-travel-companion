@@ -198,6 +198,7 @@ Live bridge verified: 2026-06-25
 Production storage active: 2026-06-25
 First relational runtime path: group_messages
 group_messages public smoke: 2026-06-25
+Second relational runtime path: trip_members, location_sharing_consents, live_locations
 ```
 
 No Supabase keys are committed to this repository.

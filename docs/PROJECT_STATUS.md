@@ -36,6 +36,7 @@ Implemented locally:
 - Supabase bridge verification endpoint for safe write/read testing before switching live storage.
 - Supabase-backed demo storage driver behind `STORAGE_DRIVER=supabase`.
 - Group chat messages backed by the relational `group_messages` table when Supabase is active.
+- Group members, consent, and live locations backed by `trip_members`, `location_sharing_consents`, and `live_locations` when Supabase is active.
 
 ## Current Storage
 
@@ -134,6 +135,7 @@ Current Supabase state:
 - Runtime driver: Supabase active in production on `2026-06-25`
 - Production storage smoke: write/read passed, then demo state reset back to clean startup data
 - First relational table migration: group messages use `group_messages`; public write/read smoke passed on `2026-06-25`
+- Second relational table migration: member roster and live locations use relational tables; public smoke pending deploy
 - Remaining demo state still uses the JSON bridge until migrated
 
 ## QA
