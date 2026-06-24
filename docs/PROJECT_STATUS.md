@@ -33,6 +33,7 @@ Implemented locally:
 - Storage driver contract that prepares a future DB/realtime migration.
 - Supabase SQL schema for the first DB/realtime gate.
 - Supabase storage configuration gate through `.env.example` and `/api/trips/demo/storage`.
+- Supabase bridge verification endpoint for safe write/read testing before switching live storage.
 
 ## Current Storage
 

@@ -5,7 +5,7 @@ import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.j
 import { loadDemoTripMembers, resetDemoTripMembers, updateDemoMemberLocation } from "./data/localMembers.js";
 import { appendDemoTripMessage, loadDemoTripMessages, resetDemoTripMessages } from "./data/localMessages.js";
 import { buildDemoTripSetupState, resetDemoTripSetupState, saveDemoTripSetupState } from "./data/localSetupState.js";
-import { getDemoStorageMetadata } from "./data/demoStorage.js";
+import { getDemoStorageMetadata, verifySupabaseBridgeStorage } from "./data/demoStorage.js";
 import { checkSupabaseRuntime } from "./data/supabaseStatus.js";
 import { loadDemoGroupDestination, resetDemoGroupDestination, saveDemoGroupDestination } from "./data/localGroupDestination.js";
 import { loadDemoGroupRoute, resetDemoGroupRoute, saveDemoGroupRoute } from "./data/localGroupRoute.js";
@@ -116,6 +116,13 @@ app.get("/api/trips/demo/storage/supabase-check", async (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
     supabase: await checkSupabaseRuntime()
+  });
+});
+
+app.post("/api/trips/demo/storage/supabase-bridge/verify", async (_req, res) => {
+  res.json({
+    tripGroupId: "group_family_greece_demo",
+    bridge: await verifySupabaseBridgeStorage()
   });
 });
 

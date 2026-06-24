@@ -94,6 +94,14 @@ GET /api/trips/demo/storage/supabase-check
 
 This endpoint checks only whether the backend has Supabase server configuration and can see the bridge table. It does not expose keys.
 
+Bridge write/read verification:
+
+```text
+POST /api/trips/demo/storage/supabase-bridge/verify
+```
+
+This endpoint verifies that the backend can write and read the temporary `demo_storage_states` bridge table. The live app still uses file storage until all data paths are migrated.
+
 ## Automated Schema Apply
 
 Preferred command:

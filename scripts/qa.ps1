@@ -297,6 +297,10 @@ if (-not $serverSource.Contains("/api/trips/demo/storage/supabase-check") -or -n
   throw "API server must expose a safe Supabase runtime readiness check before switching storage drivers."
 }
 
+if (-not $serverSource.Contains("/api/trips/demo/storage/supabase-bridge/verify") -or -not $serverSource.Contains("verifySupabaseBridgeStorage")) {
+  throw "API server must expose a safe Supabase bridge verification endpoint before switching live storage."
+}
+
 if (-not $serverSource.Contains("/api/trips/demo/agent-actions/authorize")) {
   throw "API server is missing the agent action authorization endpoint."
 }
@@ -357,6 +361,10 @@ if (-not $demoStorageSource.Contains(".data") -or -not $demoStorageSource.Contai
 
 if (-not $demoStorageSource.Contains("STORAGE_DRIVER") -or -not $demoStorageSource.Contains("SUPABASE_SERVICE_ROLE_KEY")) {
   throw "Demo storage metadata must expose the future Supabase storage driver configuration gate."
+}
+
+if (-not $demoStorageSource.Contains("loadDemoStorageAsync") -or -not $demoStorageSource.Contains("saveDemoStorageAsync")) {
+  throw "Demo storage must include async bridge functions before Supabase migration."
 }
 
 if (-not $demoStorageSource.Contains("messages: StoredDemoMessage[] | null")) {
