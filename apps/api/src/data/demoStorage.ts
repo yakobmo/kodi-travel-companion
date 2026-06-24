@@ -230,24 +230,33 @@ export async function verifySupabaseBridgeStorage() {
     };
   }
 
-  const previousState = await loadSupabaseStorage(client);
-  const verifiedAt = new Date().toISOString();
-  const nextState = await saveSupabaseStorage(client, {
-    ...previousState,
-    setup: previousState.setup,
-    messages: previousState.messages,
-    members: previousState.members,
-    groupDestination: previousState.groupDestination,
-    groupRoute: previousState.groupRoute
-  });
-  const reloadedState = await loadSupabaseStorage(client);
+  try {
+    const previousState = await loadSupabaseStorage(client);
+    const verifiedAt = new Date().toISOString();
+    const nextState = await saveSupabaseStorage(client, {
+      ...previousState,
+      setup: previousState.setup,
+      messages: previousState.messages,
+      members: previousState.members,
+      groupDestination: previousState.groupDestination,
+      groupRoute: previousState.groupRoute
+    });
+    const reloadedState = await loadSupabaseStorage(client);
 
-  return {
-    configured: true,
-    writable: nextState.updatedAt.length > 0,
-    readable: reloadedState.version === 1,
-    verifiedAt
-  };
+    return {
+      configured: true,
+      writable: nextState.updatedAt.length > 0,
+      readable: reloadedState.version === 1,
+      verifiedAt
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      writable: false,
+      readable: false,
+      error: error instanceof Error ? error.message : "unknown_supabase_bridge_error"
+    };
+  }
 }
 
 export function getDemoStorageMetadata() {
