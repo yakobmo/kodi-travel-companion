@@ -37,6 +37,7 @@ Implemented locally:
 - Supabase-backed demo storage driver behind `STORAGE_DRIVER=supabase`.
 - Group chat messages backed by the relational `group_messages` table when Supabase is active.
 - Group members, consent, and live locations backed by `trip_members`, `location_sharing_consents`, and `live_locations` when Supabase is active.
+- Group destination and route state backed by `group_destinations`, `group_routes`, and `group_route_stops` when Supabase is active.
 
 ## Current Storage
 
@@ -136,6 +137,7 @@ Current Supabase state:
 - Production storage smoke: write/read passed, then demo state reset back to clean startup data
 - First relational table migration: group messages use `group_messages`; public write/read smoke passed on `2026-06-25`
 - Second relational table migration: member roster and live locations use relational tables; public smoke passed on `2026-06-25`
+- Third relational table migration: group destination and group routes use relational tables; public smoke pending deploy
 - Remaining demo state still uses the JSON bridge until migrated
 
 ## QA

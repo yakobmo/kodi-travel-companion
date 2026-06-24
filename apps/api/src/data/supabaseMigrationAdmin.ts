@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 
 const grantsSqlPath = fileURLToPath(new URL("../../../../supabase/service-role-grants.sql", import.meta.url));
+const relationalRouteMigrationSqlPath = fileURLToPath(
+  new URL("../../../../supabase/relational-route-migration.sql", import.meta.url)
+);
 
 export interface SupabaseGrantApplyResult {
   configured: boolean;
@@ -11,6 +14,10 @@ export interface SupabaseGrantApplyResult {
   verified: boolean;
   checkedAt: string;
   error?: string;
+}
+
+export interface SupabaseMigrationApplyResult extends SupabaseGrantApplyResult {
+  migration: "relational_routes";
 }
 
 export function isValidMigrationAdminToken(input: string | undefined) {
@@ -73,6 +80,60 @@ export async function applySupabaseServiceRoleGrants(): Promise<SupabaseGrantApp
       verified: false,
       checkedAt,
       error: error instanceof Error ? error.message : "unknown_grant_apply_error"
+    };
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
+}
+
+export async function applySupabaseRelationalRouteMigration(): Promise<SupabaseMigrationApplyResult> {
+  const checkedAt = new Date().toISOString();
+  const databaseUrl = getDatabaseUrl();
+
+  if (!databaseUrl) {
+    return {
+      migration: "relational_routes",
+      configured: false,
+      authorized: true,
+      applied: false,
+      verified: false,
+      checkedAt,
+      error: "missing_SUPABASE_DB_URL_or_DATABASE_URL"
+    };
+  }
+
+  const sql = postgres(databaseUrl, {
+    ssl: "require",
+    max: 1,
+    idle_timeout: 5,
+    connect_timeout: 20
+  });
+
+  try {
+    await sql.unsafe(await readFile(relationalRouteMigrationSqlPath, "utf8"));
+    const rows = await sql`
+      select to_regclass('public.trip_places_trip_group_source_place_idx') as source_place_idx
+    `;
+    const verified = rows[0]?.source_place_idx === "trip_places_trip_group_source_place_idx";
+
+    return {
+      migration: "relational_routes",
+      configured: true,
+      authorized: true,
+      applied: true,
+      verified,
+      checkedAt,
+      error: verified ? undefined : "relational_route_migration_verification_failed"
+    };
+  } catch (error) {
+    return {
+      migration: "relational_routes",
+      configured: true,
+      authorized: true,
+      applied: false,
+      verified: false,
+      checkedAt,
+      error: error instanceof Error ? error.message : "unknown_relational_route_migration_error"
     };
   } finally {
     await sql.end({ timeout: 5 });

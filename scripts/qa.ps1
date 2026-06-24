@@ -392,6 +392,20 @@ if (-not $localMessagesSource.Contains("group_messages") -or -not $localMessages
   throw "Demo messages must use the relational Supabase group_messages table when Supabase storage is active."
 }
 
+$localDestinationSource = Get-Content (Join-Path $root "apps\api\src\data\localGroupDestination.ts") -Raw
+if (-not $localDestinationSource.Contains("group_destinations") -or -not $localDestinationSource.Contains("ensureDemoTripPlace")) {
+  throw "Demo group destination must use relational Supabase destination and place tables when Supabase storage is active."
+}
+
+$localRouteSource = Get-Content (Join-Path $root "apps\api\src\data\localGroupRoute.ts") -Raw
+if (-not $localRouteSource.Contains("group_routes") -or -not $localRouteSource.Contains("group_route_stops")) {
+  throw "Demo group route must use relational Supabase route and route stop tables when Supabase storage is active."
+}
+
+if (-not $serverSource.Contains("apply-relational-route-migration")) {
+  throw "API server is missing the guarded Supabase relational route migration endpoint."
+}
+
 $agentActionsSource = Get-Content (Join-Path $root "apps\api\src\permissions\agentActions.ts") -Raw
 if (-not $agentActionsSource.Contains("operational_action_requires_admin") -or -not $agentActionsSource.Contains("set_group_destination")) {
   throw "Agent action policy must block operational actions unless the actor is an admin."

@@ -19,7 +19,11 @@ import {
 } from "./data/localSetupState.js";
 import { getDemoStorageMetadata, verifySupabaseBridgeStorage } from "./data/demoStorage.js";
 import { checkSupabaseRuntime } from "./data/supabaseStatus.js";
-import { applySupabaseServiceRoleGrants, isValidMigrationAdminToken } from "./data/supabaseMigrationAdmin.js";
+import {
+  applySupabaseRelationalRouteMigration,
+  applySupabaseServiceRoleGrants,
+  isValidMigrationAdminToken
+} from "./data/supabaseMigrationAdmin.js";
 import {
   loadDemoGroupDestinationAsync,
   resetDemoGroupDestinationAsync,
@@ -160,6 +164,22 @@ app.post("/api/admin/supabase/apply-grants", async (req, res) => {
 
   res.json({
     supabase: await applySupabaseServiceRoleGrants()
+  });
+});
+
+app.post("/api/admin/supabase/apply-relational-route-migration", async (req, res) => {
+  const token = req.headers["x-kodi-admin-token"];
+  const normalizedToken = Array.isArray(token) ? token[0] : token;
+
+  if (!isValidMigrationAdminToken(normalizedToken)) {
+    res.status(403).json({
+      error: "admin_token_required"
+    });
+    return;
+  }
+
+  res.json({
+    supabase: await applySupabaseRelationalRouteMigration()
   });
 });
 

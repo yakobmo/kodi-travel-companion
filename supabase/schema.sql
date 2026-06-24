@@ -105,7 +105,6 @@ create table if not exists public.trip_places (
   visit_state public.visit_state not null default 'unvisited',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (trip_group_id, source_id),
   check ((lat is null and lng is null) or (lat between -90 and 90 and lng between -180 and 180))
 );
 
@@ -173,6 +172,9 @@ create table if not exists public.demo_storage_states (
 create index if not exists trip_members_trip_group_id_idx on public.trip_members(trip_group_id);
 create index if not exists trip_places_trip_group_id_idx on public.trip_places(trip_group_id);
 create index if not exists trip_places_type_idx on public.trip_places(type);
+create unique index if not exists trip_places_trip_group_source_place_idx
+  on public.trip_places(trip_group_id, source_place_id)
+  where source_place_id is not null;
 create index if not exists group_messages_trip_created_idx on public.group_messages(trip_group_id, created_at desc);
 create index if not exists live_locations_trip_group_id_idx on public.live_locations(trip_group_id);
 create index if not exists group_routes_trip_group_id_idx on public.group_routes(trip_group_id);
