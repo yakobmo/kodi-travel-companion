@@ -1,0 +1,359 @@
+import type { AgeGroup, MemberRole, TripPlace, TripState } from "../domain/types.js";
+
+export interface ConversationMessage {
+  author: string;
+  text: string;
+  memberId?: string;
+  source?: "member" | "agent" | "system";
+}
+
+export interface AgentMessageRequest {
+  member?: {
+    id?: string;
+    displayName?: string;
+    age?: number;
+    ageGroup?: AgeGroup;
+    role?: MemberRole;
+  };
+  message: string;
+  recentMessages?: ConversationMessage[];
+  selectedPlace?: Pick<TripPlace, "id" | "name" | "type" | "address" | "lat" | "lng" | "note" | "tags">;
+  tripState?: TripState;
+}
+
+export interface AgentMessageResponse {
+  author: "קודי";
+  text: string;
+  intent: "local_guide" | "route_creation" | "family_compromise" | "group_location" | "place_recommendation" | "general";
+  requiresAdminApproval: boolean;
+  source: "rules";
+}
+
+interface RecommendationCandidate {
+  place: TripPlace;
+  score: number;
+  reasons: string[];
+  caveats: string[];
+}
+
+interface ConversationContextSummary {
+  speakerNames: string[];
+  mentionedNeeds: string[];
+  childNames: string[];
+  currentDestinationName?: string;
+}
+
+function includesAny(text: string, terms: string[]) {
+  return terms.some((term) => text.includes(term));
+}
+
+function joinRecentMessages(messages: ConversationMessage[] = []) {
+  return messages
+    .slice(-8)
+    .map((message) => `${message.author}: ${message.text}`)
+    .join(" ");
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function summarizeRecentConversation(
+  messages: ConversationMessage[] = [],
+  currentMessage: string,
+  tripState?: TripState
+): ConversationContextSummary {
+  const recentMessages = messages.slice(-8);
+  const allText = `${joinRecentMessages(recentMessages)} ${currentMessage}`;
+  const childNames =
+    tripState?.members
+      .filter((item) => item.member.ageGroup === "child")
+      .map((item) => item.member.displayName) ?? [];
+  const mentionedNeeds: string[] = [];
+
+  if (includesAny(allText, ["גלידה", "מתוק", "קינוח"])) {
+    mentionedNeeds.push("משהו מתוק/גלידה");
+  }
+
+  if (includesAny(allText, ["לישון", "עייפ", "מנוחה", "רגוע"])) {
+    mentionedNeeds.push("מנוחה וקיצור מאמץ");
+  }
+
+  if (includesAny(allText, ["ילדים", "קטנים", ...childNames])) {
+    mentionedNeeds.push("התאמה לילדים");
+  }
+
+  if (includesAny(allText, ["מים", "בריכה", "מעיין", "חוף", "מזרקה"])) {
+    mentionedNeeds.push("מים או נקודת עניין רטובה");
+  }
+
+  if (includesAny(allText, ["בלי הליכה", "מעט הליכה", "קרוב", "ליד המלון", "מינימום הליכה"])) {
+    mentionedNeeds.push("קרוב ועם מעט הליכה");
+  }
+
+  return {
+    speakerNames: unique(recentMessages.filter((message) => message.source !== "agent").map((message) => message.author)),
+    mentionedNeeds: unique(mentionedNeeds),
+    childNames: unique(childNames),
+    currentDestinationName: tripState?.groupDestination?.placeName
+  };
+}
+
+function buildVisibleLocationSummary(tripState?: TripState) {
+  if (!tripState) {
+    return {
+      visibleNames: [],
+      hiddenCount: 0,
+      totalMembers: 0
+    };
+  }
+
+  const visibleMembers = tripState.members.filter((item) => item.consent.state === "enabled" && item.liveLocation);
+  const hiddenMembers = tripState.members.filter((item) => item.consent.state !== "enabled" || !item.liveLocation);
+
+  return {
+    visibleNames: visibleMembers.map((item) => item.member.displayName),
+    hiddenCount: hiddenMembers.length,
+    totalMembers: tripState.members.length
+  };
+}
+
+function getRecommendationPreferences(message: string) {
+  return {
+    wantsWater: includesAny(message, ["מים", "רטוב", "מעיין", "בריכה", "חוף"]),
+    wantsFood: includesAny(message, ["אוכל", "גלידה", "מסעדה", "קפה"]),
+    wantsKids: includesAny(message, ["ילדים", "קטנים", "משפחה"]),
+    wantsMinimalWalking: includesAny(message, ["בלי הליכה", "מעט הליכה", "מינימום הליכה", "קל"])
+  };
+}
+
+function scorePlace(place: TripPlace, message: string): RecommendationCandidate {
+  const preferences = getRecommendationPreferences(message);
+  const tagsAndNote = `${place.tags.join(" ")} ${place.note ?? ""}`.toLowerCase();
+  const preferredTypes = preferences.wantsWater
+    ? ["water", "attraction", "food", "stop", "lodging", "unknown"]
+    : preferences.wantsFood
+      ? ["food", "attraction", "water", "stop", "lodging", "unknown"]
+      : ["attraction", "water", "food", "stop", "lodging", "unknown"];
+  const typeRank = preferredTypes.indexOf(place.type);
+  const hasCoordinates = typeof place.lat === "number" && typeof place.lng === "number";
+  const reasons: string[] = [];
+  const caveats: string[] = [];
+  let score = typeRank >= 0 ? (preferredTypes.length - typeRank) * 10 : 0;
+
+  if (typeRank === 0) {
+    reasons.push(`סוג המקום מתאים לבקשה (${place.type})`);
+  }
+
+  if (hasCoordinates) {
+    score += 4;
+    reasons.push("יש קואורדינטות לפתיחת ניווט");
+  } else {
+    caveats.push("חסרות קואורדינטות מדויקות");
+  }
+
+  if (place.note) {
+    score += 2;
+    reasons.push("יש הערה שמורה מהמפה");
+  }
+
+  if (place.address) {
+    score += 1;
+    reasons.push("יש כתובת שמורה");
+  }
+
+  if (place.visitState === "unvisited") {
+    score += 2;
+    reasons.push("עדיין לא סומן כביקור שבוצע");
+  }
+
+  if (preferences.wantsKids) {
+    if (includesAny(tagsAndNote, ["child", "children", "kid", "ילד", "ילדים", "family"])) {
+      score += 3;
+      reasons.push("יש סימון שמתאים למשפחה/ילדים");
+    } else {
+      caveats.push("אין עדיין סימון ודאי להתאמה לילדים");
+    }
+  }
+
+  if (preferences.wantsMinimalWalking) {
+    if (hasCoordinates) {
+      score += 1;
+      reasons.push("אפשר לפתוח ניווט ישיר ולבדוק מסלול קצר");
+    }
+
+    caveats.push("אין עדיין חישוב הליכה אמיתי בלי Google Routes");
+  }
+
+  return {
+    place,
+    score,
+    reasons,
+    caveats
+  };
+}
+
+function selectRecommendedPlace(message: string, tripState?: TripState) {
+  const scored = (tripState?.places ?? [])
+    .map((place) => scorePlace(place, message))
+    .filter((item) => item.score > 0)
+    .sort((first, second) => second.score - first.score);
+  const preferences = getRecommendationPreferences(message);
+
+  return {
+    best: scored[0],
+    alternatives: scored.slice(1, 3),
+    requestedFocus: preferences.wantsWater ? "מים" : preferences.wantsFood ? "אוכל" : "אטרקציה"
+  };
+}
+
+function summarizePlaceNote(note?: string) {
+  if (!note) {
+    return null;
+  }
+
+  const withoutUrls = note.replace(/https?:\/\/\S+/g, "").replace(/https?:\/?$/g, "").trim();
+  const cleaned = withoutUrls.replace(/\s+/g, " ").slice(0, 90).trim();
+
+  return cleaned.length >= 12 ? cleaned : null;
+}
+
+function describeRejectedAlternative(candidate: RecommendationCandidate) {
+  const reasons: string[] = [];
+
+  if (candidate.caveats.length > 0) {
+    reasons.push(candidate.caveats[0]);
+  }
+
+  if (!candidate.reasons.some((reason) => reason.includes("סוג המקום מתאים"))) {
+    reasons.push("סוג המקום פחות מדויק לבקשה");
+  }
+
+  if (reasons.length === 0) {
+    reasons.push("הציון הכולל שלה נמוך יותר");
+  }
+
+  return `${candidate.place.name} - ${reasons.join(", ")}`;
+}
+
+export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMessageResponse {
+  const message = input.message.trim();
+  const recentText = joinRecentMessages(input.recentMessages);
+  const allContext = `${recentText} ${message}`;
+  const memberName = input.member?.displayName ?? "אני";
+  const selected = input.selectedPlace?.name ?? "המלון הקרוב";
+  const locationSummary = buildVisibleLocationSummary(input.tripState);
+  const conversationSummary = summarizeRecentConversation(input.recentMessages, message, input.tripState);
+  const needsText =
+    conversationSummary.mentionedNeeds.length > 0
+      ? conversationSummary.mentionedNeeds.join(", ")
+      : "העדפה כללית לטיול נוח";
+  const speakersText =
+    conversationSummary.speakerNames.length > 0 ? conversationSummary.speakerNames.join(", ") : memberName;
+  const destinationText = conversationSummary.currentDestinationName
+    ? ` היעד הקבוצתי הנוכחי הוא ${conversationSummary.currentDestinationName}, ולכן לא אשנה אותו בלי אישור מנהל.`
+    : "";
+
+  if (includesAny(message, ["מה כדאי", "מה לעשות", "לאן ללכת", "תמליץ", "המלצה", "הכי טוב", "משהו עם מים"])) {
+    const recommendation = selectRecommendedPlace(message, input.tripState);
+    const best = recommendation.best;
+
+    if (!best) {
+      return {
+        author: "קודי",
+        intent: "place_recommendation",
+        requiresAdminApproval: false,
+        source: "rules",
+        text:
+          "אני רוצה להמליץ מתוך מפת הטיול, אבל כרגע אין לי נקודות זמינות ב-TripState. צריך לוודא שהסנכרון מגוגל נטען לפני שאבחר יעד."
+      };
+    }
+
+    const cleanNote = summarizePlaceNote(best.place.note);
+    const reasonsText = best.reasons.slice(0, 4).join("; ");
+    const caveatsText = best.caveats.length > 0 ? ` מגבלות: ${best.caveats.join("; ")}.` : "";
+    const alternativesText =
+      recommendation.alternatives.length > 0
+        ? ` חלופות שדחיתי כרגע: ${recommendation.alternatives.map(describeRejectedAlternative).join("; ")}.`
+        : " אין לי כרגע חלופות מספיק טובות להשוואה מתוך הנתונים הזמינים.";
+
+    return {
+      author: "קודי",
+      intent: "place_recommendation",
+      requiresAdminApproval: true,
+      source: "rules",
+      text:
+        `ההמלצה שלי כרגע היא ${best.place.name}. בחרתי אותה כי היא מתאימה לבקשת ${recommendation.requestedFocus}. ` +
+        `מהשיחה האחרונה קלטתי את הצרכים האלה: ${needsText}. ` +
+        `הנימוקים המרכזיים: ${reasonsText || "זו הנקודה החזקה ביותר לפי הנתונים השמורים"}. ` +
+        `${cleanNote ? `הערה שמורה: ${cleanNote}. ` : "היא קיימת במפת הטיול השמורה. "}` +
+        "אני לא קובע עדיין זמן נסיעה, עומס, שעות פתיחה או מרחק הליכה אמיתי בלי Google Routes/Places." +
+        `${destinationText}${caveatsText}${alternativesText} אם מנהל מאשר, אוכל לפתוח ניווט או להפוך אותה ליעד הקבוצתי הבא.`
+    };
+  }
+
+  if (includesAny(message, ["ספר", "רואים", "מזרקה", "תסביר", "מה הסיפור", "מדריך"])) {
+    return {
+      author: "קודי",
+      intent: "local_guide",
+      requiresAdminApproval: false,
+      source: "rules",
+      text:
+        `${memberName}, אני יכול להיות רגע מדריך מקומי. לפי ההקשר אני צריך לזהות בדיוק איפה אתם או איזו נקודה נבחרה, ` +
+        "ואז אסביר בקצרה מה רואים, למה זה מעניין, ואתאים את ההסבר לילדים בלי להמציא עובדות שאני לא בטוח בהן."
+    };
+  }
+
+  if (includesAny(message, ["מסלול", "שעה פנויה", "מזרקות", "בנה", "צור", "הליכה רגלית"])) {
+    return {
+      author: "קודי",
+      intent: "route_creation",
+      requiresAdminApproval: true,
+      source: "rules",
+      text:
+        "אני יכול לבנות מסלול חדש, אבל קודם צריך לאפיין אותו. כמה זמן יש לכם, האם זה ברגל או ברכב, מה דרגת הקושי הרצויה, " +
+        `מי בקבוצה עכשיו, ומה מעניין אתכם: מים, אוכל, היסטוריה, ילדים או משהו רגוע ליד המלון? מהשיחה קלטתי כרגע: ${needsText}.${destinationText} אחרי זה אציע מסלול ואבקש אישור מנהל לפני שינוי יעד קבוצתי.`
+    };
+  }
+
+  if (includesAny(message, ["איפה", "כולם", "מיקום", "נפגשים", "קרוב למי"])) {
+    const visibleNames =
+      locationSummary.visibleNames.length > 0 ? locationSummary.visibleNames.join(", ") : "אף אחד עדיין לא משתף מיקום";
+    const hiddenText =
+      locationSummary.hiddenCount > 0
+        ? ` יש ${locationSummary.hiddenCount} חברי קבוצה שלא מציגים מיקום כרגע, ואני לא חושף אותם בלי הסכמה.`
+        : "";
+
+    return {
+      author: "קודי",
+      intent: "group_location",
+      requiresAdminApproval: false,
+      source: "rules",
+      text:
+        `אני מסתכל על מצב הטיול. כרגע אני רואה מיקום משותף של: ${visibleNames}.${hiddenText} ` +
+        `מהשיחה האחרונה קלטתי גם את הצרכים האלה: ${needsText}.${destinationText} ` +
+        "אפשר להשתמש בזה כדי להציע נקודת מפגש, אבל שינוי יעד קבוצתי עדיין דורש אישור מנהל."
+    };
+  }
+
+  if (includesAny(allContext, ["גלידה", "לישון", "מלון", "עייפ", "ילדים"])) {
+    return {
+      author: "קודי",
+      intent: "family_compromise",
+      requiresAdminApproval: true,
+      source: "rules",
+      text:
+        `שמעתי את ${speakersText}. מהשיחה אני מזהה: ${needsText}. הייתי מחפש נקודה קלה ליד ${selected}, ` +
+        `עם מינימום הליכה ובלי לדחוף את כולם לכיוון שלא מתאים לילדים.${destinationText} אני יכול להציע מקום, ואז אבקש אישור מנהל לפני שינוי יעד קבוצתי.`
+    };
+  }
+
+  return {
+    author: "קודי",
+    intent: "general",
+    requiresAdminApproval: false,
+    source: "rules",
+    text:
+      `אני כאן בשיחה. קראתי את ההודעות האחרונות של ${speakersText}, ואני מזהה כרגע: ${needsText}.${destinationText} אם תרצו אעזור למצוא מכנה משותף ולהפוך את זה להחלטה פשוטה: המלצה, הסבר וניווט.`
+  };
+}
