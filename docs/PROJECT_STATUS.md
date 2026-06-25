@@ -140,7 +140,7 @@ Current Supabase state:
 - Second relational table migration: member roster and live locations use relational tables; public smoke passed on `2026-06-25`
 - Third relational table migration: group destination and group routes use relational tables; public smoke passed on `2026-06-25`
 - Production places fixture: bundled in `data/demo-google-places.json` so Render can serve the full 108-place trip state
-- Fourth relational table migration: activation/setup state uses `trip_groups`; public smoke pending deploy
+- Fourth relational table migration: activation/setup state uses `trip_groups`; public smoke passed on `2026-06-25`
 - Remaining demo state still uses the JSON bridge until migrated
 
 ## QA
