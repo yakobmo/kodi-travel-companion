@@ -1,17 +1,25 @@
 import type { TripSetupState, TripSetupSubmission, TripSetupStep } from "../domain/types.js";
 import {
+  getActiveDemoStorageDriverName,
   loadDemoStorage,
   loadDemoStorageAsync,
   saveDemoStorage,
   saveDemoStorageAsync,
   type StoredDemoSetup
 } from "./demoStorage.js";
+import { DEMO_TRIP_GROUP_UUID } from "./demoRelationalIds.js";
+import { ensureDemoRelationalBase } from "./demoRelationalSeed.js";
 
 function getSavedDemoSetup(): StoredDemoSetup | null {
   return loadDemoStorage().setup;
 }
 
 async function getSavedDemoSetupAsync(): Promise<StoredDemoSetup | null> {
+  const supabaseSetup = await loadSupabaseSetupState();
+  if (supabaseSetup !== undefined) {
+    return supabaseSetup;
+  }
+
   return (await loadDemoStorageAsync()).setup;
 }
 
@@ -141,6 +149,11 @@ export function saveDemoTripSetupState(submission: TripSetupSubmission) {
 }
 
 export async function saveDemoTripSetupStateAsync(submission: TripSetupSubmission) {
+  const supabaseSetup = await saveSupabaseSetupState(submission);
+  if (supabaseSetup) {
+    return buildDemoTripSetupStateFromSavedSetup(supabaseSetup);
+  }
+
   await saveDemoStorageAsync({
     setup: {
       ...submission,
@@ -157,10 +170,138 @@ export function resetDemoTripSetupState() {
 }
 
 export async function resetDemoTripSetupStateAsync() {
+  if (await resetSupabaseSetupState()) {
+    return buildDemoTripSetupStateFromSavedSetup(null);
+  }
+
   await saveDemoStorageAsync({ setup: null });
   return buildDemoTripSetupStateAsync();
 }
 
 export async function buildDemoTripSetupStateAsync(): Promise<TripSetupState> {
   return buildDemoTripSetupStateFromSavedSetup(await getSavedDemoSetupAsync());
+}
+
+interface SupabaseSetupRow {
+  name: string;
+  google_source_url: string | null;
+  setup_first_member_name: string | null;
+  setup_first_member_age: number | null;
+  ai_plan_confirmed: boolean;
+  location_consent_explained: boolean;
+  setup_saved_at: string | null;
+}
+
+function getGoogleSourceState(googleLink: string) {
+  return isGoogleMapsViewingLink(googleLink) ? "demo_link_ready" : "not_connected";
+}
+
+function mapSupabaseSetupRow(row: SupabaseSetupRow | null): StoredDemoSetup | null {
+  if (!row?.setup_saved_at) {
+    return null;
+  }
+
+  return {
+    tripName: row.name,
+    firstMemberName: row.setup_first_member_name ?? "",
+    firstMemberAge: row.setup_first_member_age ?? undefined,
+    googleLink: row.google_source_url ?? "",
+    aiPlanConfirmed: row.ai_plan_confirmed,
+    locationConsentExplained: row.location_consent_explained,
+    savedAt: row.setup_saved_at
+  };
+}
+
+async function loadSupabaseSetupState(): Promise<StoredDemoSetup | null | undefined> {
+  if (getActiveDemoStorageDriverName() !== "supabase") {
+    return undefined;
+  }
+
+  const supabase = await ensureDemoRelationalBase();
+  if (!supabase) {
+    return undefined;
+  }
+
+  const { data, error } = await supabase
+    .from("trip_groups")
+    .select(
+      "name, google_source_url, setup_first_member_name, setup_first_member_age, ai_plan_confirmed, location_consent_explained, setup_saved_at"
+    )
+    .eq("id", DEMO_TRIP_GROUP_UUID)
+    .single();
+
+  if (error) {
+    throw new Error(`Supabase setup load failed: ${error.message}`);
+  }
+
+  return mapSupabaseSetupRow(data as SupabaseSetupRow);
+}
+
+async function saveSupabaseSetupState(submission: TripSetupSubmission): Promise<StoredDemoSetup | null> {
+  if (getActiveDemoStorageDriverName() !== "supabase") {
+    return null;
+  }
+
+  const supabase = await ensureDemoRelationalBase();
+  if (!supabase) {
+    return null;
+  }
+
+  const savedAt = new Date().toISOString();
+  const setup: StoredDemoSetup = {
+    ...submission,
+    savedAt
+  };
+  const { error } = await supabase
+    .from("trip_groups")
+    .update({
+      name: submission.tripName,
+      google_source_url: submission.googleLink,
+      google_source_state: getGoogleSourceState(submission.googleLink),
+      setup_first_member_name: submission.firstMemberName,
+      setup_first_member_age: submission.firstMemberAge,
+      ai_plan_confirmed: submission.aiPlanConfirmed,
+      location_consent_explained: submission.locationConsentExplained,
+      setup_saved_at: savedAt,
+      updated_at: savedAt
+    })
+    .eq("id", DEMO_TRIP_GROUP_UUID);
+
+  if (error) {
+    throw new Error(`Supabase setup save failed: ${error.message}`);
+  }
+
+  return setup;
+}
+
+async function resetSupabaseSetupState() {
+  if (getActiveDemoStorageDriverName() !== "supabase") {
+    return false;
+  }
+
+  const supabase = await ensureDemoRelationalBase();
+  if (!supabase) {
+    return false;
+  }
+
+  const { error } = await supabase
+    .from("trip_groups")
+    .update({
+      name: "צפון יוון",
+      google_source_url: null,
+      google_source_state: "not_connected",
+      setup_first_member_name: null,
+      setup_first_member_age: null,
+      ai_plan_confirmed: false,
+      location_consent_explained: false,
+      setup_saved_at: null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", DEMO_TRIP_GROUP_UUID);
+
+  if (error) {
+    throw new Error(`Supabase setup reset failed: ${error.message}`);
+  }
+
+  return true;
 }

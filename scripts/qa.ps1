@@ -406,6 +406,15 @@ if (-not $serverSource.Contains("apply-relational-route-migration")) {
   throw "API server is missing the guarded Supabase relational route migration endpoint."
 }
 
+$setupSource = Get-Content (Join-Path $root "apps\api\src\data\localSetupState.ts") -Raw
+if (-not $setupSource.Contains("setup_saved_at") -or -not $setupSource.Contains("google_source_state")) {
+  throw "Demo setup state must use relational trip_groups setup columns when Supabase storage is active."
+}
+
+if (-not $serverSource.Contains("apply-setup-state-migration")) {
+  throw "API server is missing the guarded Supabase setup state migration endpoint."
+}
+
 $agentActionsSource = Get-Content (Join-Path $root "apps\api\src\permissions\agentActions.ts") -Raw
 if (-not $agentActionsSource.Contains("operational_action_requires_admin") -or -not $agentActionsSource.Contains("set_group_destination")) {
   throw "Agent action policy must block operational actions unless the actor is an admin."

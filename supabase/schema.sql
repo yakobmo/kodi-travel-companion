@@ -59,6 +59,13 @@ create table if not exists public.trip_groups (
   google_source_url text,
   google_source_state text not null default 'not_connected',
   owner_member_id uuid,
+  setup_first_member_name text,
+  setup_first_member_age int check (
+    setup_first_member_age is null or (setup_first_member_age >= 0 and setup_first_member_age <= 120)
+  ),
+  ai_plan_confirmed boolean not null default false,
+  location_consent_explained boolean not null default false,
+  setup_saved_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -8,13 +8,18 @@ export async function ensureDemoRelationalBase() {
   }
 
   const now = new Date().toISOString();
-  const { error: groupError } = await supabase.from("trip_groups").upsert({
-    id: DEMO_TRIP_GROUP_UUID,
-    name: "צפון יוון",
-    google_source_url: "https://maps.app.goo.gl/MspoN6j9CJDyGmtb8",
-    google_source_state: "demo_link_ready",
-    updated_at: now
-  });
+  const { error: groupError } = await supabase
+    .from("trip_groups")
+    .upsert(
+      {
+        id: DEMO_TRIP_GROUP_UUID,
+        name: "צפון יוון",
+        google_source_url: "https://maps.app.goo.gl/MspoN6j9CJDyGmtb8",
+        google_source_state: "demo_link_ready",
+        updated_at: now
+      },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
 
   if (groupError) {
     throw new Error(`Supabase demo trip group seed failed: ${groupError.message}`);

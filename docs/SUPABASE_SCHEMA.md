@@ -202,6 +202,7 @@ Second relational runtime path: trip_members, location_sharing_consents, live_lo
 member/location public smoke: 2026-06-25
 Third relational runtime path: group_destinations, group_routes, group_route_stops
 destination/route public smoke: 2026-06-25
+Fourth relational runtime path: trip_groups setup columns
 ```
 
 No Supabase keys are committed to this repository.
