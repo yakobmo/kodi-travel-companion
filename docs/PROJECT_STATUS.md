@@ -150,7 +150,7 @@ Current Supabase state:
 - Active runtime no longer reads from or writes to the legacy `demo_storage_states` JSON bridge; local build, QA, smoke, and public Render smoke passed on `2026-06-26`
 - Event-log schema and API foundation added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public event smoke passed. Public status reports `eventLogReady=true`.
 - Live activity UI connected to the event log on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
-- Immediate activity refresh after group actions added on `2026-06-26`; local build, QA, and smoke passed.
+- Immediate activity refresh after group actions added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 
 ## QA
 
