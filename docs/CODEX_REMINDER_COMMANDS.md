@@ -46,7 +46,20 @@ Available manual entries:
 
 They are intentionally `PAUSED` so they do not run on a schedule. Use them manually from the Automations UI if the UI exposes a run button.
 
-If Codex does not show a manual run control for paused automations, the fallback remains the text commands below.
+Important behavior observed in Codex Desktop:
+
+- Running an automation does not inject the result into the current chat.
+- It creates or updates a separate automation thread in the left chat list.
+- The thread name should match the automation name, for example `Kodi | Continue - ...`.
+- The automation also writes its latest summary to its local `memory.md` file.
+
+Example result location:
+
+```text
+C:\Users\yaako\.codex\automations\kodi-continue-manual\memory.md
+```
+
+If Codex does not show a manual run control for paused automations, or if the user wants the result inside the current chat, the fallback remains the text commands below.
 
 ## Main Command
 
