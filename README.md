@@ -15,7 +15,7 @@ The product combines:
 
 ## Current Stage
 
-This is the local MVP Core.
+This is the deployed MVP Core.
 
 The app currently has:
 
@@ -24,8 +24,11 @@ The app currently has:
 - Navigation endpoint that creates Waze and Google Maps links.
 - React UI connected to the local API.
 - Hebrew map/chat shell with a Waze action card.
+- Render deployment.
+- Supabase production project.
+- Relational Supabase storage for messages, members, live locations, group destination, group routes, and setup state.
 
-External Google APIs, OpenAI, auth, database, and Render deploy are still future steps.
+External Google APIs, OpenAI, and real auth are still future steps.
 
 The current web map uses an internal fallback layer that connects trip places, personal GPS, selected destination, and consented group locations. To prepare the Google Maps JS switch, configure:
 
@@ -59,6 +62,7 @@ The project also uses a Codex self-review protocol: Codex acts as both builder a
 
 ```text
 travel-companion-mvp/
+  AGENTS.md
   apps/
     api/
     web/
@@ -117,10 +121,17 @@ Public MVP URL:
 
 Repository-local docs:
 
+- `AGENTS.md`
 - `docs/PROJECT_STATUS.md`
 - `docs/ARCHITECTURE_LINKS.md`
 - `docs/DEPLOYMENT_PLAN.md`
 - `docs/SUPABASE_SCHEMA.md`
+- `docs/AGENT_LESSONS_AND_BLOCKERS.md`
+- `.codex/skills/kodi-build-protocol/SKILL.md`
+
+Global Codex reminder:
+
+- `C:\Users\yaako\.codex\skills\kodi-build-protocol\SKILL.md`
 
 The original planning docs in the Codex workspace live one directory above this project:
 
