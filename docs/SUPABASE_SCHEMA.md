@@ -209,6 +209,7 @@ Fourth relational runtime path: trip_groups setup columns
 setup public smoke: 2026-06-25
 Active JSON bridge dependency retired from runtime: 2026-06-25
 Event log foundation added in code/schema: 2026-06-26
+Public event smoke passed with `eventLogReady=true`: 2026-06-26
 ```
 
 No Supabase keys are committed to this repository.

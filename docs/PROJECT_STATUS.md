@@ -90,7 +90,7 @@ PB is a separate product and must remain untouched.
 8. Verify initial Supabase bridge write/read from the live Render service. Done.
 9. Move runtime storage to relational Supabase tables. Done.
 10. Retire active JSON bridge dependency from runtime. Done.
-11. Add the first event-log foundation for Realtime/event flow. Code, QA, and local smoke done; production DB migration pending.
+11. Add the first event-log foundation for Realtime/event flow. Done.
 
 ## Required Secrets Later
 
@@ -146,7 +146,7 @@ Current Supabase state:
 - Production places fixture: bundled in `data/demo-google-places.json` so Render can serve the full 108-place trip state
 - Fourth relational table migration: activation/setup state uses `trip_groups`; public smoke passed on `2026-06-25`
 - Active runtime no longer reads from or writes to the legacy `demo_storage_states` JSON bridge; local build, QA, smoke, and public Render smoke passed on `2026-06-26`
-- Event-log schema and API foundation added on `2026-06-26`; local build, QA, and smoke passed. Production DB migration still needs guarded apply before `eventLogReady=true`.
+- Event-log schema and API foundation added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public event smoke passed. Public status reports `eventLogReady=true`.
 
 ## QA
 
