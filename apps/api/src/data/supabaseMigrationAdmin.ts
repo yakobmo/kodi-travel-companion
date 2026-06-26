@@ -7,6 +7,7 @@ const relationalRouteMigrationSqlPath = fileURLToPath(
   new URL("../../../../supabase/relational-route-migration.sql", import.meta.url)
 );
 const setupStateMigrationSqlPath = fileURLToPath(new URL("../../../../supabase/setup-state-migration.sql", import.meta.url));
+const eventLogMigrationSqlPath = fileURLToPath(new URL("../../../../supabase/event-log-migration.sql", import.meta.url));
 
 export interface SupabaseGrantApplyResult {
   configured: boolean;
@@ -18,7 +19,7 @@ export interface SupabaseGrantApplyResult {
 }
 
 export interface SupabaseMigrationApplyResult extends SupabaseGrantApplyResult {
-  migration: "relational_routes" | "setup_state";
+  migration: "relational_routes" | "setup_state" | "event_log";
 }
 
 export function isValidMigrationAdminToken(input: string | undefined) {
@@ -202,6 +203,68 @@ export async function applySupabaseSetupStateMigration(): Promise<SupabaseMigrat
       verified: false,
       checkedAt,
       error: error instanceof Error ? error.message : "unknown_setup_state_migration_error"
+    };
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
+}
+
+export async function applySupabaseEventLogMigration(): Promise<SupabaseMigrationApplyResult> {
+  const checkedAt = new Date().toISOString();
+  const databaseUrl = getDatabaseUrl();
+
+  if (!databaseUrl) {
+    return {
+      migration: "event_log",
+      configured: false,
+      authorized: true,
+      applied: false,
+      verified: false,
+      checkedAt,
+      error: "missing_SUPABASE_DB_URL_or_DATABASE_URL"
+    };
+  }
+
+  const sql = postgres(databaseUrl, {
+    ssl: "require",
+    max: 1,
+    idle_timeout: 5,
+    connect_timeout: 20
+  });
+
+  try {
+    await sql.unsafe(await readFile(eventLogMigrationSqlPath, "utf8"));
+    const rows = await sql`
+      select
+        to_regclass('public.group_events') as group_events_table,
+        exists (
+          select 1
+          from pg_publication_tables
+          where pubname = 'supabase_realtime'
+            and schemaname = 'public'
+            and tablename = 'group_events'
+        ) as group_events_realtime
+    `;
+    const verified = rows[0]?.group_events_table === "group_events" && Boolean(rows[0]?.group_events_realtime);
+
+    return {
+      migration: "event_log",
+      configured: true,
+      authorized: true,
+      applied: true,
+      verified,
+      checkedAt,
+      error: verified ? undefined : "event_log_migration_verification_failed"
+    };
+  } catch (error) {
+    return {
+      migration: "event_log",
+      configured: true,
+      authorized: true,
+      applied: false,
+      verified: false,
+      checkedAt,
+      error: error instanceof Error ? error.message : "unknown_event_log_migration_error"
     };
   } finally {
     await sql.end({ timeout: 5 });

@@ -20,6 +20,7 @@ The schema covers:
 - Group chat messages.
 - Active group destination.
 - Group routes and route stops.
+- Group event log for realtime activity.
 - A legacy `demo_storage_states` JSONB bridge table kept only for backward compatibility until a later cleanup migration.
 
 ## Realtime Tables
@@ -31,6 +32,7 @@ The schema enables Supabase Realtime publication for:
 - `group_destinations`
 - `group_routes`
 - `group_route_stops`
+- `group_events`
 
 These are the tables that need live UI updates first.
 
@@ -102,6 +104,7 @@ GET /api/trips/demo/storage/supabase-check
 ```
 
 This endpoint checks only whether the backend has Supabase server configuration and can see the relational runtime tables. It does not expose keys.
+It also reports `eventLogReady`, which becomes true after the event-log migration is applied.
 
 It also reports the JWT role embedded in the configured key, for example:
 
@@ -205,6 +208,7 @@ destination/route public smoke: 2026-06-25
 Fourth relational runtime path: trip_groups setup columns
 setup public smoke: 2026-06-25
 Active JSON bridge dependency retired from runtime: 2026-06-25
+Event log foundation added in code/schema: 2026-06-26
 ```
 
 No Supabase keys are committed to this repository.

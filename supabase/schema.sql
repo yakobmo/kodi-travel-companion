@@ -53,6 +53,21 @@ exception
   when duplicate_object then null;
 end $$;
 
+do $$
+begin
+  create type public.trip_event_type as enum (
+    'message_created',
+    'location_updated',
+    'destination_set',
+    'route_created',
+    'route_progressed',
+    'setup_updated',
+    'system'
+  );
+exception
+  when duplicate_object then null;
+end $$;
+
 create table if not exists public.trip_groups (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -170,6 +185,17 @@ create table if not exists public.group_route_stops (
   unique (route_id, place_id)
 );
 
+create table if not exists public.group_events (
+  id uuid primary key default gen_random_uuid(),
+  trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
+  event_type public.trip_event_type not null,
+  actor_member_id uuid references public.trip_members(id) on delete set null,
+  actor_name text,
+  related_entity_id text,
+  summary text not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.demo_storage_states (
   storage_key text primary key,
   state jsonb not null,
@@ -186,6 +212,7 @@ create index if not exists group_messages_trip_created_idx on public.group_messa
 create index if not exists live_locations_trip_group_id_idx on public.live_locations(trip_group_id);
 create index if not exists group_routes_trip_group_id_idx on public.group_routes(trip_group_id);
 create index if not exists group_route_stops_route_order_idx on public.group_route_stops(route_id, stop_order);
+create index if not exists group_events_trip_created_idx on public.group_events(trip_group_id, created_at desc);
 create index if not exists demo_storage_states_updated_at_idx on public.demo_storage_states(updated_at desc);
 
 do $$
@@ -195,6 +222,16 @@ begin
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'group_messages'
   ) then
     alter publication supabase_realtime add table public.group_messages;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'group_events'
+  ) then
+    alter publication supabase_realtime add table public.group_events;
   end if;
 end $$;
 
@@ -247,6 +284,7 @@ alter table public.group_messages enable row level security;
 alter table public.group_destinations enable row level security;
 alter table public.group_routes enable row level security;
 alter table public.group_route_stops enable row level security;
+alter table public.group_events enable row level security;
 alter table public.demo_storage_states enable row level security;
 
 grant usage on schema public to service_role;

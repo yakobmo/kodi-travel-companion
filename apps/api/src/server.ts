@@ -20,11 +20,18 @@ import {
 import { getDemoStorageMetadata } from "./data/demoStorage.js";
 import { checkSupabaseRuntime } from "./data/supabaseStatus.js";
 import {
+  applySupabaseEventLogMigration,
   applySupabaseRelationalRouteMigration,
   applySupabaseSetupStateMigration,
   applySupabaseServiceRoleGrants,
   isValidMigrationAdminToken
 } from "./data/supabaseMigrationAdmin.js";
+import {
+  getDemoTripEventLogStatus,
+  loadDemoTripEventsAsync,
+  recordDemoTripEventAsync,
+  resetDemoTripEventsAsync
+} from "./data/localEvents.js";
 import {
   loadDemoGroupDestinationAsync,
   resetDemoGroupDestinationAsync,
@@ -39,6 +46,7 @@ import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripSta
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext } from "./agent/kodi.js";
 import { canMemberRunAgentAction, isAgentActionType } from "./permissions/agentActions.js";
+import type { TripEventType } from "./domain/types.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
@@ -78,6 +86,21 @@ function buildAgentContextSummary(input: {
     operationalChangesRequireAdmin: input.permissionPolicy?.operationalChangesRequireAdmin ?? true,
     canShareLiveLocation: input.permissionPolicy?.canShareLiveLocation ?? false
   };
+}
+
+async function safeRecordTripEvent(input: {
+  eventType: TripEventType;
+  actorMemberId?: string;
+  actorName?: string;
+  relatedEntityId?: string;
+  summary: string;
+}) {
+  try {
+    return await recordDemoTripEventAsync(input);
+  } catch (error) {
+    console.warn("Trip event recording skipped", error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 app.use((req, res, next) => {
@@ -207,6 +230,30 @@ app.post("/api/admin/supabase/apply-setup-state-migration", async (req, res) => 
   });
 });
 
+app.post("/api/admin/supabase/apply-event-log-migration", async (req, res) => {
+  const token = req.headers["x-kodi-admin-token"];
+  const normalizedToken = Array.isArray(token) ? token[0] : token;
+
+  if (!isValidMigrationAdminToken(normalizedToken)) {
+    res.status(403).json({
+      error: "admin_token_required"
+    });
+    return;
+  }
+
+  res.json({
+    supabase: await applySupabaseEventLogMigration()
+  });
+});
+
+app.get("/api/trips/demo/events", async (_req, res) => {
+  res.json({
+    tripGroupId: "group_family_greece_demo",
+    eventLog: await getDemoTripEventLogStatus(),
+    events: await loadDemoTripEventsAsync()
+  });
+});
+
 app.get("/api/trips/demo/group-destination", async (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
@@ -274,6 +321,13 @@ app.post("/api/trips/demo/group-destination", async (req, res) => {
     setByMemberId: candidateMember.id,
     setByName: candidateMember.displayName,
     setAt: new Date().toISOString()
+  });
+  await safeRecordTripEvent({
+    eventType: "destination_set",
+    actorMemberId: candidateMember.id,
+    actorName: candidateMember.displayName,
+    relatedEntityId: destination.placeId,
+    summary: `${candidateMember.displayName} set ${destination.placeName} as the group destination.`
   });
 
   res.json({
@@ -361,6 +415,13 @@ app.post("/api/trips/demo/group-route", async (req, res) => {
     createdAt: new Date().toISOString(),
     status: "approved"
   });
+  await safeRecordTripEvent({
+    eventType: "route_created",
+    actorMemberId: candidateMember.id,
+    actorName: candidateMember.displayName,
+    relatedEntityId: route.routeId,
+    summary: `${candidateMember.displayName} created group route: ${route.title}.`
+  });
 
   res.json({
     tripGroupId: "group_family_greece_demo",
@@ -423,6 +484,13 @@ app.post("/api/trips/demo/group-route/progress", async (req, res) => {
     activeStopIndex: nextActiveStopIndex,
     status: routeCompleted ? "completed" : currentRoute.status
   });
+  await safeRecordTripEvent({
+    eventType: "route_progressed",
+    actorMemberId: candidateMember.id,
+    actorName: candidateMember.displayName,
+    relatedEntityId: route.routeId,
+    summary: `${candidateMember.displayName} completed route stop: ${activeStop.placeName}.`
+  });
 
   res.json({
     tripGroupId: "group_family_greece_demo",
@@ -455,14 +523,23 @@ app.post("/api/trips/demo/messages", async (req, res) => {
     return;
   }
 
+  const message = await appendDemoTripMessageAsync({
+    author: author.trim(),
+    text: text.trim(),
+    memberId,
+    source
+  });
+  await safeRecordTripEvent({
+    eventType: "message_created",
+    actorMemberId: memberId,
+    actorName: author.trim(),
+    relatedEntityId: message.id,
+    summary: `${author.trim()} sent a ${message.source} message.`
+  });
+
   res.json({
     tripGroupId: "group_family_greece_demo",
-    message: await appendDemoTripMessageAsync({
-      author: author.trim(),
-      text: text.trim(),
-      memberId,
-      source
-    })
+    message
   });
 });
 
@@ -486,6 +563,13 @@ app.post("/api/trips/demo/members/:memberId/location", async (req, res) => {
     res.status(result.error === "member_not_found" ? 404 : 403).json({ error: result.error });
     return;
   }
+  await safeRecordTripEvent({
+    eventType: "location_updated",
+    actorMemberId: memberId,
+    actorName: result.member.member.displayName,
+    relatedEntityId: memberId,
+    summary: `${result.member.member.displayName} updated live location.`
+  });
 
   res.json({
     tripGroupId: "group_family_greece_demo",
@@ -530,16 +614,20 @@ app.post("/api/trips/demo/setup", async (req, res) => {
     return;
   }
 
-  res.json(
-    await saveDemoTripSetupStateAsync({
-      tripName: tripName.trim(),
-      firstMemberName: firstMemberName.trim(),
-      firstMemberAge,
-      googleLink: googleLink.trim(),
-      aiPlanConfirmed,
-      locationConsentExplained
-    })
-  );
+  const setupState = await saveDemoTripSetupStateAsync({
+    tripName: tripName.trim(),
+    firstMemberName: firstMemberName.trim(),
+    firstMemberAge,
+    googleLink: googleLink.trim(),
+    aiPlanConfirmed,
+    locationConsentExplained
+  });
+  await safeRecordTripEvent({
+    eventType: "setup_updated",
+    actorName: firstMemberName.trim(),
+    summary: `Trip setup saved for ${tripName.trim()}.`
+  });
+  res.json(setupState);
 });
 
 app.delete("/api/trips/demo/setup", async (_req, res) => {
@@ -547,6 +635,7 @@ app.delete("/api/trips/demo/setup", async (_req, res) => {
   await resetDemoTripMessagesAsync();
   await resetDemoGroupDestinationAsync();
   await resetDemoGroupRouteAsync();
+  await resetDemoTripEventsAsync();
   res.json(await resetDemoTripSetupStateAsync());
 });
 

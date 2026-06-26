@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { TripMemberLocationView, TripSetupSubmission } from "../domain/types.js";
+import type { TripEvent, TripMemberLocationView, TripSetupSubmission } from "../domain/types.js";
 import { hasSupabaseServerConfig } from "./supabaseClient.js";
 
 export interface StoredDemoMessage {
@@ -59,6 +59,7 @@ export interface DemoStorageState {
   messages: StoredDemoMessage[] | null;
   groupDestination: StoredGroupDestination | null;
   groupRoute: StoredGroupRoute | null;
+  events: TripEvent[] | null;
 }
 
 export interface DemoStorageDriver {
@@ -91,7 +92,8 @@ function createEmptyState(): DemoStorageState {
     members: null,
     messages: null,
     groupDestination: null,
-    groupRoute: null
+    groupRoute: null,
+    events: null
   };
 }
 

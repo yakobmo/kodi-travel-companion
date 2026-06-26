@@ -8,6 +8,7 @@ export interface SupabaseRuntimeStatus {
   reachable: boolean;
   bridgeTableReady: boolean;
   relationalTablesReady: boolean;
+  eventLogReady: boolean;
   checkedAt: string;
   error?: string;
 }
@@ -50,6 +51,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       reachable: false,
       bridgeTableReady: false,
       relationalTablesReady: false,
+      eventLogReady: false,
       checkedAt
     };
   }
@@ -63,9 +65,12 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       supabase.from("trip_groups").select("id", { count: "exact", head: true }),
       supabase.from("group_messages").select("id", { count: "exact", head: true }),
       supabase.from("live_locations").select("id", { count: "exact", head: true }),
-      supabase.from("group_routes").select("id", { count: "exact", head: true })
+      supabase.from("group_routes").select("id", { count: "exact", head: true }),
+      supabase.from("group_events").select("id", { count: "exact", head: true })
     ]);
-    const error = checks.find((result) => result.error)?.error;
+    const requiredRuntimeChecks = checks.slice(0, 4);
+    const eventLogCheck = checks[4];
+    const error = requiredRuntimeChecks.find((result) => result.error)?.error;
 
     if (error) {
       return {
@@ -76,6 +81,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
         reachable: true,
         bridgeTableReady: false,
         relationalTablesReady: false,
+        eventLogReady: false,
         checkedAt,
         error: error.message
       };
@@ -89,6 +95,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       reachable: true,
       bridgeTableReady: false,
       relationalTablesReady: true,
+      eventLogReady: !eventLogCheck.error,
       checkedAt
     };
   } catch (error) {
@@ -100,6 +107,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       reachable: false,
       bridgeTableReady: false,
       relationalTablesReady: false,
+      eventLogReady: false,
       checkedAt,
       error: error instanceof Error ? error.message : "unknown_supabase_runtime_error"
     };

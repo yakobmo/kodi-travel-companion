@@ -28,6 +28,15 @@ export type AiPlanMode = "demo" | "limited" | "full";
 
 export type GoogleSourceState = "not_connected" | "demo_link_ready" | "connected" | "needs_refresh";
 
+export type TripEventType =
+  | "message_created"
+  | "location_updated"
+  | "destination_set"
+  | "route_created"
+  | "route_progressed"
+  | "setup_updated"
+  | "system";
+
 export interface TripMember {
   id: string;
   tripGroupId: string;
@@ -182,6 +191,17 @@ export interface TripSetupSubmission {
   googleLink: string;
   aiPlanConfirmed: boolean;
   locationConsentExplained: boolean;
+}
+
+export interface TripEvent {
+  id: string;
+  tripGroupId: string;
+  eventType: TripEventType;
+  actorMemberId?: string;
+  actorName?: string;
+  relatedEntityId?: string;
+  summary: string;
+  createdAt: string;
 }
 
 export interface AgentContextSnapshot {

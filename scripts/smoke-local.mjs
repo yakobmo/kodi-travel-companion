@@ -73,6 +73,8 @@ try {
   const messagesPayload = await messagesResponse.json();
   const storageResponse = await page.request.get("http://localhost:3001/api/trips/demo/storage");
   const storagePayload = await storageResponse.json();
+  const eventsResponse = await page.request.get("http://localhost:3001/api/trips/demo/events");
+  const eventsPayload = await eventsResponse.json();
 
   assertCheck("map", body.includes("מפה חיה"));
   assertCheck("api connected", body.includes("מחובר ל-API המקומי"));
@@ -98,11 +100,21 @@ try {
   assertCheck("messages api initial", messagesPayload.messages?.length >= 4);
   assertCheck("storage status ok", storageResponse.ok() && storagePayload.storage?.driver === "file");
   assertCheck("storage realtime not ready", storagePayload.storage?.realtimeReady === false);
+  assertCheck("events api ok", eventsResponse.ok() && Array.isArray(eventsPayload.events));
+  assertCheck("events file fallback", eventsPayload.eventLog?.driver === "file");
   const savedMessageResponse = await page.request.post("http://localhost:3001/api/trips/demo/messages", {
     data: { author: "QA", text: "בדיקת שמירת שיחה", source: "system" }
   });
   const savedMessagePayload = await savedMessageResponse.json();
   assertCheck("messages api append", savedMessageResponse.ok() && savedMessagePayload.message?.text === "בדיקת שמירת שיחה");
+  const eventsAfterMessageResponse = await page.request.get("http://localhost:3001/api/trips/demo/events");
+  const eventsAfterMessagePayload = await eventsAfterMessageResponse.json();
+  assertCheck(
+    "events message recorded",
+    eventsAfterMessagePayload.events?.some(
+      (event) => event.eventType === "message_created" && event.relatedEntityId === savedMessagePayload.message?.id
+    )
+  );
   assertCheck(
     "members api consent",
     membersPayload.members?.some((item) => item.member?.displayName === "סבתא" && item.consent?.state === "disabled")

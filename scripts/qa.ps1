@@ -9,6 +9,7 @@ $requiredFiles = @(
   "README.md",
   "DEVELOPMENT_WORKFLOW.md",
   "supabase/schema.sql",
+  "supabase/event-log-migration.sql",
   "docs/SUPABASE_SCHEMA.md",
   "scripts/apply-supabase-schema.mjs",
   "scripts/apply-supabase-schema.ps1",
@@ -26,6 +27,7 @@ $requiredFiles = @(
   "apps/api/src/data/supabaseStatus.ts",
   "apps/api/src/data/supabaseMigrationAdmin.ts",
   "apps/api/src/data/localMessages.ts",
+  "apps/api/src/data/localEvents.ts",
   "apps/api/src/data/localMembers.ts",
   "apps/api/src/data/localPlaces.ts",
   "apps/api/src/data/localSetupState.ts",
@@ -267,6 +269,10 @@ if (-not $domainTypesSource.Contains("groupRoute")) {
   throw "Domain model is missing the active group route state."
 }
 
+if (-not $domainTypesSource.Contains("TripEvent") -or -not $domainTypesSource.Contains("TripEventType")) {
+  throw "Domain model is missing the group event log model."
+}
+
 $serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
 if (-not $serverSource.Contains("/api/agent/message")) {
   throw "API server is missing the Kodi agent endpoint."
@@ -322,6 +328,14 @@ if (-not $serverSource.Contains("/api/trips/demo/group-route")) {
 
 if (-not $serverSource.Contains("/api/trips/demo/group-route/progress")) {
   throw "API server is missing the group route progress endpoint."
+}
+
+if (-not $serverSource.Contains("/api/trips/demo/events") -or -not $serverSource.Contains("recordDemoTripEvent")) {
+  throw "API server is missing the group event log endpoint or event recording hook."
+}
+
+if (-not $serverSource.Contains("apply-event-log-migration")) {
+  throw "API server is missing the guarded Supabase event log migration endpoint."
 }
 
 if (-not $serverSource.Contains("routeCompleted") -or -not $serverSource.Contains('status: routeCompleted ? "completed"')) {
@@ -415,6 +429,11 @@ if (-not $localDestinationSource.Contains("group_destinations") -or -not $localD
 $localRouteSource = Get-Content (Join-Path $root "apps\api\src\data\localGroupRoute.ts") -Raw
 if (-not $localRouteSource.Contains("group_routes") -or -not $localRouteSource.Contains("group_route_stops")) {
   throw "Demo group route must use relational Supabase route and route stop tables when Supabase storage is active."
+}
+
+$localEventsSource = Get-Content (Join-Path $root "apps\api\src\data\localEvents.ts") -Raw
+if (-not $localEventsSource.Contains("group_events") -or -not $localEventsSource.Contains("recordDemoTripEventAsync")) {
+  throw "Demo event log must use the relational Supabase group_events table when available with file fallback."
 }
 
 if (-not $serverSource.Contains("apply-relational-route-migration")) {
@@ -531,7 +550,8 @@ foreach ($requiredTable in @(
   "group_messages",
   "group_destinations",
   "group_routes",
-  "group_route_stops"
+  "group_route_stops",
+  "group_events"
 )) {
   if (-not $supabaseSchemaSource.Contains("public.$requiredTable")) {
     throw "Supabase schema is missing table: $requiredTable"
@@ -547,7 +567,8 @@ foreach ($realtimeTable in @(
   "live_locations",
   "group_destinations",
   "group_routes",
-  "group_route_stops"
+  "group_route_stops",
+  "group_events"
 )) {
   if (-not $supabaseSchemaSource.Contains("alter publication supabase_realtime add table public.$realtimeTable")) {
     throw "Supabase schema must publish realtime table: $realtimeTable"
