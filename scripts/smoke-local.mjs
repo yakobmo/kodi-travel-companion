@@ -291,6 +291,7 @@ try {
   await input.fill("בא לי גלידה ליד המלון");
   await page.locator(".composer button").click();
   await page.getByText("בא לי גלידה ליד המלון").waitFor();
+  await page.locator(".event-activity").getByText("אמא שלח/ה הודעה בקבוצה").waitFor();
   const messagesAfterFamilyOnly = await page.locator(".message").count();
   assertCheck("kodi stays asleep without call", messagesAfterFamilyOnly === messagesBeforeFamilyOnly + 1);
 

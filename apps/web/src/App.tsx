@@ -445,6 +445,29 @@ export function App() {
   );
   const [activeRouteStopIndex, setActiveRouteStopIndex] = useState(0);
 
+  function applyTripEvents(data: TripEventsResponse) {
+    setTripEvents(data.events);
+    setEventLogDriver(data.eventLog.driver);
+    setEventRealtimeState("live");
+  }
+
+  async function fetchTripEvents() {
+    const response = await fetch(`${apiBaseUrl}/api/trips/demo/events`);
+    if (!response.ok) {
+      throw new Error(`Events API failed with ${response.status}`);
+    }
+
+    return (await response.json()) as TripEventsResponse;
+  }
+
+  async function refreshTripEvents() {
+    try {
+      applyTripEvents(await fetchTripEvents());
+    } catch {
+      setEventRealtimeState("error");
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
 
@@ -603,16 +626,9 @@ export function App() {
 
     async function loadTripEvents() {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/trips/demo/events`);
-        if (!response.ok) {
-          throw new Error(`Events API failed with ${response.status}`);
-        }
-
-        const data = (await response.json()) as TripEventsResponse;
+        const data = await fetchTripEvents();
         if (!ignore) {
-          setTripEvents(data.events);
-          setEventLogDriver(data.eventLog.driver);
-          setEventRealtimeState("live");
+          applyTripEvents(data);
         }
       } catch {
         if (!ignore) {
@@ -669,19 +685,10 @@ export function App() {
 
     async function pollTripEvents() {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/trips/demo/events`);
-        if (!response.ok) {
-          throw new Error(`Events polling failed with ${response.status}`);
+        const data = await fetchTripEvents();
+        if (!ignore) {
+          applyTripEvents(data);
         }
-
-        const data = (await response.json()) as TripEventsResponse;
-        if (ignore) {
-          return;
-        }
-
-        setTripEvents(data.events);
-        setEventLogDriver(data.eventLog.driver);
-        setEventRealtimeState("live");
       } catch {
         if (!ignore) {
           setEventRealtimeState("error");
@@ -1101,6 +1108,7 @@ export function App() {
       }
 
       const payload = (await response.json()) as { message: ChatMessage };
+      await refreshTripEvents();
       return payload.message;
     } catch {
       return message;
@@ -1256,6 +1264,7 @@ export function App() {
             )
           );
           setLocationSyncState("synced");
+          await refreshTripEvents();
         } catch {
           setLocationSyncState("error");
         }
