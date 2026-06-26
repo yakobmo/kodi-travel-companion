@@ -33,5 +33,5 @@ Before declaring work complete:
 Operational references:
 
 - `docs/AGENT_LESSONS_AND_BLOCKERS.md`
+- `docs/CODEX_REMINDER_COMMANDS.md`
 - `.codex/skills/kodi-build-protocol/SKILL.md`
-

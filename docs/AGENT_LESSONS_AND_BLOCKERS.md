@@ -13,12 +13,14 @@ The protocol is anchored in three places:
 - `AGENTS.md`: short repository-level operating rules to read before touching the project.
 - `.codex/skills/kodi-build-protocol/SKILL.md`: repository copy of the reusable Kodi build protocol.
 - `C:\Users\yaako\.codex\skills\kodi-build-protocol\SKILL.md`: global Codex skill copy for future sessions.
+- `docs/CODEX_REMINDER_COMMANDS.md`: short dashboard-style commands the user can type in chat.
 
 The practical startup rule is:
 
 1. Open `AGENTS.md`.
 2. Use `kodi-build-protocol` when continuing Kodi work.
-3. Add new recurring blockers to this file.
+3. Treat the short commands in `docs/CODEX_REMINDER_COMMANDS.md` as user control buttons.
+4. Add new recurring blockers to this file.
 
 This is not only documentation. It is the working memory layer for future automation decisions.
 

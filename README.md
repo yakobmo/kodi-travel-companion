@@ -127,6 +127,7 @@ Repository-local docs:
 - `docs/DEPLOYMENT_PLAN.md`
 - `docs/SUPABASE_SCHEMA.md`
 - `docs/AGENT_LESSONS_AND_BLOCKERS.md`
+- `docs/CODEX_REMINDER_COMMANDS.md`
 - `.codex/skills/kodi-build-protocol/SKILL.md`
 
 Global Codex reminder:

@@ -1,9 +1,29 @@
 ---
 name: kodi-build-protocol
-description: Use when continuing Kodi Travel Companion development, deployment, Supabase work, Render/GitHub automation, product-spec alignment, or when the user says to continue the build loop. Enforces a disciplined cycle of stage identification, blocker removal, implementation, QA, self-review, docs update, commit, deploy, and smoke testing while minimizing manual user copy/paste.
+description: Use when continuing Kodi Travel Companion development, deployment, Supabase work, Render/GitHub automation, product-spec alignment, or when the user says to continue the build loop. Also trigger on short user reminder commands such as "פרוטוקול קודי", "קודי פרוטוקול", "קודי QA", "קודי חסמים", "קודי המשך מסודר", "הפעל נוהל קודי", or "תזכורת קודי". Enforces a disciplined cycle of stage identification, blocker removal, implementation, QA, self-review, docs update, commit, deploy, and smoke testing while minimizing manual user copy/paste.
 ---
 
 # Kodi Build Protocol
+
+## User Reminder Commands
+
+When the user writes one of these short commands, load and follow this protocol before doing any implementation:
+
+- `פרוטוקול קודי`
+- `קודי פרוטוקול`
+- `תזכורת קודי`
+- `הפעל נוהל קודי`
+- `קודי המשך מסודר`
+- `קודי QA`
+- `קודי חסמים`
+
+Treat these commands as dashboard-style controls from the user.
+
+If the command is `קודי QA`, start by reporting the QA gates and then run the relevant checks.
+
+If the command is `קודי חסמים`, start by identifying the blocker, the cause, the automation path, and whether user action is truly required.
+
+If the command is `קודי המשך מסודר`, resume the next implementation step only after reading current status and `git status`.
 
 ## Core Rule
 
