@@ -23,6 +23,31 @@ If the buttons do not appear immediately, restart the Codex desktop app and open
 
 If the UI still does not show them as buttons, use the text commands below. The text commands are the fallback control surface.
 
+## Manual Automation Buttons
+
+Manual-style automation entries were created under:
+
+```text
+C:\Users\yaako\.codex\automations\
+```
+
+Look in the left sidebar:
+
+```text
+Automations
+```
+
+Available manual entries:
+
+- `Kodi | Protocol`
+- `Kodi | Continue`
+- `Kodi | QA`
+- `Kodi | Blockers`
+
+They are intentionally `PAUSED` so they do not run on a schedule. Use them manually from the Automations UI if the UI exposes a run button.
+
+If Codex does not show a manual run control for paused automations, the fallback remains the text commands below.
+
 ## Main Command
 
 ```text
