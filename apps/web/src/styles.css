@@ -945,6 +945,63 @@ input {
   font-weight: 700;
 }
 
+.event-activity {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid #e1e6e3;
+  padding: 12px 18px;
+  background: #fbfcfb;
+}
+
+.event-activity-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.event-activity-heading strong {
+  color: #16211f;
+  font-size: 13px;
+}
+
+.event-activity-heading span {
+  color: #096b5c;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.event-items {
+  display: grid;
+  gap: 6px;
+}
+
+.event-items article {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+  border: 1px solid #d7e3df;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #ffffff;
+}
+
+.event-items span {
+  color: #096b5c;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.event-items p {
+  margin: 0;
+  color: #53615e;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .messages {
   flex: 1;
   display: flex;

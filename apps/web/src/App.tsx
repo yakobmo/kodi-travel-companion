@@ -165,6 +165,35 @@ interface TripMessagesResponse {
   messages: ChatMessage[];
 }
 
+interface TripEvent {
+  id: string;
+  tripGroupId: string;
+  eventType:
+    | "message_created"
+    | "location_updated"
+    | "destination_set"
+    | "route_created"
+    | "route_progressed"
+    | "setup_updated"
+    | "system";
+  actorMemberId?: string;
+  actorName?: string;
+  relatedEntityId?: string;
+  summary: string;
+  createdAt: string;
+}
+
+interface TripEventsResponse {
+  tripGroupId: string;
+  eventLog: {
+    driver: "file" | "supabase";
+    eventLogReady: boolean;
+    checkedAt: string;
+    error?: string;
+  };
+  events: TripEvent[];
+}
+
 interface TripStateResponse {
   trip: {
     id: string;
@@ -260,6 +289,39 @@ function mapMemberLocations(members: TripMemberLocationResponse["members"]): Dem
         }
       : null
   }));
+}
+
+function getTripEventLabel(eventType: TripEvent["eventType"]) {
+  const labels: Record<TripEvent["eventType"], string> = {
+    message_created: "הודעה",
+    location_updated: "מיקום",
+    destination_set: "יעד",
+    route_created: "מסלול",
+    route_progressed: "התקדמות",
+    setup_updated: "קליטה",
+    system: "מערכת"
+  };
+
+  return labels[eventType];
+}
+
+function getTripEventText(event: TripEvent) {
+  switch (event.eventType) {
+    case "message_created":
+      return `${event.actorName ?? "חבר קבוצה"} שלח/ה הודעה בקבוצה`;
+    case "location_updated":
+      return `${event.actorName ?? "חבר קבוצה"} עדכן/ה מיקום חי`;
+    case "destination_set":
+      return `${event.actorName ?? "מנהל"} קבע/ה יעד קבוצתי`;
+    case "route_created":
+      return `${event.actorName ?? "מנהל"} יצר/ה מסלול קבוצתי`;
+    case "route_progressed":
+      return `${event.actorName ?? "מנהל"} סימן/ה התקדמות במסלול`;
+    case "setup_updated":
+      return "הקליטה הראשונית נשמרה";
+    default:
+      return "קודי הכין את יומן הפעילות";
+  }
 }
 
 function getPlaceTypeLabel(type: PlaceType) {
@@ -359,6 +421,9 @@ export function App() {
   const [loadState, setLoadState] = useState<"loading" | "ready" | "fallback">("loading");
   const [navigationState, setNavigationState] = useState<"idle" | "opening" | "error">("idle");
   const [messages, setMessages] = useState<ChatMessage[]>(demoMessages);
+  const [tripEvents, setTripEvents] = useState<TripEvent[]>([]);
+  const [eventRealtimeState, setEventRealtimeState] = useState<"idle" | "live" | "error">("idle");
+  const [eventLogDriver, setEventLogDriver] = useState<"file" | "supabase" | "unknown">("unknown");
   const [members, setMembers] = useState<DemoMember[]>(demoMembers as DemoMember[]);
   const [activeMemberId, setActiveMemberId] = useState("mom");
   const [draft, setDraft] = useState("");
@@ -536,9 +601,30 @@ export function App() {
       }
     }
 
+    async function loadTripEvents() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/trips/demo/events`);
+        if (!response.ok) {
+          throw new Error(`Events API failed with ${response.status}`);
+        }
+
+        const data = (await response.json()) as TripEventsResponse;
+        if (!ignore) {
+          setTripEvents(data.events);
+          setEventLogDriver(data.eventLog.driver);
+          setEventRealtimeState("live");
+        }
+      } catch {
+        if (!ignore) {
+          setEventRealtimeState("error");
+        }
+      }
+    }
+
     void loadSetupState();
     void loadTripState();
     void loadMessages();
+    void loadTripEvents();
 
     return () => {
       ignore = true;
@@ -571,6 +657,40 @@ export function App() {
 
     void pollGroupMessages();
     const intervalId = window.setInterval(pollGroupMessages, 4000);
+
+    return () => {
+      ignore = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function pollTripEvents() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/trips/demo/events`);
+        if (!response.ok) {
+          throw new Error(`Events polling failed with ${response.status}`);
+        }
+
+        const data = (await response.json()) as TripEventsResponse;
+        if (ignore) {
+          return;
+        }
+
+        setTripEvents(data.events);
+        setEventLogDriver(data.eventLog.driver);
+        setEventRealtimeState("live");
+      } catch {
+        if (!ignore) {
+          setEventRealtimeState("error");
+        }
+      }
+    }
+
+    void pollTripEvents();
+    const intervalId = window.setInterval(pollTripEvents, 5000);
 
     return () => {
       ignore = true;
@@ -638,6 +758,7 @@ export function App() {
     liveLocation: null
   };
   const visibleMembers = members.filter((member) => member.locationSharing === "enabled" && member.liveLocation);
+  const recentTripEvents = tripEvents.slice(0, 3);
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
   const setupReadiness = {
     hasOwner: setupDraft.tripName.trim().length > 1,
@@ -1616,6 +1737,36 @@ export function App() {
           </div>
           <div className="active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
         </header>
+
+        <section className="event-activity" aria-label="פעילות חיה בקבוצה">
+          <div className="event-activity-heading">
+            <strong>פעילות חיה</strong>
+            <span>
+              {eventRealtimeState === "live"
+                ? eventLogDriver === "supabase"
+                  ? "Supabase realtime-ready"
+                  : "סנכרון מקומי"
+                : eventRealtimeState === "error"
+                  ? "ממתין לחיבור"
+                  : "מכין סנכרון"}
+            </span>
+          </div>
+          <div className="event-items">
+            {recentTripEvents.length > 0 ? (
+              recentTripEvents.map((event) => (
+                <article key={event.id}>
+                  <span>{getTripEventLabel(event.eventType)}</span>
+                  <p>{getTripEventText(event)}</p>
+                </article>
+              ))
+            ) : (
+              <article>
+                <span>מערכת</span>
+                <p>קודי מחכה לפעילות ראשונה בקבוצה</p>
+              </article>
+            )}
+          </div>
+        </section>
 
         <div className="messages">
           {messages.map((message, index) => (

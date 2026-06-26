@@ -81,6 +81,7 @@ try {
   assertCheck("places count", body.includes("108 נקודות"));
   assertCheck("group chat", body.includes("קבוצת הטיול"));
   assertCheck("kodi background", body.includes("קודי ברקע"));
+  assertCheck("event activity", body.includes("פעילות חיה"));
   assertCheck("waze", body.includes("פתח ב-Waze"));
   assertCheck("google maps shortcut", body.includes("Google Maps"));
   assertCheck("booking shortcut", body.includes("Booking"));
@@ -102,6 +103,12 @@ try {
   assertCheck("storage realtime not ready", storagePayload.storage?.realtimeReady === false);
   assertCheck("events api ok", eventsResponse.ok() && Array.isArray(eventsPayload.events));
   assertCheck("events file fallback", eventsPayload.eventLog?.driver === "file");
+  assertCheck(
+    "events visible in ui",
+    body.includes("קודי מחכה לפעילות ראשונה בקבוצה") ||
+      body.includes("קודי הכין את יומן הפעילות") ||
+      body.includes("הודעה")
+  );
   const savedMessageResponse = await page.request.post("http://localhost:3001/api/trips/demo/messages", {
     data: { author: "QA", text: "בדיקת שמירת שיחה", source: "system" }
   });

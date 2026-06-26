@@ -144,6 +144,14 @@ if (-not $appSource.Contains("chat-sync-status")) {
   throw "Web app must show a quiet live sync status for the group chat."
 }
 
+if (-not $appSource.Contains("/api/trips/demo/events") -or -not $appSource.Contains("event-activity")) {
+  throw "Web app must display the group event activity stream."
+}
+
+if (-not $appSource.Contains("eventRealtimeState") -or -not $appSource.Contains("window.setInterval(pollTripEvents, 5000)")) {
+  throw "Web app must poll group events for a basic live activity experience."
+}
+
 if (-not $appSource.Contains("/api/navigation/links")) {
   throw "Web app is not connected to the navigation links API."
 }

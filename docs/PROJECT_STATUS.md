@@ -40,6 +40,7 @@ Implemented locally:
 - Group destination and route state backed by `group_destinations`, `group_routes`, and `group_route_stops` when Supabase is active.
 - Trip activation/setup state backed by `trip_groups` setup columns when Supabase is active.
 - Group event log foundation through `/api/trips/demo/events`, with `group_events` prepared for Supabase Realtime.
+- Live activity panel in the family chat UI, polling the group event log and showing recent group activity.
 
 ## Current Storage
 
@@ -147,6 +148,7 @@ Current Supabase state:
 - Fourth relational table migration: activation/setup state uses `trip_groups`; public smoke passed on `2026-06-25`
 - Active runtime no longer reads from or writes to the legacy `demo_storage_states` JSON bridge; local build, QA, smoke, and public Render smoke passed on `2026-06-26`
 - Event-log schema and API foundation added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public event smoke passed. Public status reports `eventLogReady=true`.
+- Live activity UI connected to the event log on `2026-06-26`; local build, QA, and smoke passed.
 
 ## QA
 
