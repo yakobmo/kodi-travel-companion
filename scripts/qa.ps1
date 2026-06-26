@@ -300,8 +300,8 @@ if (-not $serverSource.Contains("/api/trips/demo/storage/supabase-check") -or -n
   throw "API server must expose a safe Supabase runtime readiness check before switching storage drivers."
 }
 
-if (-not $serverSource.Contains("/api/trips/demo/storage/supabase-bridge/verify") -or -not $serverSource.Contains("verifySupabaseBridgeStorage")) {
-  throw "API server must expose a safe Supabase bridge verification endpoint before switching live storage."
+if (-not $serverSource.Contains("/api/trips/demo/storage/supabase-bridge/verify") -or -not $serverSource.Contains("relational_supabase_tables")) {
+  throw "API server must keep the legacy bridge endpoint as a non-writing retired compatibility response."
 }
 
 if (-not $serverSource.Contains("/api/admin/supabase/apply-grants") -or -not $serverSource.Contains("x-kodi-admin-token")) {
@@ -376,7 +376,22 @@ if (-not $demoStorageSource.Contains("STORAGE_DRIVER") -or -not $supabaseClientS
 }
 
 if (-not $demoStorageSource.Contains("loadDemoStorageAsync") -or -not $demoStorageSource.Contains("saveDemoStorageAsync")) {
-  throw "Demo storage must include async bridge functions for Supabase migration."
+  throw "Demo storage must include async file fallback functions for local development."
+}
+
+$doubleQuotedBridgeQuery = '.from("demo_storage_states"'
+$singleQuotedBridgeQuery = ".from('demo_storage_states'"
+
+if (
+  $demoStorageSource.Contains($doubleQuotedBridgeQuery) -or
+  $demoStorageSource.Contains($singleQuotedBridgeQuery) -or
+  $demoStorageSource.Contains("verifySupabaseBridgeStorage")
+) {
+  throw "Demo storage must not use the retired Supabase JSON bridge in the active runtime path."
+}
+
+if (-not $demoStorageSource.Contains("relationalStorageReady") -or -not $demoStorageSource.Contains("jsonBridgeActive")) {
+  throw "Demo storage metadata must expose relational readiness and retired JSON bridge state."
 }
 
 if (-not $demoStorageSource.Contains("messages: StoredDemoMessage[] | null")) {
@@ -523,8 +538,8 @@ foreach ($requiredTable in @(
   }
 }
 
-if (-not $supabaseSchemaSource.Contains("public.demo_storage_states")) {
-  throw "Supabase schema must include the demo storage bridge table before enabling the runtime driver."
+if ($supabaseSchemaSource.Contains("public.demo_storage_states")) {
+  Write-Host "Notice: legacy demo_storage_states table is still present in schema for backward compatibility."
 }
 
 foreach ($realtimeTable in @(
@@ -557,6 +572,10 @@ if (-not $supabaseStatusSource.Contains("keyRole") -or -not $supabaseStatusSourc
   throw "Supabase status must report the configured key role without exposing the key."
 }
 
+if (-not $supabaseStatusSource.Contains("relationalTablesReady") -or $supabaseStatusSource.Contains($doubleQuotedBridgeQuery) -or $supabaseStatusSource.Contains($singleQuotedBridgeQuery)) {
+  throw "Supabase status must verify relational runtime tables, not the retired JSON bridge table."
+}
+
 $envExampleSource = Get-Content (Join-Path $root ".env.example") -Raw
 foreach ($requiredEnvName in @("STORAGE_DRIVER=file", "SUPABASE_URL=", "SUPABASE_SERVICE_ROLE_KEY=")) {
   if (-not $envExampleSource.Contains($requiredEnvName)) {
@@ -574,8 +593,8 @@ if (-not $migrationAdminSource.Contains("MIGRATION_ADMIN_TOKEN") -or -not $migra
 }
 
 $schemaScriptSource = Get-Content (Join-Path $root "scripts\apply-supabase-schema.mjs") -Raw
-if (-not $schemaScriptSource.Contains("SUPABASE_DB_URL") -or -not $schemaScriptSource.Contains("demo_storage_states")) {
-  throw "Automated Supabase schema script must read SUPABASE_DB_URL and verify the bridge table."
+if (-not $schemaScriptSource.Contains("SUPABASE_DB_URL") -or -not $schemaScriptSource.Contains("group_messages")) {
+  throw "Automated Supabase schema script must read SUPABASE_DB_URL and verify relational runtime tables."
 }
 
 $grantsScriptSource = Get-Content (Join-Path $root "scripts\apply-supabase-grants.mjs") -Raw

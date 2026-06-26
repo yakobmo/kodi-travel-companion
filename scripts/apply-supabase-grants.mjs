@@ -25,18 +25,25 @@ try {
   const rows = await sql`
     select
       has_schema_privilege('service_role', 'public', 'USAGE') as schema_usage,
-      has_table_privilege('service_role', 'public.demo_storage_states', 'SELECT') as can_select,
-      has_table_privilege('service_role', 'public.demo_storage_states', 'INSERT') as can_insert,
-      has_table_privilege('service_role', 'public.demo_storage_states', 'UPDATE') as can_update
+      has_table_privilege('service_role', 'public.trip_groups', 'SELECT') as can_select_groups,
+      has_table_privilege('service_role', 'public.group_messages', 'INSERT') as can_insert_messages,
+      has_table_privilege('service_role', 'public.live_locations', 'UPDATE') as can_update_locations,
+      has_table_privilege('service_role', 'public.group_routes', 'UPDATE') as can_update_routes
   `;
   const result = rows[0];
 
-  if (!result?.schema_usage || !result?.can_select || !result?.can_insert || !result?.can_update) {
+  if (
+    !result?.schema_usage ||
+    !result?.can_select_groups ||
+    !result?.can_insert_messages ||
+    !result?.can_update_locations ||
+    !result?.can_update_routes
+  ) {
     throw new Error("Service-role grants were applied but verification did not pass.");
   }
 
   console.log("Supabase service-role grants applied successfully.");
-  console.log("Verified service_role privileges on public.demo_storage_states.");
+  console.log("Verified service_role privileges on relational runtime tables.");
 } finally {
   await sql.end({ timeout: 5 });
 }

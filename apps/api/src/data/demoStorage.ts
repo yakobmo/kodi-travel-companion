@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TripMemberLocationView, TripSetupSubmission } from "../domain/types.js";
-import { createSupabaseServerClient, hasSupabaseServerConfig } from "./supabaseClient.js";
+import { hasSupabaseServerConfig } from "./supabaseClient.js";
 
 export interface StoredDemoMessage {
   id: string;
@@ -70,7 +69,6 @@ export interface DemoStorageDriver {
 type StorageDriverName = "file" | "supabase";
 
 const storagePath = join(process.cwd(), ".data", "demo-state.json");
-const DEMO_STORAGE_KEY = "group_family_greece_demo";
 
 function getRequestedStorageDriver(): StorageDriverName {
   if (process.env.STORAGE_DRIVER === "supabase" || process.env.STORAGE_DRIVER === "file") {
@@ -141,115 +139,12 @@ export function saveDemoStorage(update: Partial<Omit<DemoStorageState, "version"
   return activeDemoStorageDriver.save(update);
 }
 
-async function loadSupabaseStorage(client: SupabaseClient): Promise<DemoStorageState> {
-  const { data, error } = await client
-    .from("demo_storage_states")
-    .select("state")
-    .eq("storage_key", DEMO_STORAGE_KEY)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Supabase storage load failed: ${error.message}`);
-  }
-
-  if (!data?.state) {
-    return createEmptyState();
-  }
-
-  return {
-    ...createEmptyState(),
-    ...(data.state as Partial<DemoStorageState>),
-    version: 1
-  };
-}
-
-async function saveSupabaseStorage(
-  client: SupabaseClient,
-  update: Partial<Omit<DemoStorageState, "version" | "updatedAt">>
-): Promise<DemoStorageState> {
-  const nextState: DemoStorageState = {
-    ...(await loadSupabaseStorage(client)),
-    ...update,
-    version: 1,
-    updatedAt: new Date().toISOString()
-  };
-
-  const { error } = await client.from("demo_storage_states").upsert({
-    storage_key: DEMO_STORAGE_KEY,
-    state: nextState,
-    updated_at: nextState.updatedAt
-  });
-
-  if (error) {
-    throw new Error(`Supabase storage save failed: ${error.message}`);
-  }
-
-  return nextState;
-}
-
 export async function loadDemoStorageAsync(): Promise<DemoStorageState> {
-  if (getRequestedStorageDriver() !== "supabase") {
-    return loadDemoStorage();
-  }
-
-  const client = createSupabaseServerClient();
-  if (!client) {
-    return loadDemoStorage();
-  }
-
-  return loadSupabaseStorage(client);
+  return loadDemoStorage();
 }
 
 export async function saveDemoStorageAsync(update: Partial<Omit<DemoStorageState, "version" | "updatedAt">>) {
-  if (getRequestedStorageDriver() !== "supabase") {
-    return saveDemoStorage(update);
-  }
-
-  const client = createSupabaseServerClient();
-  if (!client) {
-    return saveDemoStorage(update);
-  }
-
-  return saveSupabaseStorage(client, update);
-}
-
-export async function verifySupabaseBridgeStorage() {
-  const client = createSupabaseServerClient();
-  if (!client) {
-    return {
-      configured: false,
-      writable: false,
-      readable: false
-    };
-  }
-
-  try {
-    const previousState = await loadSupabaseStorage(client);
-    const verifiedAt = new Date().toISOString();
-    const nextState = await saveSupabaseStorage(client, {
-      ...previousState,
-      setup: previousState.setup,
-      messages: previousState.messages,
-      members: previousState.members,
-      groupDestination: previousState.groupDestination,
-      groupRoute: previousState.groupRoute
-    });
-    const reloadedState = await loadSupabaseStorage(client);
-
-    return {
-      configured: true,
-      writable: nextState.updatedAt.length > 0,
-      readable: reloadedState.version === 1,
-      verifiedAt
-    };
-  } catch (error) {
-    return {
-      configured: true,
-      writable: false,
-      readable: false,
-      error: error instanceof Error ? error.message : "unknown_supabase_bridge_error"
-    };
-  }
+  return saveDemoStorage(update);
 }
 
 export function getDemoStorageMetadata() {
@@ -262,12 +157,13 @@ export function getDemoStorageMetadata() {
     requestedDriver,
     storagePath,
     supabaseConfigured,
-    supabaseBridgeReady: supabaseConfigured,
+    relationalStorageReady: activeDriver === "supabase",
+    jsonBridgeActive: false,
     realtimeReady: activeDriver === "supabase",
-    migrationTarget: "managed_db_plus_realtime",
+    migrationTarget: "relational_supabase_plus_realtime",
     note:
       activeDriver === "supabase"
-        ? "Supabase bridge storage is active for the MVP demo."
+        ? "Relational Supabase storage is active for the MVP demo; local demo-state JSON is fallback only."
         : requestedDriver === "supabase"
           ? "Supabase storage was requested, but server configuration is missing; file storage is active as fallback."
         : "File storage is active for the MVP demo."

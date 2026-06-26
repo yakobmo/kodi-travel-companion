@@ -23,15 +23,24 @@ try {
   const schemaSql = await readFile(schemaPath, "utf8");
   await sql.unsafe(schemaSql);
   const rows = await sql`
-    select to_regclass('public.demo_storage_states') as bridge_table
+    select
+      to_regclass('public.trip_groups') as trip_groups_table,
+      to_regclass('public.group_messages') as group_messages_table,
+      to_regclass('public.live_locations') as live_locations_table,
+      to_regclass('public.group_routes') as group_routes_table
   `;
 
-  if (rows[0]?.bridge_table !== "demo_storage_states") {
-    throw new Error("Schema applied, but public.demo_storage_states was not found.");
+  if (
+    rows[0]?.trip_groups_table !== "trip_groups" ||
+    rows[0]?.group_messages_table !== "group_messages" ||
+    rows[0]?.live_locations_table !== "live_locations" ||
+    rows[0]?.group_routes_table !== "group_routes"
+  ) {
+    throw new Error("Schema applied, but one or more relational runtime tables were not found.");
   }
 
   console.log("Supabase schema applied successfully.");
-  console.log("Verified table: public.demo_storage_states");
+  console.log("Verified relational runtime tables.");
 } finally {
   await sql.end({ timeout: 5 });
 }

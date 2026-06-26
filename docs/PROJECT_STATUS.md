@@ -33,8 +33,8 @@ Implemented locally:
 - Storage driver contract that prepares a future DB/realtime migration.
 - Supabase SQL schema for the first DB/realtime gate.
 - Supabase storage configuration gate through `.env.example` and `/api/trips/demo/storage`.
-- Supabase bridge verification endpoint for safe write/read testing before switching live storage.
-- Supabase-backed demo storage driver behind `STORAGE_DRIVER=supabase`.
+- Supabase bridge compatibility endpoint marked retired after relational runtime migration.
+- Supabase relational runtime storage behind `STORAGE_DRIVER=supabase`.
 - Group chat messages backed by the relational `group_messages` table when Supabase is active.
 - Group members, consent, and live locations backed by `trip_members`, `location_sharing_consents`, and `live_locations` when Supabase is active.
 - Group destination and route state backed by `group_destinations`, `group_routes`, and `group_route_stops` when Supabase is active.
@@ -45,10 +45,10 @@ Implemented locally:
 The MVP supports two storage modes:
 
 - `file`: local fallback using `.data/demo-state.json`
-- `supabase`: server-side storage through `public.demo_storage_states`
+- `supabase`: server-side relational storage through `trip_groups`, `group_messages`, `trip_members`, `location_sharing_consents`, `live_locations`, `group_destinations`, `group_routes`, and `group_route_stops`
 - Production default: Supabase when server credentials exist; `STORAGE_DRIVER=file` can force fallback.
 - Realtime: ready only when `STORAGE_DRIVER=supabase`
-- Migration target: managed DB plus realtime
+- Migration target: relational Supabase plus realtime
 
 The API exposes this through:
 
@@ -61,6 +61,8 @@ The endpoint now reports:
 - Active driver: `file`
 - Requested driver: `file` or `supabase`
 - Whether server-side Supabase configuration is present
+- Whether relational storage is ready
+- Whether the retired JSON bridge is active. It should be `false`.
 - Realtime readiness for the active driver
 
 ## Recommended Production Architecture
@@ -84,9 +86,9 @@ PB is a separate product and must remain untouched.
 5. Create a Supabase project. Done.
 6. Apply `supabase/schema.sql` for groups, members, messages, places, live locations, destinations, routes, and route stops. Done.
 7. Configure Render server-only Supabase variables. Done.
-8. Verify Supabase bridge write/read from the live Render service. Done.
-9. Add a Supabase storage driver beside the current file driver. Done.
-10. Switch production storage only after the full runtime driver passes QA. Done.
+8. Verify initial Supabase bridge write/read from the live Render service. Done.
+9. Move runtime storage to relational Supabase tables. Done.
+10. Retire active JSON bridge dependency from runtime. Done.
 
 ## Required Secrets Later
 
@@ -141,7 +143,7 @@ Current Supabase state:
 - Third relational table migration: group destination and group routes use relational tables; public smoke passed on `2026-06-25`
 - Production places fixture: bundled in `data/demo-google-places.json` so Render can serve the full 108-place trip state
 - Fourth relational table migration: activation/setup state uses `trip_groups`; public smoke passed on `2026-06-25`
-- Remaining demo state still uses the JSON bridge until migrated
+- Active runtime no longer reads from or writes to the legacy `demo_storage_states` JSON bridge; local build, QA, and smoke passed on `2026-06-26`
 
 ## QA
 

@@ -20,7 +20,7 @@ The schema covers:
 - Group chat messages.
 - Active group destination.
 - Group routes and route stops.
-- A temporary `demo_storage_states` JSONB bridge table for the first runtime storage driver.
+- A legacy `demo_storage_states` JSONB bridge table kept only for backward compatibility until a later cleanup migration.
 
 ## Realtime Tables
 
@@ -56,7 +56,7 @@ Completed:
 2. `supabase/schema.sql` applied.
 3. Server-only Render environment variables added.
 4. Guarded Render grants endpoint verified.
-5. Live Render service verified write/read access to `demo_storage_states`.
+5. Live Render service verified initial write/read access to `demo_storage_states`.
 
 Next:
 
@@ -101,7 +101,7 @@ Runtime readiness check:
 GET /api/trips/demo/storage/supabase-check
 ```
 
-This endpoint checks only whether the backend has Supabase server configuration and can see the bridge table. It does not expose keys.
+This endpoint checks only whether the backend has Supabase server configuration and can see the relational runtime tables. It does not expose keys.
 
 It also reports the JWT role embedded in the configured key, for example:
 
@@ -111,13 +111,13 @@ keyRole: service_role
 
 If it reports `anon`, the wrong Supabase key was configured in Render.
 
-Bridge write/read verification:
+Legacy bridge verification:
 
 ```text
 POST /api/trips/demo/storage/supabase-bridge/verify
 ```
 
-This endpoint verifies that the backend can write and read the temporary `demo_storage_states` bridge table. The live app uses this same table when `STORAGE_DRIVER=supabase`.
+This endpoint is retained as a compatibility response only. It does not write to `demo_storage_states`; the live app uses relational Supabase tables when `STORAGE_DRIVER=supabase`.
 
 ## Automated Schema Apply
 
@@ -145,9 +145,9 @@ or:
 DATABASE_URL=
 ```
 
-It does not print the connection string and it verifies `public.demo_storage_states` after applying the schema.
+It does not print the connection string and it verifies the relational runtime tables after applying the schema.
 
-The grants script verifies that `service_role` can select, insert and update the bridge table.
+The grants script verifies that `service_role` can access the relational runtime tables.
 
 ## Guarded Remote Grants Endpoint
 
@@ -170,7 +170,7 @@ MIGRATION_ADMIN_TOKEN=
 After running it, verify:
 
 ```text
-POST /api/trips/demo/storage/supabase-bridge/verify
+GET /api/trips/demo/storage/supabase-check
 ```
 
 Production verification passed on `2026-06-25`:
@@ -180,10 +180,10 @@ POST /api/admin/supabase/apply-grants
 Result: configured=true, authorized=true, applied=true, verified=true
 
 GET /api/trips/demo/storage/supabase-check
-Result: keyRole=service_role, reachable=true, bridgeTableReady=true
+Result: keyRole=service_role, reachable=true, relationalTablesReady=true
 
 POST /api/trips/demo/storage/supabase-bridge/verify
-Result: writable=true, readable=true
+Result: retired=true, replacement=relational_supabase_tables
 ```
 
 ## Current Project
@@ -204,6 +204,7 @@ Third relational runtime path: group_destinations, group_routes, group_route_sto
 destination/route public smoke: 2026-06-25
 Fourth relational runtime path: trip_groups setup columns
 setup public smoke: 2026-06-25
+Active JSON bridge dependency retired from runtime: 2026-06-25
 ```
 
 No Supabase keys are committed to this repository.

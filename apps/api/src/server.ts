@@ -17,7 +17,7 @@ import {
   resetDemoTripSetupStateAsync,
   saveDemoTripSetupStateAsync
 } from "./data/localSetupState.js";
-import { getDemoStorageMetadata, verifySupabaseBridgeStorage } from "./data/demoStorage.js";
+import { getDemoStorageMetadata } from "./data/demoStorage.js";
 import { checkSupabaseRuntime } from "./data/supabaseStatus.js";
 import {
   applySupabaseRelationalRouteMigration,
@@ -148,7 +148,14 @@ app.get("/api/trips/demo/storage/supabase-check", async (_req, res) => {
 app.post("/api/trips/demo/storage/supabase-bridge/verify", async (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
-    bridge: await verifySupabaseBridgeStorage()
+    bridge: {
+      configured: false,
+      writable: false,
+      readable: false,
+      retired: true,
+      replacement: "relational_supabase_tables",
+      note: "The temporary JSON bridge has been retired from the active runtime path."
+    }
   });
 });
 

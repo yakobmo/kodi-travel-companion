@@ -1,6 +1,6 @@
 -- Kodi service-role grants.
 -- Apply after schema creation when PostgREST reports:
--- "permission denied for table demo_storage_states".
+-- "permission denied for table <runtime_table>".
 
 grant usage on schema public to service_role;
 grant all privileges on all tables in schema public to service_role;

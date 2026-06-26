@@ -7,6 +7,7 @@ export interface SupabaseRuntimeStatus {
   keyRole?: string;
   reachable: boolean;
   bridgeTableReady: boolean;
+  relationalTablesReady: boolean;
   checkedAt: string;
   error?: string;
 }
@@ -48,6 +49,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       keyRole,
       reachable: false,
       bridgeTableReady: false,
+      relationalTablesReady: false,
       checkedAt
     };
   }
@@ -57,7 +59,13 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
     if (!supabase) {
       throw new Error("missing_supabase_server_client");
     }
-    const { error } = await supabase.from("demo_storage_states").select("storage_key", { count: "exact", head: true });
+    const checks = await Promise.all([
+      supabase.from("trip_groups").select("id", { count: "exact", head: true }),
+      supabase.from("group_messages").select("id", { count: "exact", head: true }),
+      supabase.from("live_locations").select("id", { count: "exact", head: true }),
+      supabase.from("group_routes").select("id", { count: "exact", head: true })
+    ]);
+    const error = checks.find((result) => result.error)?.error;
 
     if (error) {
       return {
@@ -67,6 +75,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
         keyRole,
         reachable: true,
         bridgeTableReady: false,
+        relationalTablesReady: false,
         checkedAt,
         error: error.message
       };
@@ -78,7 +87,8 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       serviceRoleKeyPresent,
       keyRole,
       reachable: true,
-      bridgeTableReady: true,
+      bridgeTableReady: false,
+      relationalTablesReady: true,
       checkedAt
     };
   } catch (error) {
@@ -89,6 +99,7 @@ export async function checkSupabaseRuntime(): Promise<SupabaseRuntimeStatus> {
       keyRole,
       reachable: false,
       bridgeTableReady: false,
+      relationalTablesReady: false,
       checkedAt,
       error: error instanceof Error ? error.message : "unknown_supabase_runtime_error"
     };

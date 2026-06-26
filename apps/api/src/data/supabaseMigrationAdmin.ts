@@ -56,13 +56,18 @@ export async function applySupabaseServiceRoleGrants(): Promise<SupabaseGrantApp
     const rows = await sql`
       select
         has_schema_privilege('service_role', 'public', 'USAGE') as schema_usage,
-        has_table_privilege('service_role', 'public.demo_storage_states', 'SELECT') as can_select,
-        has_table_privilege('service_role', 'public.demo_storage_states', 'INSERT') as can_insert,
-        has_table_privilege('service_role', 'public.demo_storage_states', 'UPDATE') as can_update
+        has_table_privilege('service_role', 'public.trip_groups', 'SELECT') as can_select_groups,
+        has_table_privilege('service_role', 'public.group_messages', 'INSERT') as can_insert_messages,
+        has_table_privilege('service_role', 'public.live_locations', 'UPDATE') as can_update_locations,
+        has_table_privilege('service_role', 'public.group_routes', 'UPDATE') as can_update_routes
     `;
     const verification = rows[0];
     const verified = Boolean(
-      verification?.schema_usage && verification?.can_select && verification?.can_insert && verification?.can_update
+      verification?.schema_usage &&
+        verification?.can_select_groups &&
+        verification?.can_insert_messages &&
+        verification?.can_update_locations &&
+        verification?.can_update_routes
     );
 
     return {
