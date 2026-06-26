@@ -229,6 +229,18 @@ When product insight appears during implementation:
 - otherwise record it in product docs/status
 - return to the active technical stage
 
+### 10. Live Streams Break Network-Idle UI Tests
+
+Problem:
+
+After adding a long-lived group activity stream, browser smoke tests that waited for `networkidle` timed out. The app was not broken; the test assumed the network should become quiet, which is false when a live stream is intentionally open.
+
+Decision:
+
+- For pages with EventSource/SSE or other live connections, wait for `domcontentloaded` and specific UI markers.
+- Add a direct smoke check for the stream endpoint itself.
+- Keep polling fallback checks so the UI remains usable if a live stream fails.
+
 ## Current Operating Checklist
 
 Before coding:

@@ -35,8 +35,18 @@ function assertCheck(name, condition) {
 }
 
 try {
+  const streamController = new AbortController();
+  const streamResponse = await fetch("http://localhost:3001/api/trips/demo/events/stream", {
+    signal: streamController.signal
+  });
+  const streamReader = streamResponse.body?.getReader();
+  const streamChunk = streamReader ? await streamReader.read() : null;
+  streamController.abort();
+  const streamText = streamChunk?.value ? new TextDecoder().decode(streamChunk.value) : "";
+  assertCheck("event stream endpoint", streamResponse.ok && streamText.includes("event: trip-events"));
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
-  await page.goto("http://127.0.0.1:5173/", { waitUntil: "networkidle" });
+  await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 
   const setupPayload = await (await page.request.get("http://localhost:3001/api/trips/demo/setup")).json();
   assertCheck("setup starts disconnected", setupPayload.googleSource?.importedPlacesCount === 0);

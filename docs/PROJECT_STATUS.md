@@ -42,6 +42,7 @@ Implemented locally:
 - Group event log foundation through `/api/trips/demo/events`, with `group_events` prepared for Supabase Realtime.
 - Live activity panel in the family chat UI, polling the group event log and showing recent group activity.
 - Immediate live activity refresh after user-visible group actions, so chat/location/route actions update the activity panel without waiting for the next polling cycle.
+- Server-sent event stream for group activity through `/api/trips/demo/events/stream`, with browser fallback to polling.
 
 ## Current Storage
 
@@ -151,6 +152,7 @@ Current Supabase state:
 - Event-log schema and API foundation added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public event smoke passed. Public status reports `eventLogReady=true`.
 - Live activity UI connected to the event log on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 - Immediate activity refresh after group actions added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
+- Server-sent group activity stream added on `2026-06-26`; local build, QA, and local stream smoke passed.
 
 ## QA
 

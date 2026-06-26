@@ -148,8 +148,14 @@ if (-not $appSource.Contains("/api/trips/demo/events") -or -not $appSource.Conta
   throw "Web app must display the group event activity stream."
 }
 
-if (-not $appSource.Contains("eventRealtimeState") -or -not $appSource.Contains("window.setInterval(pollTripEvents, 5000)")) {
-  throw "Web app must poll group events for a basic live activity experience."
+if (
+  -not $appSource.Contains("eventRealtimeState") -or
+  -not $appSource.Contains("/api/trips/demo/events/stream") -or
+  -not $appSource.Contains("new EventSource") -or
+  -not $appSource.Contains("startPollingFallback") -or
+  -not $appSource.Contains("window.setInterval(pollTripEvents, 5000)")
+) {
+  throw "Web app must stream group events with a polling fallback."
 }
 
 if (-not $appSource.Contains("/api/navigation/links")) {

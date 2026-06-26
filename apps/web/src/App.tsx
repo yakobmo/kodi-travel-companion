@@ -682,6 +682,8 @@ export function App() {
 
   useEffect(() => {
     let ignore = false;
+    let intervalId: number | undefined;
+    let eventSource: EventSource | undefined;
 
     async function pollTripEvents() {
       try {
@@ -696,12 +698,48 @@ export function App() {
       }
     }
 
-    void pollTripEvents();
-    const intervalId = window.setInterval(pollTripEvents, 5000);
+    function startPollingFallback() {
+      if (intervalId !== undefined) {
+        return;
+      }
+
+      void pollTripEvents();
+      intervalId = window.setInterval(pollTripEvents, 5000);
+    }
+
+    if ("EventSource" in window) {
+      eventSource = new EventSource(`${apiBaseUrl}/api/trips/demo/events/stream`);
+      eventSource.addEventListener("trip-events", (event) => {
+        try {
+          const data = JSON.parse(event.data) as TripEventsResponse;
+          if (!ignore && Array.isArray(data.events)) {
+            applyTripEvents(data);
+          }
+        } catch {
+          if (!ignore) {
+            setEventRealtimeState("error");
+          }
+        }
+      });
+      eventSource.onerror = () => {
+        if (ignore) {
+          return;
+        }
+
+        eventSource?.close();
+        eventSource = undefined;
+        startPollingFallback();
+      };
+    } else {
+      startPollingFallback();
+    }
 
     return () => {
       ignore = true;
-      window.clearInterval(intervalId);
+      eventSource?.close();
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
     };
   }, []);
 
