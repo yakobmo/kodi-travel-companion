@@ -136,8 +136,13 @@ if (-not $appSource.Contains("/api/trips/demo/messages") -or -not $appSource.Con
   throw "Web app must persist group chat messages through the demo messages API."
 }
 
-if (-not $appSource.Contains("chatRealtimeState") -or -not $appSource.Contains("window.setInterval(pollGroupMessages, 4000)")) {
-  throw "Web app must poll group chat messages for a basic live conversation experience."
+if (
+  -not $appSource.Contains("chatRealtimeState") -or
+  -not $appSource.Contains("/api/trips/demo/messages/stream") -or
+  -not $appSource.Contains("trip-messages") -or
+  -not $appSource.Contains("window.setInterval(pollGroupMessages, 4000)")
+) {
+  throw "Web app must stream group chat messages with a polling fallback."
 }
 
 if (-not $appSource.Contains("chat-sync-status")) {
@@ -368,8 +373,13 @@ if (-not $serverSource.Contains("saveDemoGroupRoute") -or -not $serverSource.Con
   throw "API server must persist and reset the active group route."
 }
 
-if (-not $serverSource.Contains("appendDemoTripMessage") -or -not $serverSource.Contains("resetDemoTripMessages")) {
-  throw "API server must append and reset persisted demo group chat messages."
+if (
+  -not $serverSource.Contains("appendDemoTripMessage") -or
+  -not $serverSource.Contains("resetDemoTripMessages") -or
+  -not $serverSource.Contains("/api/trips/demo/messages/stream") -or
+  -not $serverSource.Contains("event: trip-messages")
+) {
+  throw "API server must append, reset, and stream persisted demo group chat messages."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/members/:memberId/location")) {

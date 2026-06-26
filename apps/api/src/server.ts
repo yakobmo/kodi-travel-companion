@@ -154,6 +154,57 @@ app.get("/api/trips/demo/messages", async (_req, res) => {
   });
 });
 
+app.get("/api/trips/demo/messages/stream", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  let closed = false;
+  let lastFingerprint = "";
+
+  function writeMessageSnapshot(payload: unknown) {
+    res.write(`event: trip-messages\n`);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  }
+
+  async function publishIfChanged(force = false) {
+    try {
+      const messages = await loadDemoTripMessagesAsync();
+      const fingerprint = messages.map((message) => `${message.id ?? ""}:${message.createdAt ?? ""}`).join("|");
+
+      if (force || fingerprint !== lastFingerprint) {
+        lastFingerprint = fingerprint;
+        writeMessageSnapshot({
+          tripGroupId: "group_family_greece_demo",
+          messages
+        });
+      } else {
+        res.write(`: heartbeat\n\n`);
+      }
+    } catch (error) {
+      writeMessageSnapshot({
+        tripGroupId: "group_family_greece_demo",
+        error: error instanceof Error ? error.message : "message_stream_failed"
+      });
+    }
+  }
+
+  req.on("close", () => {
+    closed = true;
+  });
+
+  await publishIfChanged(true);
+  const intervalId = setInterval(() => {
+    if (closed) {
+      clearInterval(intervalId);
+      return;
+    }
+
+    void publishIfChanged();
+  }, 3000);
+});
+
 app.get("/api/trips/demo/storage", (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",

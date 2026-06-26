@@ -43,6 +43,7 @@ Implemented locally:
 - Live activity panel in the family chat UI, polling the group event log and showing recent group activity.
 - Immediate live activity refresh after user-visible group actions, so chat/location/route actions update the activity panel without waiting for the next polling cycle.
 - Server-sent event stream for group activity through `/api/trips/demo/events/stream`, with browser fallback to polling.
+- Server-sent event stream for group chat messages through `/api/trips/demo/messages/stream`, with browser fallback to polling.
 
 ## Current Storage
 
@@ -153,6 +154,7 @@ Current Supabase state:
 - Live activity UI connected to the event log on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 - Immediate activity refresh after group actions added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 - Server-sent group activity stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
+- Server-sent group chat message stream added on `2026-06-26`; local build, QA, and local stream smoke passed.
 
 ## QA
 

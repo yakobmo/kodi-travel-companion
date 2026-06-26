@@ -45,6 +45,19 @@ try {
   const streamText = streamChunk?.value ? new TextDecoder().decode(streamChunk.value) : "";
   assertCheck("event stream endpoint", streamResponse.ok && streamText.includes("event: trip-events"));
 
+  const messageStreamController = new AbortController();
+  const messageStreamResponse = await fetch("http://localhost:3001/api/trips/demo/messages/stream", {
+    signal: messageStreamController.signal
+  });
+  const messageStreamReader = messageStreamResponse.body?.getReader();
+  const messageStreamChunk = messageStreamReader ? await messageStreamReader.read() : null;
+  messageStreamController.abort();
+  const messageStreamText = messageStreamChunk?.value ? new TextDecoder().decode(messageStreamChunk.value) : "";
+  assertCheck(
+    "message stream endpoint",
+    messageStreamResponse.ok && messageStreamText.includes("event: trip-messages")
+  );
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 
