@@ -4,6 +4,25 @@ These are short commands the user can type in Codex before work starts.
 
 They are intended to function like a lightweight dashboard: one short phrase triggers the matching operating protocol.
 
+## Button-Style Skills
+
+Personal Codex skills were also created under:
+
+```text
+C:\Users\yaako\.codex\skills\
+```
+
+They are intended to appear as selectable skill chips/buttons when the Codex UI surfaces personal skills:
+
+- `Kodi Protocol`
+- `Kodi Continue`
+- `Kodi QA`
+- `Kodi Blockers`
+
+If the buttons do not appear immediately, restart the Codex desktop app and open the skills/tool picker again.
+
+If the UI still does not show them as buttons, use the text commands below. The text commands are the fallback control surface.
+
 ## Main Command
 
 ```text
@@ -56,4 +75,3 @@ Treat it as a control instruction:
 2. Read `AGENTS.md` if inside the Kodi repository.
 3. Report the current stage.
 4. Continue only after checking the relevant evidence.
-
