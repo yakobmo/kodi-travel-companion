@@ -162,7 +162,7 @@ Current Supabase state:
 - Server-sent member location stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group route state stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group destination stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
-- First Google integration spike added on `2026-06-28`; read-only source preview implemented locally with build, QA, and local browser smoke passed. Public Render smoke is next after deploy.
+- First Google integration spike added on `2026-06-28`; read-only source preview implemented with build, QA, local browser smoke, Render deploy, public API smoke, and public browser smoke passed.
 
 ## Next Continuation Checkpoint
 
@@ -170,8 +170,8 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Deploy and run public Render smoke for `/api/trips/demo/google-source`.
-2. Continue Google integration by adding a source adapter boundary: current fixture adapter plus future Google API-backed adapter contract.
+1. Continue Google integration by adding a source adapter boundary: current fixture adapter plus future Google API-backed adapter contract.
+2. Add QA that fails if UI copy implies live Google editing before it is real.
 3. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
 
 ## QA
