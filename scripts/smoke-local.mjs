@@ -71,6 +71,16 @@ try {
     memberStreamResponse.ok && memberStreamText.includes("event: trip-members")
   );
 
+  const routeStreamController = new AbortController();
+  const routeStreamResponse = await fetch("http://localhost:3001/api/trips/demo/group-route/stream", {
+    signal: routeStreamController.signal
+  });
+  const routeStreamReader = routeStreamResponse.body?.getReader();
+  const routeStreamChunk = routeStreamReader ? await routeStreamReader.read() : null;
+  routeStreamController.abort();
+  const routeStreamText = routeStreamChunk?.value ? new TextDecoder().decode(routeStreamChunk.value) : "";
+  assertCheck("group route stream endpoint", routeStreamResponse.ok && routeStreamText.includes("event: group-route"));
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 

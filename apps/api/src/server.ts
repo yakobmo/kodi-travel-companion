@@ -424,6 +424,65 @@ app.get("/api/trips/demo/group-route", async (_req, res) => {
   });
 });
 
+app.get("/api/trips/demo/group-route/stream", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  let closed = false;
+  let lastFingerprint = "";
+
+  function writeRouteSnapshot(payload: unknown) {
+    res.write(`event: group-route\n`);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  }
+
+  async function publishIfChanged(force = false) {
+    try {
+      const route = await loadDemoGroupRouteAsync();
+      const fingerprint = route
+        ? [
+            route.routeId,
+            route.status,
+            route.activeStopIndex,
+            route.completedStopIds.join(","),
+            route.stops.map((stop) => `${stop.placeId}:${stop.order}`).join(",")
+          ].join("|")
+        : "no-route";
+
+      if (force || fingerprint !== lastFingerprint) {
+        lastFingerprint = fingerprint;
+        writeRouteSnapshot({
+          tripGroupId: "group_family_greece_demo",
+          route
+        });
+      } else {
+        res.write(`: heartbeat\n\n`);
+      }
+    } catch (error) {
+      writeRouteSnapshot({
+        tripGroupId: "group_family_greece_demo",
+        error: error instanceof Error ? error.message : "group_route_stream_failed"
+      });
+    }
+  }
+
+  req.on("close", () => {
+    closed = true;
+  });
+
+  await publishIfChanged(true);
+  const intervalId = setInterval(() => {
+    if (closed) {
+      clearInterval(intervalId);
+      return;
+    }
+
+    void publishIfChanged();
+  }, 3000);
+});
+
 app.post("/api/trips/demo/group-destination", async (req, res) => {
   const { member, placeId } = req.body ?? {};
 

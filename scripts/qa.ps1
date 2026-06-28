@@ -179,8 +179,14 @@ if (-not $appSource.Contains("/api/trips/demo/group-destination") -or -not $appS
   throw "Web app must persist and display the current group destination after admin approval."
 }
 
-if (-not $appSource.Contains("/api/trips/demo/group-route") -or -not $appSource.Contains("groupRoute")) {
-  throw "Web app must persist and display the active group route after admin approval."
+if (
+  -not $appSource.Contains("/api/trips/demo/group-route") -or
+  -not $appSource.Contains("/api/trips/demo/group-route/stream") -or
+  -not $appSource.Contains("groupRoute") -or
+  -not $appSource.Contains("routeRealtimeState") -or
+  -not $appSource.Contains("group-route")
+) {
+  throw "Web app must persist, display, and stream the active group route after admin approval."
 }
 
 if (-not $appSource.Contains("activeRouteStopIndex") -or -not $appSource.Contains("openActiveRouteStopInWaze")) {
@@ -346,8 +352,8 @@ if (-not $serverSource.Contains("/api/trips/demo/group-destination")) {
   throw "API server is missing the active group destination endpoint."
 }
 
-if (-not $serverSource.Contains("/api/trips/demo/group-route")) {
-  throw "API server is missing the active group route endpoint."
+if (-not $serverSource.Contains("/api/trips/demo/group-route") -or -not $serverSource.Contains("/api/trips/demo/group-route/stream")) {
+  throw "API server is missing active group route endpoints."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/group-route/progress")) {

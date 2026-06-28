@@ -208,6 +208,11 @@ interface TripStateResponse {
   groupRoute?: GroupRoute | null;
 }
 
+interface GroupRouteResponse {
+  tripGroupId: string;
+  route: GroupRoute | null;
+}
+
 interface TripSetupStep {
   id: string;
   title: string;
@@ -440,6 +445,7 @@ export function App() {
   );
   const [groupDestination, setGroupDestination] = useState<GroupDestination | null>(null);
   const [groupRoute, setGroupRoute] = useState<GroupRoute | null>(null);
+  const [routeRealtimeState, setRouteRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [routeApprovalState, setRouteApprovalState] = useState<"idle" | "checking" | "approved" | "blocked" | "error">(
     "idle"
   );
@@ -466,6 +472,12 @@ export function App() {
     } catch {
       setEventRealtimeState("error");
     }
+  }
+
+  function applyGroupRoute(route: GroupRoute | null) {
+    setGroupRoute(route);
+    setActiveRouteStopIndex(route?.activeStopIndex ?? 0);
+    setRouteRealtimeState("live");
   }
 
   useEffect(() => {
@@ -829,6 +841,74 @@ export function App() {
         } catch {
           if (!ignore) {
             setMemberRealtimeState("error");
+          }
+        }
+      });
+      eventSource.onerror = () => {
+        if (ignore) {
+          return;
+        }
+
+        eventSource?.close();
+        eventSource = undefined;
+        startPollingFallback();
+      };
+    } else {
+      startPollingFallback();
+    }
+
+    return () => {
+      ignore = true;
+      eventSource?.close();
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    let intervalId: number | undefined;
+    let eventSource: EventSource | undefined;
+
+    async function pollGroupRoute() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/trips/demo/group-route`);
+        if (!response.ok) {
+          throw new Error(`Group route polling failed with ${response.status}`);
+        }
+
+        const data = (await response.json()) as GroupRouteResponse;
+        if (!ignore) {
+          applyGroupRoute(data.route ?? null);
+        }
+      } catch {
+        if (!ignore) {
+          setRouteRealtimeState("error");
+        }
+      }
+    }
+
+    function startPollingFallback() {
+      if (intervalId !== undefined) {
+        return;
+      }
+
+      void pollGroupRoute();
+      intervalId = window.setInterval(pollGroupRoute, 5000);
+    }
+
+    if ("EventSource" in window) {
+      eventSource = new EventSource(`${apiBaseUrl}/api/trips/demo/group-route/stream`);
+      eventSource.addEventListener("group-route", (event) => {
+        try {
+          const data = JSON.parse(event.data) as GroupRouteResponse;
+          if (!ignore && "route" in data) {
+            applyGroupRoute(data.route ?? null);
+          }
+        } catch {
+          if (!ignore) {
+            setRouteRealtimeState("error");
           }
         }
       });
@@ -1754,6 +1834,13 @@ export function App() {
               <div className="group-route-card" aria-label="מסלול קבוצתי פעיל">
                 <span>מסלול קבוצתי פעיל</span>
                 <strong>{groupRoute.title}</strong>
+                <small className="route-sync-status">
+                  {routeRealtimeState === "live"
+                    ? "מסלול מסונכרן"
+                    : routeRealtimeState === "error"
+                      ? "סנכרון מסלול ממתין לחיבור"
+                      : "מכין סנכרון מסלול"}
+                </small>
                 {groupRoute.status === "completed" ? <p className="route-completed-note">המסלול הושלם. אפשר ליצור מסלול חדש כשצריך.</p> : null}
                 <p>הסדר בדמו מתחיל בנקודה שנבחרה וממשיך לנקודות הקרובות ברשימת הטיול. ETA אמיתי יגיע רק עם Google Routes.</p>
                 <ol>
