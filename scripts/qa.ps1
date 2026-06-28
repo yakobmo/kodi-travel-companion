@@ -33,6 +33,7 @@ $requiredFiles = @(
   "apps/api/src/data/localPlaces.ts",
   "apps/api/src/data/localSetupState.ts",
   "apps/api/src/data/localTripState.ts",
+  "apps/api/src/google/sourceAdapter.ts",
   "apps/api/src/permissions/agentActions.ts",
   "apps/web/package.json",
   "apps/web/tsconfig.json",
@@ -80,11 +81,24 @@ if (-not $localPlacesSource.Contains("loadDemoTripPlaces")) {
 }
 
 if (
-  -not $localPlacesSource.Contains("buildDemoGoogleSourcePreview") -or
-  -not $localPlacesSource.Contains("read_only_fixture") -or
-  -not $localPlacesSource.Contains("requiresGoogleOAuthForLiveSync")
+  -not $localPlacesSource.Contains("loadDemoTripPlaces") -or
+  -not $localPlacesSource.Contains("getDemoTripPlacesSourcePath") -or
+  $localPlacesSource.Contains("buildDemoGoogleSourcePreview")
 ) {
-  throw "Local places loader must expose a read-only Google source preview contract before live Google sync."
+  throw "Local places loader must stay focused on places; Google source preview belongs in the adapter boundary."
+}
+
+$googleSourceAdapterSource = Get-Content (Join-Path $root "apps\api\src\google\sourceAdapter.ts") -Raw
+if (
+  -not $googleSourceAdapterSource.Contains("GoogleSourceAdapter") -or
+  -not $googleSourceAdapterSource.Contains("fixtureGoogleSourceAdapter") -or
+  -not $googleSourceAdapterSource.Contains("getActiveGoogleSourceAdapter") -or
+  -not $googleSourceAdapterSource.Contains("read_only_fixture") -or
+  -not $googleSourceAdapterSource.Contains("requiresGoogleOAuthForLiveSync") -or
+  -not $googleSourceAdapterSource.Contains("liveGoogleAccess: false") -or
+  -not $googleSourceAdapterSource.Contains("canWriteBackToGoogle: false")
+) {
+  throw "Google source integration must go through a read-only adapter boundary before live Google sync."
 }
 
 $demoTripSource = Get-Content (Join-Path $root "apps\web\src\demoTrip.ts") -Raw
@@ -140,10 +154,25 @@ if (-not $appSource.Contains("Google Maps Place List")) {
 if (
   -not $appSource.Contains("/api/trips/demo/google-source") -or
   -not $appSource.Contains("googleSourcePreview") -or
+  -not $appSource.Contains("liveGoogleAccess") -or
   -not $appSource.Contains("Read-only preview active") -or
   -not $appSource.Contains("write-back requires Google OAuth")
 ) {
   throw "Welcome + Activation must show the read-only Google source preview before live Google sync."
+}
+
+$forbiddenGoogleUiClaims = @(
+  "live Google editing active",
+  "Google write-back active",
+  "editing your Google Maps list",
+  "synced live with Google Maps",
+  "changes are saved to Google Maps"
+)
+
+foreach ($claim in $forbiddenGoogleUiClaims) {
+  if ($appSource.ToLowerInvariant().Contains($claim.ToLowerInvariant())) {
+    throw "Forbidden Google UI claim before OAuth/write-back is real: $claim"
+  }
 }
 
 if (-not $appSource.Contains("/api/trips/demo/members")) {

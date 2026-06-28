@@ -48,6 +48,7 @@ Implemented locally:
 - Server-sent event stream for group route state through `/api/trips/demo/group-route/stream`, with browser fallback to polling.
 - Server-sent event stream for group destination state through `/api/trips/demo/group-destination/stream`, with browser fallback to polling.
 - Read-only Google source preview through `/api/trips/demo/google-source`, exposing imported place count, coordinate coverage, and future OAuth/API requirements without claiming live Google write-back.
+- Google source adapter boundary with the active fixture adapter explicitly reporting `liveGoogleAccess=false` and `canWriteBackToGoogle=false`.
 
 ## Current Storage
 
@@ -163,6 +164,7 @@ Current Supabase state:
 - Server-sent group route state stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group destination stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - First Google integration spike added on `2026-06-28`; read-only source preview implemented with build, QA, local browser smoke, Render deploy, public API smoke, and public browser smoke passed.
+- Google source adapter boundary added on `2026-06-28`; local build, QA, and local smoke are the current validation gate before deploy.
 
 ## Next Continuation Checkpoint
 
@@ -170,8 +172,8 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Continue Google integration by adding a source adapter boundary: current fixture adapter plus future Google API-backed adapter contract.
-2. Add QA that fails if UI copy implies live Google editing before it is real.
+1. Deploy and run public Render smoke for the Google source adapter boundary.
+2. Add a non-active Google API adapter skeleton that reports `not_configured` until Google secrets exist.
 3. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
 
 ## QA

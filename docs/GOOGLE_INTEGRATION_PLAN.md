@@ -37,6 +37,29 @@ read_only_fixture
 
 This protects the product from pretending that Kodi has edit access to Google Maps before OAuth and a supported API path exist.
 
+## Adapter Boundary
+
+Implemented boundary:
+
+```text
+apps/api/src/google/sourceAdapter.ts
+```
+
+The active adapter is:
+
+```text
+fixtureGoogleSourceAdapter
+```
+
+Its contract says:
+
+- `adapter.kind = fixture`
+- `adapter.liveGoogleAccess = false`
+- `sync.mode = read_only_fixture`
+- `sync.canWriteBackToGoogle = false`
+
+Any future Google API adapter must preserve the same response shape before replacing the fixture path.
+
 ## Google Capability Split
 
 Use separate Google layers:
@@ -48,12 +71,12 @@ Use separate Google layers:
 
 ## Next Slice
 
-Next implementation should add a controlled Google source adapter boundary:
+Next implementation should add the future Google API-backed adapter skeleton:
 
-1. Keep the current fixture adapter as `read_only_fixture`.
-2. Add a second adapter contract for future Google API-backed reads.
+1. Keep the current fixture adapter as the active adapter.
+2. Add a non-active Google API adapter skeleton that reports `not_configured` until secrets exist.
 3. Keep write-back disabled until a proven and permissioned Google path exists.
-4. Add QA that fails if UI copy implies live Google editing before it is real.
+4. Keep QA failing if UI copy implies live Google editing before it is real.
 
 ## Official References
 

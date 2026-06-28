@@ -1,7 +1,8 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
-import { buildDemoGoogleSourcePreview, buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
+import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
+import { buildDemoGoogleSourcePreview } from "./google/sourceAdapter.js";
 import {
   loadDemoTripMembersAsync,
   resetDemoTripMembersAsync,

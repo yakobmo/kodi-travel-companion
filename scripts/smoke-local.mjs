@@ -99,6 +99,8 @@ try {
   const googleSourceResponse = await fetch("http://localhost:3001/api/trips/demo/google-source");
   const googleSourcePayload = await googleSourceResponse.json();
   assertCheck("google source preview endpoint", googleSourceResponse.ok);
+  assertCheck("google source adapter kind", googleSourcePayload.adapter?.kind === "fixture");
+  assertCheck("google source no live access", googleSourcePayload.adapter?.liveGoogleAccess === false);
   assertCheck("google source preview mode", googleSourcePayload.source?.state === "read_only_preview");
   assertCheck("google source sync mode", googleSourcePayload.sync?.mode === "read_only_fixture");
   assertCheck("google source preview count", googleSourcePayload.source?.importedPlacesCount >= 100);

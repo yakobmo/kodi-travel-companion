@@ -252,6 +252,11 @@ interface TripSetupStateResponse {
 
 interface GoogleSourcePreviewResponse {
   tripGroupId: string;
+  adapter: {
+    kind: "fixture" | "google_api" | string;
+    name: string;
+    liveGoogleAccess: boolean;
+  };
   source: {
     id: string;
     type: string;
