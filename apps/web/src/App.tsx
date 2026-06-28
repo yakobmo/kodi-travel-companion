@@ -444,6 +444,7 @@ export function App() {
     "idle"
   );
   const [groupDestination, setGroupDestination] = useState<GroupDestination | null>(null);
+  const [destinationRealtimeState, setDestinationRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [groupRoute, setGroupRoute] = useState<GroupRoute | null>(null);
   const [routeRealtimeState, setRouteRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [routeApprovalState, setRouteApprovalState] = useState<"idle" | "checking" | "approved" | "blocked" | "error">(
@@ -478,6 +479,11 @@ export function App() {
     setGroupRoute(route);
     setActiveRouteStopIndex(route?.activeStopIndex ?? 0);
     setRouteRealtimeState("live");
+  }
+
+  function applyGroupDestination(destination: GroupDestination | null) {
+    setGroupDestination(destination);
+    setDestinationRealtimeState("live");
   }
 
   useEffect(() => {
@@ -706,6 +712,74 @@ export function App() {
         } catch {
           if (!ignore) {
             setChatRealtimeState("error");
+          }
+        }
+      });
+      eventSource.onerror = () => {
+        if (ignore) {
+          return;
+        }
+
+        eventSource?.close();
+        eventSource = undefined;
+        startPollingFallback();
+      };
+    } else {
+      startPollingFallback();
+    }
+
+    return () => {
+      ignore = true;
+      eventSource?.close();
+      if (intervalId !== undefined) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    let intervalId: number | undefined;
+    let eventSource: EventSource | undefined;
+
+    async function pollGroupDestination() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/trips/demo/group-destination`);
+        if (!response.ok) {
+          throw new Error(`Group destination polling failed with ${response.status}`);
+        }
+
+        const data = (await response.json()) as GroupDestinationResponse;
+        if (!ignore) {
+          applyGroupDestination(data.destination ?? null);
+        }
+      } catch {
+        if (!ignore) {
+          setDestinationRealtimeState("error");
+        }
+      }
+    }
+
+    function startPollingFallback() {
+      if (intervalId !== undefined) {
+        return;
+      }
+
+      void pollGroupDestination();
+      intervalId = window.setInterval(pollGroupDestination, 5000);
+    }
+
+    if ("EventSource" in window) {
+      eventSource = new EventSource(`${apiBaseUrl}/api/trips/demo/group-destination/stream`);
+      eventSource.addEventListener("group-destination", (event) => {
+        try {
+          const data = JSON.parse(event.data) as GroupDestinationResponse;
+          if (!ignore && "destination" in data) {
+            applyGroupDestination(data.destination ?? null);
+          }
+        } catch {
+          if (!ignore) {
+            setDestinationRealtimeState("error");
           }
         }
       });
@@ -1807,6 +1881,13 @@ export function App() {
               <div className="group-destination-card" aria-label="יעד קבוצתי נוכחי">
                 <span>יעד קבוצתי נוכחי</span>
                 <strong>{groupDestination.placeName}</strong>
+                <small className="destination-sync-status">
+                  {destinationRealtimeState === "live"
+                    ? "יעד מסונכרן"
+                    : destinationRealtimeState === "error"
+                      ? "סנכרון יעד ממתין לחיבור"
+                      : "מכין סנכרון יעד"}
+                </small>
                 <small>נקבע על ידי {groupDestination.setByName}</small>
               </div>
             ) : null}

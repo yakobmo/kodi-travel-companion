@@ -81,6 +81,21 @@ try {
   const routeStreamText = routeStreamChunk?.value ? new TextDecoder().decode(routeStreamChunk.value) : "";
   assertCheck("group route stream endpoint", routeStreamResponse.ok && routeStreamText.includes("event: group-route"));
 
+  const destinationStreamController = new AbortController();
+  const destinationStreamResponse = await fetch("http://localhost:3001/api/trips/demo/group-destination/stream", {
+    signal: destinationStreamController.signal
+  });
+  const destinationStreamReader = destinationStreamResponse.body?.getReader();
+  const destinationStreamChunk = destinationStreamReader ? await destinationStreamReader.read() : null;
+  destinationStreamController.abort();
+  const destinationStreamText = destinationStreamChunk?.value
+    ? new TextDecoder().decode(destinationStreamChunk.value)
+    : "";
+  assertCheck(
+    "group destination stream endpoint",
+    destinationStreamResponse.ok && destinationStreamText.includes("event: group-destination")
+  );
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 

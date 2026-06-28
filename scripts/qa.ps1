@@ -175,8 +175,14 @@ if (-not $appSource.Contains("/api/trips/demo/agent-actions/authorize") -or -not
   throw "Web app must request server authorization before operational group actions."
 }
 
-if (-not $appSource.Contains("/api/trips/demo/group-destination") -or -not $appSource.Contains("groupDestination")) {
-  throw "Web app must persist and display the current group destination after admin approval."
+if (
+  -not $appSource.Contains("/api/trips/demo/group-destination") -or
+  -not $appSource.Contains("/api/trips/demo/group-destination/stream") -or
+  -not $appSource.Contains("groupDestination") -or
+  -not $appSource.Contains("destinationRealtimeState") -or
+  -not $appSource.Contains("group-destination")
+) {
+  throw "Web app must persist, display, and stream the current group destination after admin approval."
 }
 
 if (
@@ -348,8 +354,11 @@ if (-not $serverSource.Contains("/api/trips/demo/agent-actions/authorize")) {
   throw "API server is missing the agent action authorization endpoint."
 }
 
-if (-not $serverSource.Contains("/api/trips/demo/group-destination")) {
-  throw "API server is missing the active group destination endpoint."
+if (
+  -not $serverSource.Contains("/api/trips/demo/group-destination") -or
+  -not $serverSource.Contains("/api/trips/demo/group-destination/stream")
+) {
+  throw "API server is missing active group destination endpoints."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/group-route") -or -not $serverSource.Contains("/api/trips/demo/group-route/stream")) {
