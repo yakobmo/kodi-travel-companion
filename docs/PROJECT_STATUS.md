@@ -156,7 +156,7 @@ Current Supabase state:
 - Immediate activity refresh after group actions added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 - Server-sent group activity stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group chat message stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
-- Server-sent member location stream added on `2026-06-28`; local build, QA, and local stream smoke passed.
+- Server-sent member location stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 
 ## Next Continuation Checkpoint
 
@@ -164,7 +164,7 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Complete public Render smoke for `/api/trips/demo/members/stream`.
+1. Start the next live-sync slice: group route state stream.
 2. Preserve the same pattern: server stream, browser EventSource, polling fallback, local smoke, public smoke.
 3. Do not start Figma/UI polish until the live-sync core is stable.
 
