@@ -92,7 +92,10 @@ $googleSourceAdapterSource = Get-Content (Join-Path $root "apps\api\src\google\s
 if (
   -not $googleSourceAdapterSource.Contains("GoogleSourceAdapter") -or
   -not $googleSourceAdapterSource.Contains("fixtureGoogleSourceAdapter") -or
+  -not $googleSourceAdapterSource.Contains("googleApiSourceAdapter") -or
   -not $googleSourceAdapterSource.Contains("getActiveGoogleSourceAdapter") -or
+  -not $googleSourceAdapterSource.Contains("getGoogleSourceReadiness") -or
+  -not $googleSourceAdapterSource.Contains('state: "not_configured"') -or
   -not $googleSourceAdapterSource.Contains("read_only_fixture") -or
   -not $googleSourceAdapterSource.Contains("requiresGoogleOAuthForLiveSync") -or
   -not $googleSourceAdapterSource.Contains("liveGoogleAccess: false") -or
@@ -379,9 +382,11 @@ if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSourc
 
 if (
   -not $serverSource.Contains("/api/trips/demo/google-source") -or
-  -not $serverSource.Contains("buildDemoGoogleSourcePreview")
+  -not $serverSource.Contains("buildDemoGoogleSourcePreview") -or
+  -not $serverSource.Contains("/api/trips/demo/google-source/readiness") -or
+  -not $serverSource.Contains("getGoogleSourceReadiness")
 ) {
-  throw "API server is missing the read-only Google source preview endpoint."
+  throw "API server is missing the read-only Google source preview or readiness endpoint."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/messages")) {
@@ -699,6 +704,12 @@ $envExampleSource = Get-Content (Join-Path $root ".env.example") -Raw
 foreach ($requiredEnvName in @("STORAGE_DRIVER=file", "SUPABASE_URL=", "SUPABASE_SERVICE_ROLE_KEY=")) {
   if (-not $envExampleSource.Contains($requiredEnvName)) {
     throw ".env.example is missing Supabase environment contract: $requiredEnvName"
+  }
+}
+
+foreach ($requiredGoogleEnvName in @("GOOGLE_MAPS_API_KEY=", "GOOGLE_OAUTH_CLIENT_ID=", "GOOGLE_OAUTH_CLIENT_SECRET=", "GOOGLE_OAUTH_REDIRECT_URI=")) {
+  if (-not $envExampleSource.Contains($requiredGoogleEnvName)) {
+    throw ".env.example is missing Google integration environment contract: $requiredGoogleEnvName"
   }
 }
 

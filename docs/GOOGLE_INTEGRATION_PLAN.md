@@ -60,6 +60,29 @@ Its contract says:
 
 Any future Google API adapter must preserve the same response shape before replacing the fixture path.
 
+Non-active future adapter:
+
+```text
+googleApiSourceAdapter
+```
+
+It reports `not_configured` until the Google environment contract is ready. It does not perform network calls, does not read user Google data, and does not write back to Google.
+
+Readiness endpoint:
+
+```text
+GET /api/trips/demo/google-source/readiness
+```
+
+It reports only whether required environment variables are configured. It must never expose API keys, OAuth secrets, tokens, or raw credential values.
+
+Required future variables:
+
+- `GOOGLE_MAPS_API_KEY`
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
+- `GOOGLE_OAUTH_REDIRECT_URI`
+
 ## Google Capability Split
 
 Use separate Google layers:
@@ -71,10 +94,10 @@ Use separate Google layers:
 
 ## Next Slice
 
-Next implementation should add the future Google API-backed adapter skeleton:
+Next implementation should prepare the first real Google API read path:
 
 1. Keep the current fixture adapter as the active adapter.
-2. Add a non-active Google API adapter skeleton that reports `not_configured` until secrets exist.
+2. Decide whether the first live read uses Places API enrichment or OAuth account connection.
 3. Keep write-back disabled until a proven and permissioned Google path exists.
 4. Keep QA failing if UI copy implies live Google editing before it is real.
 

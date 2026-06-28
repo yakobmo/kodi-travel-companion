@@ -45,6 +45,28 @@ export interface GoogleSourcePreview {
   previewPlaces: TripPlace[];
 }
 
+export interface GoogleEnvironmentRequirement {
+  name: string;
+  configured: boolean;
+  purpose: "places" | "routes" | "oauth";
+  requiredFor: string;
+}
+
+export interface GoogleSourceReadiness {
+  activeAdapterKind: GoogleSourceAdapterKind;
+  futureGoogleApiAdapter: {
+    kind: "google_api";
+    state: "not_configured";
+    liveGoogleAccess: false;
+    canWriteBackToGoogle: false;
+  };
+  requirements: GoogleEnvironmentRequirement[];
+  readyForGoogleApiRead: boolean;
+  readyForGoogleOAuth: boolean;
+  safeToActivateGoogleApiAdapter: boolean;
+  checkedAt: string;
+}
+
 export interface GoogleSourceAdapter {
   readonly kind: GoogleSourceAdapterKind;
   buildPreview(): GoogleSourcePreview;
@@ -101,10 +123,104 @@ export const fixtureGoogleSourceAdapter: GoogleSourceAdapter = {
   buildPreview: buildReadOnlyFixturePreview
 };
 
+export const googleApiSourceAdapter: GoogleSourceAdapter = {
+  kind: "google_api",
+  buildPreview() {
+    const fixturePreview = buildReadOnlyFixturePreview();
+
+    return {
+      ...fixturePreview,
+      adapter: {
+        kind: "google_api",
+        name: "Google API adapter skeleton",
+        liveGoogleAccess: false
+      },
+      source: {
+        ...fixturePreview.source,
+        state: "not_configured",
+        importedPlacesCount: 0,
+        placesWithCoordinates: 0,
+        placesMissingCoordinates: 0,
+        placesWithGoogleIds: 0
+      },
+      sync: {
+        mode: "google_api_read",
+        canPreviewImportedPlaces: false,
+        canOpenGoogleMapsUrl: true,
+        canWriteBackToGoogle: false,
+        requiresGoogleOAuthForLiveSync: true,
+        requiresGoogleMapsApiKeyForPlacesEnrichment: true,
+        requiresRoutesApiForEta: true
+      },
+      previewPlaces: []
+    };
+  }
+};
+
 export function getActiveGoogleSourceAdapter(): GoogleSourceAdapter {
   return fixtureGoogleSourceAdapter;
 }
 
 export function buildDemoGoogleSourcePreview() {
   return getActiveGoogleSourceAdapter().buildPreview();
+}
+
+function hasEnv(name: string) {
+  return Boolean(process.env[name]?.trim());
+}
+
+export function getGoogleSourceReadiness(): GoogleSourceReadiness {
+  const requirements: GoogleEnvironmentRequirement[] = [
+    {
+      name: "GOOGLE_MAPS_API_KEY",
+      configured: hasEnv("GOOGLE_MAPS_API_KEY"),
+      purpose: "places",
+      requiredFor: "Places search, place enrichment, and server-side Google Maps Platform calls."
+    },
+    {
+      name: "GOOGLE_MAPS_API_KEY",
+      configured: hasEnv("GOOGLE_MAPS_API_KEY"),
+      purpose: "routes",
+      requiredFor: "Routes API distance, duration, and ETA calculations."
+    },
+    {
+      name: "GOOGLE_OAUTH_CLIENT_ID",
+      configured: hasEnv("GOOGLE_OAUTH_CLIENT_ID"),
+      purpose: "oauth",
+      requiredFor: "User-authorized Google account connection."
+    },
+    {
+      name: "GOOGLE_OAUTH_CLIENT_SECRET",
+      configured: hasEnv("GOOGLE_OAUTH_CLIENT_SECRET"),
+      purpose: "oauth",
+      requiredFor: "Server-side OAuth token exchange."
+    },
+    {
+      name: "GOOGLE_OAUTH_REDIRECT_URI",
+      configured: hasEnv("GOOGLE_OAUTH_REDIRECT_URI"),
+      purpose: "oauth",
+      requiredFor: "OAuth callback routing."
+    }
+  ];
+  const readyForGoogleApiRead = requirements
+    .filter((requirement) => requirement.purpose === "places" || requirement.purpose === "routes")
+    .every((requirement) => requirement.configured);
+  const readyForGoogleOAuth = requirements
+    .filter((requirement) => requirement.purpose === "oauth")
+    .every((requirement) => requirement.configured);
+
+  return {
+    activeAdapterKind: getActiveGoogleSourceAdapter().kind,
+    futureGoogleApiAdapter: {
+      kind: "google_api",
+      state: "not_configured",
+      liveGoogleAccess: false,
+      canWriteBackToGoogle: false
+    },
+    requirements,
+    readyForGoogleApiRead,
+    readyForGoogleOAuth,
+    safeToActivateGoogleApiAdapter: readyForGoogleApiRead && readyForGoogleOAuth,
+    checkedAt: new Date().toISOString()
+  };
 }

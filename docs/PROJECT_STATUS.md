@@ -49,6 +49,7 @@ Implemented locally:
 - Server-sent event stream for group destination state through `/api/trips/demo/group-destination/stream`, with browser fallback to polling.
 - Read-only Google source preview through `/api/trips/demo/google-source`, exposing imported place count, coordinate coverage, and future OAuth/API requirements without claiming live Google write-back.
 - Google source adapter boundary with the active fixture adapter explicitly reporting `liveGoogleAccess=false` and `canWriteBackToGoogle=false`.
+- Non-active Google API adapter skeleton and readiness endpoint through `/api/trips/demo/google-source/readiness`, reporting only configured/not-configured status for future Google environment requirements.
 
 ## Current Storage
 
@@ -165,6 +166,7 @@ Current Supabase state:
 - Server-sent group destination stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - First Google integration spike added on `2026-06-28`; read-only source preview implemented with build, QA, local browser smoke, Render deploy, public API smoke, and public browser smoke passed.
 - Google source adapter boundary added on `2026-06-28`; local build, QA, local smoke, Render deploy, public API smoke, and public browser smoke passed.
+- Google API readiness skeleton is in progress on `2026-06-28`; local build, QA, smoke, Render deploy, and public API smoke are the current validation gate.
 
 ## Next Continuation Checkpoint
 
@@ -172,9 +174,10 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Add a non-active Google API adapter skeleton that reports `not_configured` until Google secrets exist.
-2. Add a safe readiness endpoint/report for required Google environment variables without exposing secrets.
-3. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
+1. Validate and deploy the non-active Google API readiness skeleton.
+2. Public-smoke `/api/trips/demo/google-source/readiness` and confirm no secret values are exposed.
+3. After that, choose the first real Google read path: Places API enrichment or OAuth account connection.
+4. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
 
 ## QA
 

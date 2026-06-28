@@ -106,6 +106,14 @@ try {
   assertCheck("google source preview count", googleSourcePayload.source?.importedPlacesCount >= 100);
   assertCheck("google source write-back blocked", googleSourcePayload.sync?.canWriteBackToGoogle === false);
 
+  const googleReadinessResponse = await fetch("http://localhost:3001/api/trips/demo/google-source/readiness");
+  const googleReadinessPayload = await googleReadinessResponse.json();
+  assertCheck("google source readiness endpoint", googleReadinessResponse.ok);
+  assertCheck("google source active adapter fixture", googleReadinessPayload.activeAdapterKind === "fixture");
+  assertCheck("google api skeleton not configured", googleReadinessPayload.futureGoogleApiAdapter?.state === "not_configured");
+  assertCheck("google api skeleton no live access", googleReadinessPayload.futureGoogleApiAdapter?.liveGoogleAccess === false);
+  assertCheck("google api readiness hides values", googleReadinessPayload.requirements?.every((item) => item.value === undefined));
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 

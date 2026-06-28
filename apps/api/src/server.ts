@@ -2,7 +2,7 @@ import express from "express";
 import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
-import { buildDemoGoogleSourcePreview } from "./google/sourceAdapter.js";
+import { buildDemoGoogleSourcePreview, getGoogleSourceReadiness } from "./google/sourceAdapter.js";
 import {
   loadDemoTripMembersAsync,
   resetDemoTripMembersAsync,
@@ -142,6 +142,10 @@ app.get("/api/trips/demo/places", (_req, res) => {
 
 app.get("/api/trips/demo/google-source", (_req, res) => {
   res.json(buildDemoGoogleSourcePreview());
+});
+
+app.get("/api/trips/demo/google-source/readiness", (_req, res) => {
+  res.json(getGoogleSourceReadiness());
 });
 
 app.get("/api/trips/demo/members", async (_req, res) => {
