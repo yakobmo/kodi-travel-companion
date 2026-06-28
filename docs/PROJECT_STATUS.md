@@ -44,6 +44,7 @@ Implemented locally:
 - Immediate live activity refresh after user-visible group actions, so chat/location/route actions update the activity panel without waiting for the next polling cycle.
 - Server-sent event stream for group activity through `/api/trips/demo/events/stream`, with browser fallback to polling.
 - Server-sent event stream for group chat messages through `/api/trips/demo/messages/stream`, with browser fallback to polling.
+- Server-sent event stream for member locations through `/api/trips/demo/members/stream`, with browser fallback to polling.
 
 ## Current Storage
 
@@ -155,6 +156,7 @@ Current Supabase state:
 - Immediate activity refresh after group actions added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 - Server-sent group activity stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group chat message stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
+- Server-sent member location stream added on `2026-06-28`; local build, QA, and local stream smoke passed.
 
 ## Next Continuation Checkpoint
 
@@ -162,7 +164,7 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Start the next live-sync slice: member locations stream or route state stream.
+1. Complete public Render smoke for `/api/trips/demo/members/stream`.
 2. Preserve the same pattern: server stream, browser EventSource, polling fallback, local smoke, public smoke.
 3. Do not start Figma/UI polish until the live-sync core is stable.
 

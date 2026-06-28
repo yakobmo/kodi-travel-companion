@@ -58,6 +58,19 @@ try {
     messageStreamResponse.ok && messageStreamText.includes("event: trip-messages")
   );
 
+  const memberStreamController = new AbortController();
+  const memberStreamResponse = await fetch("http://localhost:3001/api/trips/demo/members/stream", {
+    signal: memberStreamController.signal
+  });
+  const memberStreamReader = memberStreamResponse.body?.getReader();
+  const memberStreamChunk = memberStreamReader ? await memberStreamReader.read() : null;
+  memberStreamController.abort();
+  const memberStreamText = memberStreamChunk?.value ? new TextDecoder().decode(memberStreamChunk.value) : "";
+  assertCheck(
+    "member stream endpoint",
+    memberStreamResponse.ok && memberStreamText.includes("event: trip-members")
+  );
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 

@@ -243,8 +243,13 @@ if (-not $appSource.Contains("/api/trips/demo/members/") -or -not $appSource.Con
   throw "Web app must sync personal GPS to the demo member location endpoint."
 }
 
-if (-not $appSource.Contains("memberRealtimeState") -or -not $appSource.Contains("window.setInterval(pollMemberLocations, 5000)")) {
-  throw "Web app must poll member locations for a basic live group map experience."
+if (
+  -not $appSource.Contains("memberRealtimeState") -or
+  -not $appSource.Contains("/api/trips/demo/members/stream") -or
+  -not $appSource.Contains("trip-members") -or
+  -not $appSource.Contains("window.setInterval(pollMemberLocations, 5000)")
+) {
+  throw "Web app must stream member locations with a polling fallback."
 }
 
 if (-not $appSource.Contains("׳¡׳ ׳›׳¨׳•׳ ׳—׳™ ׳₪׳¢׳™׳")) {
@@ -309,8 +314,8 @@ if (-not $serverSource.Contains("contextSummary")) {
   throw "Kodi agent endpoint must return a structured context summary."
 }
 
-if (-not $serverSource.Contains("/api/trips/demo/members")) {
-  throw "API server is missing the demo members endpoint."
+if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {
+  throw "API server is missing demo members endpoints."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/messages")) {
