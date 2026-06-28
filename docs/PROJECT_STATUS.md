@@ -47,6 +47,7 @@ Implemented locally:
 - Server-sent event stream for member locations through `/api/trips/demo/members/stream`, with browser fallback to polling.
 - Server-sent event stream for group route state through `/api/trips/demo/group-route/stream`, with browser fallback to polling.
 - Server-sent event stream for group destination state through `/api/trips/demo/group-destination/stream`, with browser fallback to polling.
+- Read-only Google source preview through `/api/trips/demo/google-source`, exposing imported place count, coordinate coverage, and future OAuth/API requirements without claiming live Google write-back.
 
 ## Current Storage
 
@@ -161,6 +162,7 @@ Current Supabase state:
 - Server-sent member location stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group route state stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group destination stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
+- First Google integration spike added on `2026-06-28`; read-only source preview implemented locally with build, QA, and local browser smoke passed. Public Render smoke is next after deploy.
 
 ## Next Continuation Checkpoint
 
@@ -168,9 +170,9 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Start the first Google integration spike: define and implement the safest read-only import/sync path for Google-sourced trip places.
-2. Preserve the same pattern for integration work: minimal product slice, backend contract, browser behavior, local QA, public smoke.
-3. Do not start Figma/UI polish until the Google read path and live-sync core are stable together.
+1. Deploy and run public Render smoke for `/api/trips/demo/google-source`.
+2. Continue Google integration by adding a source adapter boundary: current fixture adapter plus future Google API-backed adapter contract.
+3. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
 
 ## QA
 

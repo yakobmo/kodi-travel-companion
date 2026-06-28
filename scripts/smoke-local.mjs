@@ -96,17 +96,27 @@ try {
     destinationStreamResponse.ok && destinationStreamText.includes("event: group-destination")
   );
 
+  const googleSourceResponse = await fetch("http://localhost:3001/api/trips/demo/google-source");
+  const googleSourcePayload = await googleSourceResponse.json();
+  assertCheck("google source preview endpoint", googleSourceResponse.ok);
+  assertCheck("google source preview mode", googleSourcePayload.source?.state === "read_only_preview");
+  assertCheck("google source sync mode", googleSourcePayload.sync?.mode === "read_only_fixture");
+  assertCheck("google source preview count", googleSourcePayload.source?.importedPlacesCount >= 100);
+  assertCheck("google source write-back blocked", googleSourcePayload.sync?.canWriteBackToGoogle === false);
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 
   const setupPayload = await (await page.request.get("http://localhost:3001/api/trips/demo/setup")).json();
   assertCheck("setup starts disconnected", setupPayload.googleSource?.importedPlacesCount === 0);
 
+  await page.getByText("Read-only preview active").waitFor();
   const activationBody = await page.locator("body").innerText();
   assertCheck("activation shell", activationBody.includes("Welcome + Activation"));
   assertCheck("kodi activation", activationBody.includes("קודי מתעורר לחיים"));
   assertCheck("api budget explanation", activationBody.includes("תקציב API"));
   assertCheck("google source explanation", activationBody.includes("Google Maps Place List"));
+  assertCheck("google source read-only preview", activationBody.includes("Read-only preview active"));
   assertCheck("location consent explanation", activationBody.includes("הסכמה מפורשת"));
 
   const startButton = page.getByRole("button", { name: "התחילו עם קודי" });

@@ -17,6 +17,7 @@ interface SourcePlace {
 const DEMO_TRIP_ID = "trip_north_greece_demo";
 const DEMO_GROUP_ID = "group_family_greece_demo";
 const DEMO_SOURCE_ID = "source_google_maps_place_list_demo";
+const DEMO_GOOGLE_SOURCE_URL = "https://maps.app.goo.gl/MspoN6j9CJDyGmtb8";
 
 const placesPathCandidates = [
   process.env.TRIP_PLACES_JSON,
@@ -111,5 +112,43 @@ export function buildTripPlacesSummary(places: TripPlace[]): TripPlacesSummary {
     byType,
     lodgingCount: byType.lodging ?? 0,
     waterCount: byType.water ?? 0
+  };
+}
+
+export function buildDemoGoogleSourcePreview() {
+  const sourcePath = resolvePlacesPath();
+  const places = loadDemoTripPlaces();
+  const summary = buildTripPlacesSummary(places);
+  const placesWithCoordinates = places.filter(
+    (place) => typeof place.lat === "number" && typeof place.lng === "number"
+  ).length;
+  const placesWithGoogleIds = places.filter((place) => Boolean(place.sourcePlaceId)).length;
+
+  return {
+    tripGroupId: DEMO_GROUP_ID,
+    source: {
+      id: DEMO_SOURCE_ID,
+      type: "google_maps_place_list",
+      state: "read_only_preview",
+      displayName: "Google Maps Place List",
+      sourceUrl: process.env.DEMO_GOOGLE_SOURCE_URL ?? DEMO_GOOGLE_SOURCE_URL,
+      fixtureFileName: path.basename(sourcePath),
+      importedPlacesCount: places.length,
+      placesWithCoordinates,
+      placesMissingCoordinates: places.length - placesWithCoordinates,
+      placesWithGoogleIds,
+      lastCheckedAt: new Date().toISOString()
+    },
+    sync: {
+      mode: "read_only_fixture",
+      canPreviewImportedPlaces: true,
+      canOpenGoogleMapsUrl: true,
+      canWriteBackToGoogle: false,
+      requiresGoogleOAuthForLiveSync: true,
+      requiresGoogleMapsApiKeyForPlacesEnrichment: true,
+      requiresRoutesApiForEta: true
+    },
+    summary,
+    previewPlaces: places.slice(0, 5)
   };
 }

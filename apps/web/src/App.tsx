@@ -250,6 +250,34 @@ interface TripSetupStateResponse {
   kodiWelcomeMessage: string;
 }
 
+interface GoogleSourcePreviewResponse {
+  tripGroupId: string;
+  source: {
+    id: string;
+    type: string;
+    state: "read_only_preview" | string;
+    displayName: string;
+    sourceUrl: string;
+    fixtureFileName: string;
+    importedPlacesCount: number;
+    placesWithCoordinates: number;
+    placesMissingCoordinates: number;
+    placesWithGoogleIds: number;
+    lastCheckedAt: string;
+  };
+  sync: {
+    mode: "read_only_fixture" | string;
+    canPreviewImportedPlaces: boolean;
+    canOpenGoogleMapsUrl: boolean;
+    canWriteBackToGoogle: boolean;
+    requiresGoogleOAuthForLiveSync: boolean;
+    requiresGoogleMapsApiKeyForPlacesEnrichment: boolean;
+    requiresRoutesApiForEta: boolean;
+  };
+  summary: TripPlacesSummary;
+  previewPlaces: TripPlace[];
+}
+
 interface SetupDraft {
   tripName: string;
   memberName: string;
@@ -405,6 +433,7 @@ function getMapPosition(index: number, total: number) {
 export function App() {
   const [showActivation, setShowActivation] = useState(true);
   const [setupState, setSetupState] = useState<TripSetupStateResponse | null>(null);
+  const [googleSourcePreview, setGoogleSourcePreview] = useState<GoogleSourcePreviewResponse | null>(null);
   const [setupSaveState, setSetupSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [setupSaveError, setSetupSaveError] = useState("");
   const [setupDraft, setSetupDraft] = useState<SetupDraft>({
@@ -560,6 +589,24 @@ export function App() {
       }
     }
 
+    async function loadGoogleSourcePreview() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/trips/demo/google-source`);
+        if (!response.ok) {
+          throw new Error(`Google source API failed with ${response.status}`);
+        }
+
+        const data = (await response.json()) as GoogleSourcePreviewResponse;
+        if (!ignore) {
+          setGoogleSourcePreview(data);
+        }
+      } catch {
+        if (!ignore) {
+          setGoogleSourcePreview(null);
+        }
+      }
+    }
+
     async function loadTripState() {
       try {
         const response = await fetch(`${apiBaseUrl}/api/trips/demo/state`);
@@ -656,6 +703,7 @@ export function App() {
     }
 
     void loadSetupState();
+    void loadGoogleSourcePreview();
     void loadTripState();
     void loadMessages();
     void loadTripEvents();
@@ -1725,6 +1773,14 @@ export function App() {
                 {setupState?.googleSource.importedPlacesCount ?? summary.total} נקודות נטענו לדמו
               </p>
             </div>
+            {googleSourcePreview ? (
+              <small className="google-source-preview">
+                Read-only preview active · {googleSourcePreview.source.placesWithCoordinates}/
+                {googleSourcePreview.source.importedPlacesCount} with coordinates · write-back requires Google OAuth
+              </small>
+            ) : (
+              <small className="google-source-preview">Read-only Google preview is waiting for the API</small>
+            )}
             <div className="readiness-grid">
               {readinessItems.map((item) => (
                 <span className={item.ready ? "ready" : "missing"} key={item.label}>

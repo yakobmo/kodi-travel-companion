@@ -11,6 +11,7 @@ $requiredFiles = @(
   "supabase/schema.sql",
   "supabase/event-log-migration.sql",
   "docs/SUPABASE_SCHEMA.md",
+  "docs/GOOGLE_INTEGRATION_PLAN.md",
   "scripts/apply-supabase-schema.mjs",
   "scripts/apply-supabase-schema.ps1",
   "scripts/apply-supabase-grants.mjs",
@@ -78,6 +79,14 @@ if (-not $localPlacesSource.Contains("loadDemoTripPlaces")) {
   throw "Local places loader is missing loadDemoTripPlaces."
 }
 
+if (
+  -not $localPlacesSource.Contains("buildDemoGoogleSourcePreview") -or
+  -not $localPlacesSource.Contains("read_only_fixture") -or
+  -not $localPlacesSource.Contains("requiresGoogleOAuthForLiveSync")
+) {
+  throw "Local places loader must expose a read-only Google source preview contract before live Google sync."
+}
+
 $demoTripSource = Get-Content (Join-Path $root "apps\web\src\demoTrip.ts") -Raw
 if (-not $demoTripSource.Contains("totalPlaces: 108")) {
   throw "Web demo trip summary does not reference the imported 108 places."
@@ -126,6 +135,15 @@ if (-not $appSource.Contains("aiPlanMode") -or -not $appSource.Contains("plan-no
 
 if (-not $appSource.Contains("Google Maps Place List")) {
   throw "Welcome + Activation must explain the Google Maps Place List source."
+}
+
+if (
+  -not $appSource.Contains("/api/trips/demo/google-source") -or
+  -not $appSource.Contains("googleSourcePreview") -or
+  -not $appSource.Contains("Read-only preview active") -or
+  -not $appSource.Contains("write-back requires Google OAuth")
+) {
+  throw "Welcome + Activation must show the read-only Google source preview before live Google sync."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/members")) {
@@ -328,6 +346,13 @@ if (-not $serverSource.Contains("contextSummary")) {
 
 if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {
   throw "API server is missing demo members endpoints."
+}
+
+if (
+  -not $serverSource.Contains("/api/trips/demo/google-source") -or
+  -not $serverSource.Contains("buildDemoGoogleSourcePreview")
+) {
+  throw "API server is missing the read-only Google source preview endpoint."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/messages")) {

@@ -282,6 +282,13 @@ input {
   font-size: 13px;
 }
 
+.google-source-preview {
+  display: block;
+  color: #52615d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .readiness-grid span {
   min-height: 32px;
   display: inline-flex;
