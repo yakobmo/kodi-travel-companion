@@ -166,7 +166,7 @@ Current Supabase state:
 - Server-sent group destination stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - First Google integration spike added on `2026-06-28`; read-only source preview implemented with build, QA, local browser smoke, Render deploy, public API smoke, and public browser smoke passed.
 - Google source adapter boundary added on `2026-06-28`; local build, QA, local smoke, Render deploy, public API smoke, and public browser smoke passed.
-- Google API readiness skeleton is in progress on `2026-06-28`; local build, QA, smoke, Render deploy, and public API smoke are the current validation gate.
+- Google API readiness skeleton added on `2026-06-28`; local build, QA, local smoke, Render deploy, and public API smoke passed. The readiness endpoint exposes only requirement names and configured booleans, not credential values.
 
 ## Next Continuation Checkpoint
 
@@ -174,10 +174,10 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Validate and deploy the non-active Google API readiness skeleton.
-2. Public-smoke `/api/trips/demo/google-source/readiness` and confirm no secret values are exposed.
-3. After that, choose the first real Google read path: Places API enrichment or OAuth account connection.
-4. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
+1. Choose the first real Google read path: Places API enrichment or OAuth account connection.
+2. Keep the fixture adapter active while building the real read path behind an explicit readiness gate.
+3. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
+4. Keep QA failing if UI copy implies live Google editing before it is real.
 
 ## QA
 

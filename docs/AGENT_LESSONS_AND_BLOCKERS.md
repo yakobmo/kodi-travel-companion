@@ -253,6 +253,19 @@ Decision:
 - When a Hebrew assertion fails unexpectedly, first print the actual UI text and request counters before changing product code.
 - Keep repository smoke scripts as files, not pasted shell snippets, when a check becomes permanent.
 
+### 12. Secret Leak Checks Must Distinguish Names From Values
+
+Problem:
+
+A public smoke test for the Google readiness endpoint treated the string `GOOGLE_OAUTH_CLIENT_SECRET` as a leaked secret because the variable name contains `SECRET`. The endpoint was safe; it returned requirement names and booleans only.
+
+Decision:
+
+- Secret smoke tests may allow known environment variable names.
+- They must fail when raw credential values, token-shaped fields, or unexpected `value` fields appear.
+- For readiness endpoints, assert the response shape: names, purposes, configured booleans, and no raw values.
+- Do not treat a safe config key name as a leaked credential.
+
 ## Current Operating Checklist
 
 Before coding:
