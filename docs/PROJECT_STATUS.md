@@ -135,7 +135,7 @@ Current Render state:
 - Service ID: `srv-d8u2lr0js32c73cajpqg`
 - Public URL: `https://kodi-travel-companion.onrender.com`
 - Status: live
-- Last public smoke: passed on `2026-06-26`
+- Last public smoke: passed on `2026-06-28`
 
 Current Supabase state:
 
@@ -160,7 +160,7 @@ Current Supabase state:
 - Server-sent group chat message stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent member location stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group route state stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
-- Server-sent group destination stream added on `2026-06-28`; local build, QA, and local stream smoke passed.
+- Server-sent group destination stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 
 ## Next Continuation Checkpoint
 
@@ -168,9 +168,9 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Complete public Render smoke for `/api/trips/demo/group-destination/stream`.
-2. Preserve the same pattern for live-sync work: server stream, browser EventSource, polling fallback, local smoke, public smoke.
-3. Do not start Figma/UI polish until the live-sync core is stable.
+1. Start the first Google integration spike: define and implement the safest read-only import/sync path for Google-sourced trip places.
+2. Preserve the same pattern for integration work: minimal product slice, backend contract, browser behavior, local QA, public smoke.
+3. Do not start Figma/UI polish until the Google read path and live-sync core are stable together.
 
 ## QA
 
