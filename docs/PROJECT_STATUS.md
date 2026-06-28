@@ -164,7 +164,7 @@ Current Supabase state:
 - Server-sent group route state stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group destination stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - First Google integration spike added on `2026-06-28`; read-only source preview implemented with build, QA, local browser smoke, Render deploy, public API smoke, and public browser smoke passed.
-- Google source adapter boundary added on `2026-06-28`; local build, QA, and local smoke are the current validation gate before deploy.
+- Google source adapter boundary added on `2026-06-28`; local build, QA, local smoke, Render deploy, public API smoke, and public browser smoke passed.
 
 ## Next Continuation Checkpoint
 
@@ -172,8 +172,8 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Deploy and run public Render smoke for the Google source adapter boundary.
-2. Add a non-active Google API adapter skeleton that reports `not_configured` until Google secrets exist.
+1. Add a non-active Google API adapter skeleton that reports `not_configured` until Google secrets exist.
+2. Add a safe readiness endpoint/report for required Google environment variables without exposing secrets.
 3. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
 
 ## QA
