@@ -241,6 +241,18 @@ Decision:
 - Add a direct smoke check for the stream endpoint itself.
 - Keep polling fallback checks so the UI remains usable if a live stream fails.
 
+### 11. Hebrew Text In Ad-Hoc PowerShell Node Scripts Can Misencode
+
+Problem:
+
+An ad-hoc public browser smoke test looked for Hebrew text written directly inside a PowerShell here-string. The app was correct, but the test timed out because the Hebrew string reached Node with broken encoding.
+
+Decision:
+
+- For ad-hoc Node smoke scripts launched from PowerShell, use Unicode escapes for exact Hebrew assertions.
+- When a Hebrew assertion fails unexpectedly, first print the actual UI text and request counters before changing product code.
+- Keep repository smoke scripts as files, not pasted shell snippets, when a check becomes permanent.
+
 ## Current Operating Checklist
 
 Before coding:

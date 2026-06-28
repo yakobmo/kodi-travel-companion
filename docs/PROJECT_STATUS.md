@@ -154,7 +154,7 @@ Current Supabase state:
 - Live activity UI connected to the event log on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 - Immediate activity refresh after group actions added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 - Server-sent group activity stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
-- Server-sent group chat message stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, and public stream smoke passed. Public browser smoke for this specific chat stream remains the next continuation checkpoint.
+- Server-sent group chat message stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 
 ## Next Continuation Checkpoint
 
@@ -162,10 +162,9 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Run public browser smoke for `/api/trips/demo/messages/stream`.
-2. Verify the browser requests the chat stream and shows `שיחה מסונכרנת`.
-3. If passed, update this file from "public stream smoke" to "public browser smoke passed".
-4. Commit that status update.
+1. Start the next live-sync slice: member locations stream or route state stream.
+2. Preserve the same pattern: server stream, browser EventSource, polling fallback, local smoke, public smoke.
+3. Do not start Figma/UI polish until the live-sync core is stable.
 
 ## QA
 
