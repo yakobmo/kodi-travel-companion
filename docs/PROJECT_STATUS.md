@@ -158,7 +158,7 @@ Current Supabase state:
 - Server-sent group activity stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent group chat message stream added on `2026-06-26`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 - Server-sent member location stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
-- Server-sent group route state stream added on `2026-06-28`; local build, QA, and local stream smoke passed.
+- Server-sent group route state stream added on `2026-06-28`; local build, QA, local stream smoke, Render deploy, public stream smoke, and public browser smoke passed.
 
 ## Next Continuation Checkpoint
 
@@ -166,8 +166,8 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Complete public Render smoke for `/api/trips/demo/group-route/stream`.
-2. Preserve the same pattern: server stream, browser EventSource, polling fallback, local smoke, public smoke.
+1. Decide the next slice: route progress stream smoke hardening, group destination stream, or first Google integration spike.
+2. Preserve the same pattern for live-sync work: server stream, browser EventSource, polling fallback, local smoke, public smoke.
 3. Do not start Figma/UI polish until the live-sync core is stable.
 
 ## QA
