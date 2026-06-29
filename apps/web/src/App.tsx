@@ -1754,6 +1754,10 @@ export function App() {
                 <strong>אפשר לשאול אותי כמעט הכול</strong>
                 <p>בית חב"ד קרוב, גלידה, תחנת דלק, חוף יפה, זמן נסיעה, או מה כדאי לעשות עכשיו.</p>
               </div>
+              <div className="plan-note">
+                <ShieldCheck size={18} aria-hidden="true" />
+                <p>בדמו רואים את הלב של קודי. בטיול אמיתי העבודה עוברת דרך תקציב API של מנהל הטיול, כדי שהמשפחה לא תצטרך מנוי נפרד.</p>
+              </div>
               <button
                 className="primary-action"
                 type="button"
@@ -1805,6 +1809,14 @@ export function App() {
                     ? "זה עדיין לא סנכרון חי מחשבון Google. OAuth יאפשר בהמשך לבחור מפה אמיתית מתוך החשבון."
                     : `${summary.total} נקודות טיול זמינות בדמו כדי לראות את הלב של האפליקציה.`}
                 </p>
+                {googleSourcePreview ? (
+                  <small className="google-source-preview">
+                    Read-only preview active · {googleSourcePreview.source.placesWithCoordinates}/
+                    {googleSourcePreview.source.importedPlacesCount} with coordinates · write-back requires Google OAuth
+                  </small>
+                ) : (
+                  <small className="google-source-preview">Read-only preview active · write-back requires Google OAuth</small>
+                )}
               </div>
               <button className="primary-action" type="button" onClick={() => setActivationStep("manager_location")}>
                 המשך למיקום מנהל
@@ -1874,147 +1886,6 @@ export function App() {
               {setupSaveError ? <small className="setup-error">{setupSaveError}</small> : null}
             </section>
           ) : null}
-          <div className="kodi-welcome-card">
-            <span className="eyebrow">קודי מתעורר לחיים</span>
-            <h2>ברוכים הבאים</h2>
-            <p>{setupState?.kodiWelcomeMessage ?? "אני קודי, מלווה הטיול של הקבוצה. אני עוזר לכם להפעיל את הטיול בצורה מסודרת."}</p>
-          </div>
-
-          <section className="activation-section" aria-label="איך מפעילים את קודי">
-            <h3>איך מפעילים אותי?</h3>
-            <div className="activation-callout">
-              <strong>כותבים בקבוצה: “קודי…”</strong>
-              <p>אני קורא את ההקשר האחרון, מזהה מי פונה אליי, ומתחשב בגיל, תפקיד והרשאות. פעולות שמשנות יעד או מסלול דורשות מנהל.</p>
-            </div>
-          </section>
-
-          <section className="activation-section" aria-label="מצב דמו ותשלום">
-            <h3>דמו מול הפעלה מלאה</h3>
-            <div className="plan-note">
-              <ShieldCheck size={18} aria-hidden="true" />
-              <p>
-                מצב דמו מתאים להיכרות. שימוש אמיתי בטיול משפחתי דורש מודל AI מתאים או תקציב API בתשלום, כי צריך
-                שיחה ארוכה, מיקום חי, נקודות Google והמלצות בזמן אמת.
-              </p>
-            </div>
-            <label className="activation-checkbox">
-              <input
-                checked={setupDraft.aiPlanConfirmed}
-                onChange={(event) => setSetupDraft((draft) => ({ ...draft, aiPlanConfirmed: event.target.checked }))}
-                type="checkbox"
-              />
-              הבנתי: הדמו מוגבל, והפעלה אמיתית תדרוש מודל AI או תקציב API מתאים.
-            </label>
-          </section>
-
-          <section className="activation-section" aria-label="פרטי הקמה ראשוניים">
-            <h3>הקמה מהירה</h3>
-            <div className="setup-form">
-              <label>
-                שם הטיול
-                <input
-                  aria-label="שם הטיול"
-                  onChange={(event) => setSetupDraft((draft) => ({ ...draft, tripName: event.target.value }))}
-                  placeholder="למשל: יוון משפחתי 2026"
-                  value={setupDraft.tripName}
-                />
-              </label>
-              <div className="field-row">
-                <label>
-                  חבר קבוצה ראשון
-                  <input
-                    aria-label="שם חבר קבוצה"
-                    onChange={(event) => setSetupDraft((draft) => ({ ...draft, memberName: event.target.value }))}
-                    placeholder="שם"
-                    value={setupDraft.memberName}
-                  />
-                </label>
-                <label>
-                  גיל
-                  <input
-                    aria-label="גיל חבר קבוצה"
-                    inputMode="numeric"
-                    onChange={(event) => setSetupDraft((draft) => ({ ...draft, memberAge: event.target.value }))}
-                    placeholder="8"
-                    value={setupDraft.memberAge}
-                  />
-                </label>
-              </div>
-              <label>
-                קישור צפייה מ-Google Maps
-                <input
-                  aria-label="קישור Google Maps"
-                  dir="ltr"
-                  onChange={(event) => setSetupDraft((draft) => ({ ...draft, googleLink: event.target.value }))}
-                  placeholder="https://maps.app.goo.gl/..."
-                  value={setupDraft.googleLink}
-                />
-              </label>
-              <label className="activation-checkbox">
-                <input
-                  checked={setupDraft.locationConsentExplained}
-                  onChange={(event) =>
-                    setSetupDraft((draft) => ({ ...draft, locationConsentExplained: event.target.checked }))
-                  }
-                  type="checkbox"
-                />
-                הבנתי: GPS ושיתוף מיקום קבוצתי יופעלו רק אחרי הסכמה מפורשת של כל משתתף.
-              </label>
-            </div>
-          </section>
-
-          <section className="activation-section" aria-label="שלבי קליטה">
-            <h3>מסלול הקליטה</h3>
-            <div className="setup-steps">
-              {(setupState?.steps ?? []).map((step, index) => (
-                <article className={step.status} key={step.id}>
-                  <span>{index + 1}</span>
-                  <div>
-                    <strong>{step.title}</strong>
-                    <p>{step.description}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="activation-section" aria-label="בדיקת מוכנות">
-            <h3>בדיקת מוכנות</h3>
-            <div className="source-status">
-              <strong>מקור Google</strong>
-              <p>
-                {setupDraft.googleLink.trim() ? "Google Maps Place List viewing link" : setupState?.googleSource.displayName ?? "Google Maps Place List viewing link"} ·{" "}
-                {setupState?.googleSource.importedPlacesCount ?? summary.total} נקודות נטענו לדמו
-              </p>
-            </div>
-            {googleSourcePreview ? (
-              <small className="google-source-preview">
-                Read-only preview active · {googleSourcePreview.source.placesWithCoordinates}/
-                {googleSourcePreview.source.importedPlacesCount} with coordinates · write-back requires Google OAuth
-              </small>
-            ) : (
-              <small className="google-source-preview">Read-only Google preview is waiting for the API</small>
-            )}
-            <div className="readiness-grid">
-              {readinessItems.map((item) => (
-                <span className={item.ready ? "ready" : "missing"} key={item.label}>
-                  <CheckCircle2 size={15} aria-hidden="true" />
-                  {item.label}
-                </span>
-              ))}
-            </div>
-          </section>
-
-          <div className="activation-actions">
-            <button disabled={!setupReady || setupSaveState === "saving"} type="button" onClick={saveSetupAndStart}>
-              {setupSaveState === "saving" ? "שומר את ההקמה..." : "התחילו עם קודי"}
-            </button>
-            <button className="secondary" type="button" onClick={() => setShowActivation(false)}>
-              דלג לדמו
-            </button>
-            {setupSaveError ? <small className="setup-error">{setupSaveError}</small> : null}
-            <small>ב-MVP מחברים Google דרך קישור צפייה. OAuth וכתיבה חזרה לגוגל הם שלבים עתידיים.</small>
-          </div>
         </aside>
       </main>
     );

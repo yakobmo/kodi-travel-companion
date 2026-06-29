@@ -106,66 +106,10 @@ input {
   background: #ffffff;
 }
 
-.kodi-welcome-card {
-  display: grid;
-  gap: 10px;
-  padding: 16px;
-  border: 1px solid #cce1dc;
-  border-radius: 8px;
-  background: #eef8f5;
-}
-
 .eyebrow {
   color: #096b5c;
   font-size: 12px;
   font-weight: 700;
-}
-
-.kodi-welcome-card h2 {
-  font-size: 28px;
-}
-
-.kodi-welcome-card p,
-.activation-section p,
-.activation-actions small {
-  color: #53615e;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.activation-section {
-  display: grid;
-  gap: 10px;
-}
-
-.activation-section h3 {
-  font-size: 16px;
-}
-
-.activation-callout,
-.plan-note {
-  border: 1px solid #d4ded9;
-  border-radius: 8px;
-  padding: 12px;
-  background: #ffffff;
-}
-
-.activation-callout strong {
-  display: block;
-  margin-bottom: 6px;
-  color: #16211f;
-}
-
-.plan-note {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.plan-note svg {
-  flex: 0 0 auto;
-  color: #096b5c;
-  margin-top: 2px;
 }
 
 .setup-form {
@@ -189,165 +133,6 @@ input {
   padding: 0 10px;
   color: #16211f;
   background: #ffffff;
-}
-
-.field-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 92px;
-  gap: 8px;
-}
-
-.activation-checkbox {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
-  border: 1px solid #d4ded9;
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: #f8faf9;
-  color: #53615e;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
-.activation-checkbox input {
-  width: 17px;
-  height: 17px;
-  margin-top: 1px;
-  accent-color: #096b5c;
-}
-
-.setup-steps {
-  display: grid;
-  gap: 8px;
-}
-
-.setup-steps article {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
-  min-height: 58px;
-  border: 1px solid #d4ded9;
-  border-radius: 8px;
-  padding: 10px;
-  background: #ffffff;
-}
-
-.setup-steps article.current {
-  border-color: rgba(9, 107, 92, 0.5);
-  background: #f2faf7;
-}
-
-.setup-steps article span {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: #16211f;
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.setup-steps strong {
-  display: block;
-  font-size: 14px;
-}
-
-.setup-steps p {
-  margin-top: 4px;
-  font-size: 12px;
-}
-
-.readiness-grid {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.source-status {
-  border: 1px solid #d4ded9;
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: #f8faf9;
-}
-
-.source-status strong {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 13px;
-}
-
-.google-source-preview {
-  display: block;
-  color: #52615d;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.readiness-grid span {
-  min-height: 32px;
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  border: 1px solid #d4ded9;
-  border-radius: 8px;
-  padding: 0 9px;
-  background: #ffffff;
-  color: #184d43;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.readiness-grid .missing {
-  color: #7a8582;
-  background: #f2f4f3;
-}
-
-.readiness-grid svg {
-  color: #096b5c;
-}
-
-.activation-actions {
-  display: grid;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.activation-actions button {
-  min-height: 46px;
-  border: 0;
-  border-radius: 8px;
-  padding: 0 16px;
-  background: #096b5c;
-  color: #ffffff;
-  font-weight: 700;
-}
-
-.activation-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
-}
-
-.activation-actions button.secondary {
-  border: 1px solid #c8d3cf;
-  background: #ffffff;
-  color: #184d43;
-}
-
-.activation-actions .setup-error {
-  color: #8b2d22;
-  font-weight: 700;
-}
-
-.guided-activation > .kodi-welcome-card,
-.guided-activation > .activation-section,
-.guided-activation > .activation-actions {
-  display: none;
 }
 
 .activation-progress {
@@ -407,6 +192,7 @@ input {
 }
 
 .kodi-dialogue-preview,
+.plan-note,
 .source-feedback,
 .location-status {
   border: 1px solid #d4ded9;
@@ -422,6 +208,27 @@ input {
   margin-bottom: 5px;
   color: #16211f;
   font-size: 14px;
+}
+
+.google-source-preview {
+  display: block;
+  margin-top: 8px;
+  color: #52615d;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.plan-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.plan-note svg {
+  flex: 0 0 auto;
+  color: #096b5c;
+  margin-top: 2px;
 }
 
 .source-feedback.ready,
