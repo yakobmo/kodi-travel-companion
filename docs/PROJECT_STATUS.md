@@ -170,7 +170,7 @@ Current Supabase state:
 - Google source adapter boundary added on `2026-06-28`; local build, QA, local smoke, Render deploy, public API smoke, and public browser smoke passed.
 - Google API readiness skeleton added on `2026-06-28`; local build, QA, local smoke, Render deploy, and public API smoke passed. The readiness endpoint exposes only requirement names and configured booleans, not credential values.
 - First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, local smoke, Render deploy, and public API smoke passed in guarded `not_configured` mode.
-- Kodi agent Places context connection is in progress on `2026-06-29`; local build, QA, smoke, Render deploy, and public smoke are the current validation gate.
+- Kodi agent Places context connection added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed in guarded `not_configured` mode.
 
 ## Next Continuation Checkpoint
 
@@ -178,11 +178,10 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Validate and deploy the Kodi agent connection to guarded Places search.
-2. Public-smoke a Kodi chat request for a nearby external need and confirm it reports `not_configured` safely.
-3. Configure `GOOGLE_MAPS_API_KEY` in Render when the user is ready to enable live Places API calls.
-4. Public-smoke a real Places query through `/api/google/places/text-search`.
-5. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
+1. Configure `GOOGLE_MAPS_API_KEY` in Render when the user is ready to enable live Places API calls.
+2. Public-smoke a real Places query through `/api/google/places/text-search`.
+3. Public-smoke a Kodi chat request for a nearby external need and confirm it includes live Places evidence.
+4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 
 ## QA
 
