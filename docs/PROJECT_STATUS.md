@@ -211,7 +211,7 @@ Current Supabase state:
 - Guided activation flow added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public browser/API smoke passed. The first-run UI now shows one step at a time: activate Kodi, choose trip source/trip, enable manager GPS, then enter the map/chat core.
 - Guided activation cleanup added on `2026-06-29`; the hidden legacy activation panel was removed, the trip/API budget note and read-only Google preview guard remain inside the guided flow, and `npm run smoke:local` now runs the local browser smoke directly. Local build, QA, local smoke, Render deploy, and public browser/API smoke passed.
 - Participant invite flow added on `2026-06-30`; local build, QA, local smoke, Render deploy, and public browser/API smoke passed. The current slice is UX/local-state only; production persistence for invited members still requires a real invite-token/member API and auth boundary.
-- Trial-mode language cleanup added on `2026-06-30`; product-facing UI, onboarding setup state, README, and product docs now describe a real trip account flow instead of a trial/demo path. Local build, QA, and local smoke passed. Internal legacy endpoint/module names still need a separate rename migration so production routes are not broken during a copy cleanup.
+- Trial-mode language cleanup added on `2026-06-30`; product-facing UI, onboarding setup state, README, and product docs now describe a real trip account flow instead of a trial/demo path. Local build, QA, local smoke, Render deploy, public API smoke, and public browser smoke passed. Internal legacy endpoint/module names still need a separate rename migration so production routes are not broken during a copy cleanup.
 
 ## Next Continuation Checkpoint
 
