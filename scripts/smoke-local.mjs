@@ -123,6 +123,15 @@ try {
   assertCheck("google places text search no values", googlePlacesSearchPayload.apiKey === undefined);
   assertCheck("google places text search field mask", googlePlacesSearchPayload.request?.fieldMask?.includes("places.displayName"));
 
+  const googleRouteEstimateResponse = await fetch(
+    "http://localhost:3001/api/google/routes/estimate?originLat=39.2514&originLng=22.7515&destinationLat=39.935888&destinationLng=20.670744&travelMode=DRIVE"
+  );
+  const googleRouteEstimatePayload = await googleRouteEstimateResponse.json();
+  assertCheck("google routes estimate endpoint", googleRouteEstimateResponse.ok);
+  assertCheck("google routes estimate guarded", googleRouteEstimatePayload.status === "not_configured");
+  assertCheck("google routes estimate no values", googleRouteEstimatePayload.apiKey === undefined);
+  assertCheck("google routes estimate field mask", googleRouteEstimatePayload.request?.fieldMask === "routes.duration,routes.distanceMeters");
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 

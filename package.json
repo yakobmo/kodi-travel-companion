@@ -13,6 +13,7 @@
     "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
     "start": "npm run start --workspace apps/api",
     "smoke:google-places-live": "node scripts/smoke-google-places-live.mjs",
+    "smoke:google-routes-live": "node scripts/smoke-google-routes-live.mjs",
     "db:apply-schema": "node scripts/apply-supabase-schema.mjs",
     "db:apply-grants": "node scripts/apply-supabase-grants.mjs"
   },

@@ -91,6 +91,9 @@ Use separate Google layers:
 - Places API: enrich or search places after configuring a Google Maps Platform key.
 - Routes API: calculate routes, distances, and ETAs after configuring a Google Maps Platform key.
 - OAuth / user account access: required before any user-specific live sync or write-back workflow.
+- Trip Context Resolver: Kodi must resolve the current reference point before calling Places or Routes. The reference can come from live GPS, active group destination, active route stop, nearby lodging, or recent conversation context.
+
+Kodi should not be fed endless category-specific rules such as "gelato", "sushi", "fuel", or "toilets". Those are natural-language user needs that become Google Places queries. The agent layer decides whether the reference is clear enough. If it is not clear enough, Kodi asks a short clarification question.
 
 ## Next Slice
 
@@ -119,15 +122,29 @@ Behavior:
 
 Kodi agent connection:
 
-- Eligible nearby-needs questions, such as gelato, food, bathrooms, pharmacy, or nearby services, call the guarded Places read path from the server.
+- Nearby-needs questions call the guarded Places read path from the server using the natural user request as the query, with current trip context as location bias.
 - If Places is not configured, Kodi explains that live Google Places search is not active yet and continues to reason from the saved trip map.
 - When `GOOGLE_MAPS_API_KEY` is configured, the same agent path can include live Places results in the recommendation context.
 
-Next implementation should connect this read path into Kodi's recommendation flow:
+Routes and ETA connection:
+
+```text
+GET /api/google/routes/estimate
+```
+
+Behavior:
+
+- If `GOOGLE_MAPS_API_KEY` is missing, the endpoint returns `not_configured`.
+- If the key exists, the server calls Google Routes `computeRoutes`.
+- The endpoint uses the narrow field mask `routes.duration,routes.distanceMeters`.
+- Kodi calls Routes only after the Trip Context Resolver has a clear enough origin and destination.
+- If the reference is ambiguous, Kodi asks a clarification question before calculating.
+
+Next implementation should deploy and public-smoke this path:
 
 1. Keep the current fixture adapter as the active adapter.
-2. Configure and smoke `GOOGLE_MAPS_API_KEY` in Render.
-3. Use Places API Text Search results as secondary evidence in Kodi recommendations.
+2. Keep Places API Text Search results as secondary evidence in Kodi recommendations.
+3. Use Routes API for ETA/distance only after context resolution.
 4. Keep write-back disabled until a proven and permissioned Google path exists.
 5. Keep QA failing if UI copy implies live Google editing before it is real.
 

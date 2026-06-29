@@ -1,5 +1,6 @@
 import type { AgeGroup, MemberRole, TripPlace, TripState } from "../domain/types.js";
 import type { GooglePlacesTextSearchResult } from "../google/placesSearch.js";
+import type { GoogleRouteEstimateResult } from "../google/routes.js";
 
 export interface ConversationMessage {
   author: string;
@@ -21,6 +22,8 @@ export interface AgentMessageRequest {
   selectedPlace?: Pick<TripPlace, "id" | "name" | "type" | "address" | "lat" | "lng" | "note" | "tags">;
   tripState?: TripState;
   externalPlacesSearch?: GooglePlacesTextSearchResult;
+  routeEstimate?: GoogleRouteEstimateResult;
+  tripContextClarification?: string;
 }
 
 export interface AgentMessageResponse {
@@ -266,6 +269,26 @@ function buildExternalPlacesContext(search?: GooglePlacesTextSearchResult) {
     : " קיבלתי תוצאות מ-Google Places, אבל הן חסרות שם או כתובת ברורים ולכן לא אציג אותן כהמלצה מובילה.";
 }
 
+function buildRouteEstimateContext(routeEstimate?: GoogleRouteEstimateResult) {
+  if (!routeEstimate) {
+    return "";
+  }
+
+  if (routeEstimate.status === "not_configured") {
+    return "חישוב זמן נסיעה חי מ-Google Routes עדיין לא מופעל כי חסר GOOGLE_MAPS_API_KEY.";
+  }
+
+  if (routeEstimate.status === "google_error") {
+    return "ניסיתי לחשב זמן נסיעה דרך Google Routes, אבל Google החזיר שגיאה ולכן אני לא מציג ETA כאילו הוא נבדק עכשיו.";
+  }
+
+  if (!routeEstimate.route) {
+    return "Google Routes חזר בלי מסלול ברור, אז אני לא מציג זמן נסיעה.";
+  }
+
+  return `לפי Google Routes, זמן ההגעה המשוער הוא ${routeEstimate.route.durationText}, מרחק ${routeEstimate.route.distanceText}.`;
+}
+
 export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMessageResponse {
   const message = input.message.trim();
   const recentText = joinRecentMessages(input.recentMessages);
@@ -284,6 +307,29 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     ? ` היעד הקבוצתי הנוכחי הוא ${conversationSummary.currentDestinationName}, ולכן לא אשנה אותו בלי אישור מנהל.`
     : "";
   const externalPlacesContext = buildExternalPlacesContext(input.externalPlacesSearch);
+  const routeEstimateContext = buildRouteEstimateContext(input.routeEstimate);
+
+  if (input.tripContextClarification) {
+    return {
+      author: "קודי",
+      intent: "group_location",
+      requiresAdminApproval: false,
+      source: "rules",
+      text: input.tripContextClarification
+    };
+  }
+
+  if (routeEstimateContext) {
+    return {
+      author: "קודי",
+      intent: "group_location",
+      requiresAdminApproval: false,
+      source: "rules",
+      text:
+        `${memberName}, ${routeEstimateContext} ` +
+        "אם מנהל מאשר, אפשר לפתוח את אותה נקודה ב-Waze או Google Maps. מבחינתי Waze הוא רק קישור ניווט לנקודה, לא מקור הידע של הטיול."
+    };
+  }
 
   if (includesAny(message, ["מה כדאי", "מה לעשות", "לאן ללכת", "תמליץ", "המלצה", "הכי טוב", "משהו עם מים"])) {
     const recommendation = selectRecommendedPlace(message, input.tripState);

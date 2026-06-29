@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
 import { searchGooglePlacesText } from "./google/placesSearch.js";
+import { estimateGoogleRoute, type GoogleRouteTravelMode } from "./google/routes.js";
 import { buildDemoGoogleSourcePreview, getGoogleSourceReadiness } from "./google/sourceAdapter.js";
 import {
   loadDemoTripMembersAsync,
@@ -47,6 +48,7 @@ import {
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext } from "./agent/kodi.js";
+import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
 import { canMemberRunAgentAction, isAgentActionType } from "./permissions/agentActions.js";
 import type { TripEventType } from "./domain/types.js";
 
@@ -69,6 +71,9 @@ function buildAgentContextSummary(input: {
   recentMessages: unknown[];
   tripState: ReturnType<typeof buildDemoTripState>;
   externalPlacesSearchStatus?: string;
+  routeEstimateStatus?: string;
+  tripContextConfidence?: string;
+  tripContextReason?: string;
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
     canShareLiveLocation?: boolean;
@@ -87,6 +92,9 @@ function buildAgentContextSummary(input: {
     hasTripState: true,
     visibleLiveLocationMembers: visibleLiveLocationMembers.length,
     externalPlacesSearchStatus: input.externalPlacesSearchStatus,
+    routeEstimateStatus: input.routeEstimateStatus,
+    tripContextConfidence: input.tripContextConfidence,
+    tripContextReason: input.tripContextReason,
     operationalChangesRequireAdmin: input.permissionPolicy?.operationalChangesRequireAdmin ?? true,
     canShareLiveLocation: input.permissionPolicy?.canShareLiveLocation ?? false
   };
@@ -97,6 +105,29 @@ function includesAnyTerm(text: string, terms: string[]) {
 }
 
 function shouldUseExternalPlacesSearch(message: string) {
+  if (
+    includesAnyTerm(message, [
+      "איפה",
+      "יש",
+      "ליד",
+      "קרוב",
+      "באזור",
+      "בדרך",
+      "בא לי",
+      "רוצה",
+      "צריך",
+      "צריכים",
+      "מחפש",
+      "מחפשים",
+      "תמצא",
+      "תציע",
+      "המלצה",
+      "משהו"
+    ])
+  ) {
+    return true;
+  }
+
   return includesAnyTerm(message, [
     "גלידה",
     "מסעדה",
@@ -112,7 +143,34 @@ function shouldUseExternalPlacesSearch(message: string) {
   ]);
 }
 
+function shouldUseRouteEstimate(message: string) {
+  if (includesAnyTerm(message, ["כמה זמן", "זמן נסיעה", "נסיעה עד", "ETA", "מרחק", "כמה רחוק"])) {
+    return true;
+  }
+
+  const asksForTimeOrDistance = includesAnyTerm(message, [
+    "כמה זמן",
+    "זמן נסיעה",
+    "נסיעה עד",
+    "ETA",
+    "מרחק",
+    "כמה רחוק"
+  ]);
+  const hasDestinationHint = includesAnyTerm(message, ["מלון", "בית מלון", "לינה", "יעד", "תחנה", "אטרקציה"]);
+
+  return asksForTimeOrDistance && hasDestinationHint;
+}
+
 function buildExternalPlacesQuery(message: string) {
+  const normalizedMessage = message
+    .replace(/קודי[, ]*/g, "")
+    .replace(/\?/g, "")
+    .trim();
+
+  if (normalizedMessage.length >= 3) {
+    return `${normalizedMessage} nearby`;
+  }
+
   if (includesAnyTerm(message, ["גלידה", "מתוק", "קינוח"])) {
     return "gelato ice cream nearby";
   }
@@ -162,6 +220,41 @@ function getSearchLocationFromTripState(tripState: ReturnType<typeof buildDemoTr
     lat: firstPlaceWithCoordinates.lat,
     lng: firstPlaceWithCoordinates.lng
   };
+}
+
+function getRouteDestinationFromTripState(tripState: ReturnType<typeof buildDemoTripState>, message: string) {
+  const wantsHotel = includesAnyTerm(message, ["מלון", "בית מלון", "לינה"]);
+
+  if (!wantsHotel && tripState.groupDestination?.lat && tripState.groupDestination.lng) {
+    return {
+      lat: tripState.groupDestination.lat,
+      lng: tripState.groupDestination.lng
+    };
+  }
+
+  const lodging = tripState.places.find(
+    (place) => place.type === "lodging" && typeof place.lat === "number" && typeof place.lng === "number"
+  );
+
+  if (lodging) {
+    return {
+      lat: lodging.lat,
+      lng: lodging.lng
+    };
+  }
+
+  if (tripState.groupDestination?.lat && tripState.groupDestination.lng) {
+    return {
+      lat: tripState.groupDestination.lat,
+      lng: tripState.groupDestination.lng
+    };
+  }
+
+  return undefined;
+}
+
+function parseTravelMode(value: unknown): GoogleRouteTravelMode {
+  return value === "WALK" || value === "BICYCLE" || value === "TWO_WHEELER" || value === "DRIVE" ? value : "DRIVE";
 }
 
 async function safeRecordTripEvent(input: {
@@ -252,6 +345,29 @@ app.get("/api/google/places/text-search", async (req, res) => {
       radiusMeters,
       languageCode: typeof req.query.languageCode === "string" ? req.query.languageCode : "he",
       regionCode: typeof req.query.regionCode === "string" ? req.query.regionCode : undefined
+    })
+  );
+});
+
+app.get("/api/google/routes/estimate", async (req, res) => {
+  const originLat = typeof req.query.originLat === "string" ? Number(req.query.originLat) : NaN;
+  const originLng = typeof req.query.originLng === "string" ? Number(req.query.originLng) : NaN;
+  const destinationLat = typeof req.query.destinationLat === "string" ? Number(req.query.destinationLat) : NaN;
+  const destinationLng = typeof req.query.destinationLng === "string" ? Number(req.query.destinationLng) : NaN;
+
+  if ([originLat, originLng, destinationLat, destinationLng].some((value) => Number.isNaN(value))) {
+    res.status(400).json({
+      error: "originLat, originLng, destinationLat and destinationLng are required numbers"
+    });
+    return;
+  }
+
+  res.json(
+    await estimateGoogleRoute({
+      origin: { lat: originLat, lng: originLng },
+      destination: { lat: destinationLat, lng: destinationLng },
+      travelMode: parseTravelMode(req.query.travelMode),
+      languageCode: typeof req.query.languageCode === "string" ? req.query.languageCode : "he"
     })
   );
 });
@@ -1118,6 +1234,21 @@ app.post("/api/agent/message", async (req, res) => {
         languageCode: "he"
       })
     : undefined;
+  const tripReference = resolveTripReferenceForMessage(message, tripState);
+  const canEstimateRoute =
+    shouldUseRouteEstimate(message) &&
+    tripReference.confidence !== "low" &&
+    tripReference.origin &&
+    tripReference.destination;
+  let routeEstimate;
+  if (canEstimateRoute) {
+    routeEstimate = await estimateGoogleRoute({
+      origin: { lat: Number(tripReference.origin?.lat), lng: Number(tripReference.origin?.lng) },
+      destination: { lat: Number(tripReference.destination?.lat), lng: Number(tripReference.destination?.lng) },
+      travelMode: includesAnyTerm(message, ["הליכה", "ברגל"]) ? "WALK" : "DRIVE",
+      languageCode: "he"
+    });
+  }
   const permissionPolicy =
     context && typeof context === "object"
       ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
@@ -1126,7 +1257,9 @@ app.post("/api/agent/message", async (req, res) => {
   const reply = buildKodiReplyFromContext({
     ...req.body,
     tripState,
-    externalPlacesSearch
+    externalPlacesSearch,
+    routeEstimate,
+    tripContextClarification: shouldUseRouteEstimate(message) ? tripReference.clarificationQuestion : undefined
   });
 
   res.json({
@@ -1141,6 +1274,9 @@ app.post("/api/agent/message", async (req, res) => {
       recentMessages,
       tripState,
       externalPlacesSearchStatus: externalPlacesSearch?.status,
+      routeEstimateStatus: routeEstimate?.status,
+      tripContextConfidence: shouldUseRouteEstimate(message) ? tripReference.confidence : undefined,
+      tripContextReason: shouldUseRouteEstimate(message) ? tripReference.reason : undefined,
       permissionPolicy
     })
   });

@@ -19,11 +19,13 @@ $requiredFiles = @(
   "scripts/dev-api.ps1",
   "scripts/dev-web.ps1",
   "scripts/smoke-google-places-live.mjs",
+  "scripts/smoke-google-routes-live.mjs",
   "scripts/smoke-local.mjs",
   "apps/api/package.json",
   "apps/api/tsconfig.json",
   "apps/api/src/server.ts",
   "apps/api/src/agent/kodi.ts",
+  "apps/api/src/agent/tripContextResolver.ts",
   "apps/api/src/domain/types.ts",
   "apps/api/src/data/demoStorage.ts",
   "apps/api/src/data/supabaseStatus.ts",
@@ -35,6 +37,7 @@ $requiredFiles = @(
   "apps/api/src/data/localSetupState.ts",
   "apps/api/src/data/localTripState.ts",
   "apps/api/src/google/placesSearch.ts",
+  "apps/api/src/google/routes.ts",
   "apps/api/src/google/sourceAdapter.ts",
   "apps/api/src/permissions/agentActions.ts",
   "apps/web/package.json",
@@ -70,6 +73,10 @@ foreach ($file in $jsonFiles) {
 $packageSource = Get-Content (Join-Path $root "package.json") -Raw
 if (-not $packageSource.Contains("smoke:google-places-live")) {
   throw "Root package.json must expose the live Google Places smoke script."
+}
+
+if (-not $packageSource.Contains("smoke:google-routes-live")) {
+  throw "Root package.json must expose the live Google Routes smoke script."
 }
 
 $sourcePlacesPath = Join-Path (Split-Path -Parent $root) "work\spikes\google-place-list\out\places.json"
@@ -130,6 +137,23 @@ if ($googlePlacesSearchSource.Contains('X-Goog-FieldMask": "*"') -or $googlePlac
   throw "Google Places Text Search must not use wildcard field masks in production code."
 }
 
+$googleRoutesSource = Get-Content (Join-Path $root "apps\api\src\google\routes.ts") -Raw
+if (
+  -not $googleRoutesSource.Contains("https://routes.googleapis.com/directions/v2:computeRoutes") -or
+  -not $googleRoutesSource.Contains("X-Goog-Api-Key") -or
+  -not $googleRoutesSource.Contains("X-Goog-FieldMask") -or
+  -not $googleRoutesSource.Contains("routes.duration,routes.distanceMeters") -or
+  -not $googleRoutesSource.Contains("GOOGLE_MAPS_API_KEY") -or
+  -not $googleRoutesSource.Contains("google_maps_api_key_required") -or
+  -not $googleRoutesSource.Contains("not_configured")
+) {
+  throw "Google Routes must be implemented as a guarded server-side read path with a narrow field mask."
+}
+
+if ($googleRoutesSource.Contains('X-Goog-FieldMask": "*"') -or $googleRoutesSource.Contains("X-Goog-FieldMask': '*'")) {
+  throw "Google Routes must not use wildcard field masks in production code."
+}
+
 $googlePlacesLiveSmokeSource = Get-Content (Join-Path $root "scripts\smoke-google-places-live.mjs") -Raw
 if (
   -not $googlePlacesLiveSmokeSource.Contains("GOOGLE_MAPS_API_KEY configured") -or
@@ -139,6 +163,38 @@ if (
   -not $googlePlacesLiveSmokeSource.Contains("places.payload.apiKey === undefined")
 ) {
   throw "Live Google Places smoke must verify readiness, endpoint results, Kodi agent context, and no API key leakage."
+}
+
+$tripContextResolverSource = Get-Content (Join-Path $root "apps\api\src\agent\tripContextResolver.ts") -Raw
+if (
+  -not $tripContextResolverSource.Contains("TripContextConfidence") -or
+  -not $tripContextResolverSource.Contains("resolveTripReferenceForMessage") -or
+  -not $tripContextResolverSource.Contains("clarificationQuestion") -or
+  -not $tripContextResolverSource.Contains("nearest_lodging") -or
+  -not $tripContextResolverSource.Contains("live_member_location")
+) {
+  throw "Kodi must resolve trip context through confidence-based origin/destination logic before using Google Routes."
+}
+
+$serverSourceForContext = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
+if (
+  -not $serverSourceForContext.Contains("resolveTripReferenceForMessage") -or
+  -not $serverSourceForContext.Contains("tripContextClarification") -or
+  -not $serverSourceForContext.Contains("tripContextConfidence") -or
+  -not $serverSourceForContext.Contains("tripReference.confidence !== `"low`"")
+) {
+  throw "Kodi agent flow must use the trip context resolver and ask clarification instead of choosing stale destinations."
+}
+
+$googleRoutesLiveSmokeSource = Get-Content (Join-Path $root "scripts\smoke-google-routes-live.mjs") -Raw
+if (
+  -not $googleRoutesLiveSmokeSource.Contains("GOOGLE_MAPS_API_KEY routes configured") -or
+  -not $googleRoutesLiveSmokeSource.Contains("/api/google/routes/estimate") -or
+  -not $googleRoutesLiveSmokeSource.Contains("/api/agent/message") -or
+  -not $googleRoutesLiveSmokeSource.Contains("routeEstimateStatus") -or
+  -not $googleRoutesLiveSmokeSource.Contains("route.payload.apiKey === undefined")
+) {
+  throw "Live Google Routes smoke must verify readiness, endpoint results, Kodi agent context, and no API key leakage."
 }
 
 $demoTripSource = Get-Content (Join-Path $root "apps\web\src\demoTrip.ts") -Raw

@@ -53,6 +53,9 @@ Implemented locally:
 - Guarded Google Places Text Search read path through `/api/google/places/text-search`, returning live Google Places results when `GOOGLE_MAPS_API_KEY` exists and never exposing credential values.
 - Kodi agent server flow can call the guarded Places read path for nearby external needs such as gelato, food, bathrooms, pharmacies, or nearby services, while clearly explaining `not_configured` when the Google key is absent.
 - Live Google Places smoke automation through `npm run smoke:google-places-live`, verifying real Places results and Kodi agent context after `GOOGLE_MAPS_API_KEY` is configured in Render.
+- Google Routes ETA read path through `/api/google/routes/estimate`, using the same server-side `GOOGLE_MAPS_API_KEY` guard, narrow field masks, and no credential exposure.
+- Trip Context Resolver for Kodi agent questions, so time/distance questions use live location, group destination, active route, and lodging context with confidence levels instead of choosing a stale first hotel.
+- Kodi asks a clarification question when the trip context is ambiguous, instead of pretending it knows which hotel, stop, or reference point the family means.
 
 ## Current Storage
 
@@ -173,6 +176,7 @@ Current Supabase state:
 - First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, local smoke, Render deploy, and public API smoke passed in guarded `not_configured` mode.
 - Kodi agent Places context connection added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed in guarded `not_configured` mode.
 - Live Google Places smoke automation added on `2026-06-29`; public production smoke passed after adding `GOOGLE_MAPS_API_KEY` to Render. Result: `placesCount=2`, first place `Cuore Amabile Gelateria`, Kodi agent external Places status `ready`, storage driver `supabase`.
+- Trip Context Resolver and guarded Google Routes ETA path added locally on `2026-06-29`; local build, QA, smoke, and focused agent checks passed. Generic nearby requests now route to Google Places from the natural user text, while ambiguous ETA questions ask a clarification before calling Routes.
 
 ## Next Continuation Checkpoint
 
@@ -180,9 +184,9 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Keep Places API as the first proven live Google read path.
-2. Build the next Google capability behind the same guarded-read pattern: either Routes API ETA/duration or OAuth account connection.
-3. Public-smoke a Kodi chat request for a nearby external need after every Google integration change and confirm it includes live Places evidence.
+1. Push and deploy the Trip Context Resolver plus Google Routes ETA path.
+2. Run public smoke for `/api/google/routes/estimate` and a Kodi chat ETA request.
+3. Continue evolving Kodi as a true agent: natural request -> reference/context resolution -> Google Places/Routes -> answer or clarification.
 4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 
 ## QA
