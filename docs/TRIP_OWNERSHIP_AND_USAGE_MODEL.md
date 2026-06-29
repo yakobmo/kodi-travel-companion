@@ -98,6 +98,8 @@ Implemented usage gate:
 - Kodi agent calls include usage-gate evidence in `contextSummary.usageGateResults`.
 - Direct Google endpoints return `usageGate` evidence without exposing provider keys.
 - Authorized Google usage is also recorded as a system event in the group event log, with capability, source, charge target, and provider-configuration evidence.
+- `/api/trips/demo/usage` returns `usageAudit`, a safe owner-visible summary derived from the group event log.
+- The web app shows a compact usage overview near the live activity panel, so the trip owner can see Google Places, Google Routes, Kodi-agent, and direct-API usage counts.
 - The current MVP authorizes calls by policy and records the intended charge target as `trip_usage_pool`; future production can replace this with persistent quotas and billing checks.
 
 Future production should add:

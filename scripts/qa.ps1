@@ -96,6 +96,7 @@ if (
 $tripUsagePoolSource = Get-Content (Join-Path $root "apps\api\src\billing\tripUsagePool.ts") -Raw
 if (
   -not $tripUsagePoolSource.Contains("buildDemoTripUsagePool") -or
+  -not $tripUsagePoolSource.Contains("buildTripUsageAuditSummary") -or
   -not $tripUsagePoolSource.Contains("authorizeTripUsageCapability") -or
   -not $tripUsagePoolSource.Contains("usage_pool_authorized") -or
   -not $tripUsagePoolSource.Contains("participantBillingRequired: false") -or
@@ -222,6 +223,8 @@ if (
   -not $serverSourceForContext.Contains("resolveTimelineReferenceForMessage") -or
   -not $serverSourceForContext.Contains("authorizeTripUsageCapability") -or
   -not $serverSourceForContext.Contains("safeRecordUsageGateEvent") -or
+  -not $serverSourceForContext.Contains("buildTripUsageAuditSummary") -or
+  -not $serverSourceForContext.Contains("usageAudit") -or
   -not $serverSourceForContext.Contains("Usage gate authorized") -or
   -not $serverSourceForContext.Contains("chargedTo=") -or
   -not $serverSourceForContext.Contains("usageGateResults") -or
@@ -342,6 +345,15 @@ if (-not $appSource.Contains("chat-sync-status")) {
 
 if (-not $appSource.Contains("/api/trips/demo/events") -or -not $appSource.Contains("event-activity")) {
   throw "Web app must display the group event activity stream."
+}
+
+if (
+  -not $appSource.Contains("usage-overview") -or
+  -not $appSource.Contains("buildUsageAuditOverview") -or
+  -not $appSource.Contains("Google Places") -or
+  -not $appSource.Contains("Google Routes")
+) {
+  throw "Web app must display owner-visible usage audit counts near the group activity stream."
 }
 
 if (

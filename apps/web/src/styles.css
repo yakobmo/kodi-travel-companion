@@ -1009,6 +1009,74 @@ input {
   line-height: 1.35;
 }
 
+.usage-overview {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid #e1e6e3;
+  padding: 12px 18px;
+  background: #f6faf8;
+}
+
+.usage-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.usage-overview-heading span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #16211f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.usage-overview-heading strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 24px;
+  border-radius: 999px;
+  background: #096b5c;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.usage-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.usage-overview-grid span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border: 1px solid #d7e3df;
+  border-radius: 8px;
+  padding: 6px;
+  background: #ffffff;
+  color: #53615e;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.usage-overview-grid strong {
+  color: #16211f;
+  font-size: 14px;
+}
+
+.usage-overview p {
+  margin: 0;
+  color: #53615e;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .messages {
   flex: 1;
   display: flex;
@@ -1122,5 +1190,9 @@ input {
   .kodi-presence {
     position: fixed;
     z-index: 4;
+  }
+
+  .usage-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

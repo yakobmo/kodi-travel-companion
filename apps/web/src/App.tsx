@@ -194,6 +194,18 @@ interface TripEventsResponse {
   events: TripEvent[];
 }
 
+type UsageAuditSource = "direct_api" | "kodi_agent" | "unknown";
+
+interface UsageAuditOverview {
+  totalAuthorizedCalls: number;
+  googlePlacesCalls: number;
+  googleRoutesCalls: number;
+  kodiAgentCalls: number;
+  directApiCalls: number;
+  lastSource: UsageAuditSource;
+  lastCapability?: string;
+}
+
 interface TripStateResponse {
   trip: {
     id: string;
@@ -360,6 +372,45 @@ function getTripEventText(event: TripEvent) {
     default:
       return "קודי הכין את יומן הפעילות";
   }
+}
+
+function getUsageAuditSource(summary: string): UsageAuditSource {
+  if (summary.includes("via kodi_agent")) {
+    return "kodi_agent";
+  }
+
+  if (summary.includes("via direct_api")) {
+    return "direct_api";
+  }
+
+  return "unknown";
+}
+
+function buildUsageAuditOverview(events: TripEvent[]): UsageAuditOverview {
+  const usageEvents = events.filter(
+    (event) => event.eventType === "system" && event.summary.includes("Usage gate authorized")
+  );
+  const lastUsageEvent = usageEvents[0];
+
+  return {
+    totalAuthorizedCalls: usageEvents.length,
+    googlePlacesCalls: usageEvents.filter((event) => event.relatedEntityId === "google_places").length,
+    googleRoutesCalls: usageEvents.filter((event) => event.relatedEntityId === "google_routes").length,
+    kodiAgentCalls: usageEvents.filter((event) => event.summary.includes("via kodi_agent")).length,
+    directApiCalls: usageEvents.filter((event) => event.summary.includes("via direct_api")).length,
+    lastSource: lastUsageEvent ? getUsageAuditSource(lastUsageEvent.summary) : "unknown",
+    lastCapability: lastUsageEvent?.relatedEntityId
+  };
+}
+
+function getUsageSourceLabel(source: UsageAuditSource) {
+  const labels: Record<UsageAuditSource, string> = {
+    kodi_agent: "קודי",
+    direct_api: "API",
+    unknown: "ממתין"
+  };
+
+  return labels[source];
 }
 
 function getPlaceTypeLabel(type: PlaceType) {
@@ -1089,6 +1140,7 @@ export function App() {
   };
   const visibleMembers = members.filter((member) => member.locationSharing === "enabled" && member.liveLocation);
   const recentTripEvents = tripEvents.slice(0, 3);
+  const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
   const setupReadiness = {
     hasOwner: setupDraft.tripName.trim().length > 1,
@@ -2120,6 +2172,41 @@ export function App() {
               </article>
             )}
           </div>
+        </section>
+
+        <section className="usage-overview" aria-label="בקרת שימושי קודי">
+          <div className="usage-overview-heading">
+            <span>
+              <ShieldCheck size={14} aria-hidden="true" />
+              בקרת שימושי קודי
+            </span>
+            <strong>{usageAuditOverview.totalAuthorizedCalls}</strong>
+          </div>
+          <div className="usage-overview-grid">
+            <span>
+              <strong>{usageAuditOverview.googlePlacesCalls}</strong>
+              Google Places
+            </span>
+            <span>
+              <strong>{usageAuditOverview.googleRoutesCalls}</strong>
+              Google Routes
+            </span>
+            <span>
+              <strong>{usageAuditOverview.kodiAgentCalls}</strong>
+              דרך קודי
+            </span>
+            <span>
+              <strong>{usageAuditOverview.directApiCalls}</strong>
+              API ישיר
+            </span>
+          </div>
+          <p>
+            {usageAuditOverview.totalAuthorizedCalls > 0
+              ? `שימוש אחרון: ${getUsageSourceLabel(usageAuditOverview.lastSource)} / ${
+                  usageAuditOverview.lastCapability ?? "לא ידוע"
+                }`
+              : "עדיין לא נרשמה קריאת Google או AI יקרה בטיול הזה."}
+          </p>
         </section>
 
         <div className="messages">

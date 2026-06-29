@@ -237,6 +237,27 @@ export interface TripUsagePool {
   };
 }
 
+export interface TripUsageAuditSummary {
+  totalAuthorizedCalls: number;
+  byCapability: Array<{
+    capability: TripUsageCapability;
+    count: number;
+  }>;
+  bySource: Array<{
+    source: "direct_api" | "kodi_agent" | "unknown";
+    count: number;
+  }>;
+  recentAuthorizations: Array<{
+    id: string;
+    capability: TripUsageCapability;
+    source: "direct_api" | "kodi_agent" | "unknown";
+    actorName?: string;
+    chargedTo: "trip_usage_pool";
+    providerConfigured: boolean;
+    createdAt: string;
+  }>;
+}
+
 export interface AgentContextSnapshot {
   tripGroupId: string;
   tripId: string;

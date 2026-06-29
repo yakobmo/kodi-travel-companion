@@ -157,6 +157,14 @@ try {
         event.summary?.includes("Usage gate authorized google_places via direct_api")
     )
   );
+  const usageAfterDirectGooglePayload = await (await fetch("http://localhost:3001/api/trips/demo/usage")).json();
+  assertCheck("trip usage audit summary", usageAfterDirectGooglePayload.usageAudit?.totalAuthorizedCalls >= 1);
+  assertCheck(
+    "trip usage audit capability count",
+    usageAfterDirectGooglePayload.usageAudit?.byCapability?.some(
+      (item) => item.capability === "google_places" && item.count >= 1
+    )
+  );
 
   const googleRouteEstimateResponse = await fetch(
     "http://localhost:3001/api/google/routes/estimate?originLat=39.2514&originLng=22.7515&destinationLat=39.935888&destinationLng=20.670744&travelMode=DRIVE"
@@ -245,6 +253,9 @@ try {
       body.includes("קודי הכין את יומן הפעילות") ||
       body.includes("הודעה")
   );
+  const usageOverviewText = await page.locator(".usage-overview").innerText();
+  assertCheck("usage overview visible", usageOverviewText.includes("Google Places") && usageOverviewText.includes("Google Routes"));
+
   const savedMessageResponse = await page.request.post("http://localhost:3001/api/trips/demo/messages", {
     data: { author: "QA", text: "בדיקת שמירת שיחה", source: "system" }
   });

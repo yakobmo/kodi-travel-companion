@@ -4,6 +4,7 @@ import { buildHealthPayload } from "./health.js";
 import {
   authorizeTripUsageCapability,
   buildDemoTripUsagePool,
+  buildTripUsageAuditSummary,
   type TripUsageGateDecision
 } from "./billing/tripUsagePool.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
@@ -627,13 +628,15 @@ app.get("/api/trips/demo/storage", (_req, res) => {
 
 app.get("/api/trips/demo/usage", async (_req, res) => {
   const tripState = await buildDemoTripStateAsync();
+  const events = await loadDemoTripEventsAsync();
 
   res.json({
     tripGroupId: tripState.trip.groupId,
     usagePool: buildDemoTripUsagePool({
       tripGroupId: tripState.trip.groupId,
       members: tripState.members
-    })
+    }),
+    usageAudit: buildTripUsageAuditSummary(events)
   });
 });
 

@@ -1,4 +1,10 @@
-import type { TripMemberLocationView, TripUsageCapability, TripUsagePool } from "../domain/types.js";
+import type {
+  TripEvent,
+  TripMemberLocationView,
+  TripUsageAuditSummary,
+  TripUsageCapability,
+  TripUsagePool
+} from "../domain/types.js";
 
 export interface TripUsageGateDecision {
   capability: TripUsageCapability;
@@ -30,6 +36,7 @@ const enabledByCapability: Record<TripUsageCapability, boolean> = {
 };
 
 const capabilities: TripUsageCapability[] = ["openai_agent", "google_places", "google_routes", "google_oauth_sync"];
+const capabilitySet = new Set<TripUsageCapability>(capabilities);
 
 function findOwner(members: TripMemberLocationView[]) {
   return members.find((item) => item.member.role === "owner") ?? members.find((item) => item.member.role === "admin");
@@ -113,5 +120,70 @@ export function authorizeTripUsageCapability(input: {
       triggeringMemberId: input.triggeringMember?.id,
       triggeringMemberRole: input.triggeringMember?.role
     }
+  };
+}
+
+function isTripUsageCapability(value: unknown): value is TripUsageCapability {
+  return typeof value === "string" && capabilitySet.has(value as TripUsageCapability);
+}
+
+function getUsageAuditSource(summary: string): "direct_api" | "kodi_agent" | "unknown" {
+  if (summary.includes("via direct_api")) {
+    return "direct_api";
+  }
+
+  if (summary.includes("via kodi_agent")) {
+    return "kodi_agent";
+  }
+
+  return "unknown";
+}
+
+function getProviderConfigured(summary: string) {
+  return summary.includes("providerConfigured=true");
+}
+
+export function buildTripUsageAuditSummary(events: TripEvent[]): TripUsageAuditSummary {
+  const authorizationEvents = events
+    .filter(
+      (event) =>
+        event.eventType === "system" &&
+        event.summary.includes("Usage gate authorized") &&
+        isTripUsageCapability(event.relatedEntityId)
+    )
+    .map((event) => ({
+      event,
+      capability: event.relatedEntityId as TripUsageCapability,
+      source: getUsageAuditSource(event.summary)
+    }));
+
+  const byCapability = capabilities
+    .map((capability) => ({
+      capability,
+      count: authorizationEvents.filter((item) => item.capability === capability).length
+    }))
+    .filter((item) => item.count > 0);
+
+  const sources: Array<"direct_api" | "kodi_agent" | "unknown"> = ["direct_api", "kodi_agent", "unknown"];
+  const bySource = sources
+    .map((source) => ({
+      source,
+      count: authorizationEvents.filter((item) => item.source === source).length
+    }))
+    .filter((item) => item.count > 0);
+
+  return {
+    totalAuthorizedCalls: authorizationEvents.length,
+    byCapability,
+    bySource,
+    recentAuthorizations: authorizationEvents.slice(0, 8).map(({ event, capability, source }) => ({
+      id: event.id,
+      capability,
+      source,
+      actorName: event.actorName,
+      chargedTo: "trip_usage_pool",
+      providerConfigured: getProviderConfigured(event.summary),
+      createdAt: event.createdAt
+    }))
   };
 }
