@@ -91,6 +91,14 @@ The endpoint returns a safe trip usage-pool summary:
 - capability list for OpenAI agent reasoning, Google Places, Google Routes, and future Google OAuth sync
 - policy flags for admin-only operational actions and server-side quota gates
 
+Implemented usage gate:
+
+- Google Places calls pass through `authorizeTripUsageCapability`.
+- Google Routes calls pass through `authorizeTripUsageCapability`.
+- Kodi agent calls include usage-gate evidence in `contextSummary.usageGateResults`.
+- Direct Google endpoints return `usageGate` evidence without exposing provider keys.
+- The current MVP authorizes calls by policy and records the intended charge target as `trip_usage_pool`; future production can replace this with persistent quotas and billing checks.
+
 Future production should add:
 
 - `trip_owner_id` on trip groups.

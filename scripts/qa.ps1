@@ -96,6 +96,8 @@ if (
 $tripUsagePoolSource = Get-Content (Join-Path $root "apps\api\src\billing\tripUsagePool.ts") -Raw
 if (
   -not $tripUsagePoolSource.Contains("buildDemoTripUsagePool") -or
+  -not $tripUsagePoolSource.Contains("authorizeTripUsageCapability") -or
+  -not $tripUsagePoolSource.Contains("usage_pool_authorized") -or
   -not $tripUsagePoolSource.Contains("participantBillingRequired: false") -or
   -not $tripUsagePoolSource.Contains("providerSecretsStoredServerSide: true") -or
   -not $tripUsagePoolSource.Contains("browserReceivesPrivateKeys: false") -or
@@ -218,6 +220,8 @@ $serverSourceForContext = Get-Content (Join-Path $root "apps\api\src\server.ts")
 if (
   -not $serverSourceForContext.Contains("resolveTripReferenceForMessage") -or
   -not $serverSourceForContext.Contains("resolveTimelineReferenceForMessage") -or
+  -not $serverSourceForContext.Contains("authorizeTripUsageCapability") -or
+  -not $serverSourceForContext.Contains("usageGateResults") -or
   -not $serverSourceForContext.Contains("/api/trips/demo/timeline") -or
   -not $serverSourceForContext.Contains("tripContextClarification") -or
   -not $serverSourceForContext.Contains("tripContextConfidence") -or

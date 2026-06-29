@@ -1,7 +1,11 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
-import { buildDemoTripUsagePool } from "./billing/tripUsagePool.js";
+import {
+  authorizeTripUsageCapability,
+  buildDemoTripUsagePool,
+  type TripUsageGateDecision
+} from "./billing/tripUsagePool.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
 import { searchGooglePlacesText } from "./google/placesSearch.js";
 import { estimateGoogleRoute, type GoogleRouteTravelMode } from "./google/routes.js";
@@ -83,6 +87,7 @@ function buildAgentContextSummary(input: {
   timelineReferenceConfidence?: string;
   timelineReferenceReason?: string;
   timelineSegmentTitle?: string;
+  usageGateResults?: TripUsageGateDecision[];
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
     canShareLiveLocation?: boolean;
@@ -107,6 +112,7 @@ function buildAgentContextSummary(input: {
     timelineReferenceConfidence: input.timelineReferenceConfidence,
     timelineReferenceReason: input.timelineReferenceReason,
     timelineSegmentTitle: input.timelineSegmentTitle,
+    usageGateResults: input.usageGateResults,
     operationalChangesRequireAdmin: input.permissionPolicy?.operationalChangesRequireAdmin ?? true,
     canShareLiveLocation: input.permissionPolicy?.canShareLiveLocation ?? false
   };
@@ -390,16 +396,36 @@ app.get("/api/google/places/text-search", async (req, res) => {
     return;
   }
 
-  res.json(
-    await searchGooglePlacesText({
+  const tripState = await buildDemoTripStateAsync();
+  const usagePool = buildDemoTripUsagePool({
+    tripGroupId: tripState.trip.groupId,
+    members: tripState.members
+  });
+  const usageGate = authorizeTripUsageCapability({
+    usagePool,
+    capability: "google_places"
+  });
+
+  if (!usageGate.allowed) {
+    res.status(429).json({
+      status: "usage_blocked",
+      message: "Google Places usage is blocked by the trip usage pool.",
+      usageGate
+    });
+    return;
+  }
+
+  res.json({
+    ...(await searchGooglePlacesText({
       query,
       lat,
       lng,
       radiusMeters,
       languageCode: typeof req.query.languageCode === "string" ? req.query.languageCode : "he",
       regionCode: typeof req.query.regionCode === "string" ? req.query.regionCode : undefined
-    })
-  );
+    })),
+    usageGate
+  });
 });
 
 app.get("/api/google/routes/estimate", async (req, res) => {
@@ -415,14 +441,34 @@ app.get("/api/google/routes/estimate", async (req, res) => {
     return;
   }
 
-  res.json(
-    await estimateGoogleRoute({
+  const tripState = await buildDemoTripStateAsync();
+  const usagePool = buildDemoTripUsagePool({
+    tripGroupId: tripState.trip.groupId,
+    members: tripState.members
+  });
+  const usageGate = authorizeTripUsageCapability({
+    usagePool,
+    capability: "google_routes"
+  });
+
+  if (!usageGate.allowed) {
+    res.status(429).json({
+      status: "usage_blocked",
+      message: "Google Routes usage is blocked by the trip usage pool.",
+      usageGate
+    });
+    return;
+  }
+
+  res.json({
+    ...(await estimateGoogleRoute({
       origin: { lat: originLat, lng: originLng },
       destination: { lat: destinationLat, lng: destinationLng },
       travelMode: parseTravelMode(req.query.travelMode),
       languageCode: typeof req.query.languageCode === "string" ? req.query.languageCode : "he"
-    })
-  );
+    })),
+    usageGate
+  });
 });
 
 app.get("/api/trips/demo/members", async (_req, res) => {
@@ -1291,8 +1337,22 @@ app.post("/api/agent/message", async (req, res) => {
   }
 
   const tripState = req.body?.tripState ?? (await buildDemoTripStateAsync());
+  const usagePool = buildDemoTripUsagePool({
+    tripGroupId: tripState.trip.groupId,
+    members: tripState.members
+  });
   const timelineReference = resolveTimelineReferenceForMessage(message, tripState);
-  const externalPlacesSearch = shouldUseExternalPlacesSearch(message)
+  const placesUsageGate = shouldUseExternalPlacesSearch(message)
+    ? authorizeTripUsageCapability({
+        usagePool,
+        capability: "google_places",
+        triggeringMember: {
+          id: normalizedMember.id,
+          role: normalizedMember.role
+        }
+      })
+    : undefined;
+  const externalPlacesSearch = placesUsageGate?.allowed
     ? await searchGooglePlacesText({
         query: buildExternalPlacesQuery(message),
         ...getSearchLocationFromTripState(tripState, timelineReference),
@@ -1307,7 +1367,17 @@ app.post("/api/agent/message", async (req, res) => {
     tripReference.origin &&
     tripReference.destination;
   let routeEstimate;
-  if (canEstimateRoute) {
+  const routesUsageGate = canEstimateRoute
+    ? authorizeTripUsageCapability({
+        usagePool,
+        capability: "google_routes",
+        triggeringMember: {
+          id: normalizedMember.id,
+          role: normalizedMember.role
+        }
+      })
+    : undefined;
+  if (canEstimateRoute && routesUsageGate?.allowed) {
     routeEstimate = await estimateGoogleRoute({
       origin: { lat: Number(tripReference.origin?.lat), lng: Number(tripReference.origin?.lng) },
       destination: { lat: Number(tripReference.destination?.lat), lng: Number(tripReference.destination?.lng) },
@@ -1346,6 +1416,9 @@ app.post("/api/agent/message", async (req, res) => {
       timelineReferenceConfidence: timelineReference.confidence,
       timelineReferenceReason: timelineReference.reason,
       timelineSegmentTitle: timelineReference.segment?.title,
+      usageGateResults: [placesUsageGate, routesUsageGate].filter(
+        (item): item is TripUsageGateDecision => Boolean(item)
+      ),
       permissionPolicy
     })
   });

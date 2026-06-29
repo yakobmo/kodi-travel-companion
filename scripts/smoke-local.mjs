@@ -144,6 +144,8 @@ try {
   assertCheck("google places text search guarded", googlePlacesSearchPayload.status === "not_configured");
   assertCheck("google places text search no values", googlePlacesSearchPayload.apiKey === undefined);
   assertCheck("google places text search field mask", googlePlacesSearchPayload.request?.fieldMask?.includes("places.displayName"));
+  assertCheck("google places usage gate", googlePlacesSearchPayload.usageGate?.reason === "usage_pool_authorized");
+  assertCheck("google places usage charged to pool", googlePlacesSearchPayload.usageGate?.chargedTo === "trip_usage_pool");
 
   const googleRouteEstimateResponse = await fetch(
     "http://localhost:3001/api/google/routes/estimate?originLat=39.2514&originLng=22.7515&destinationLat=39.935888&destinationLng=20.670744&travelMode=DRIVE"
@@ -153,6 +155,8 @@ try {
   assertCheck("google routes estimate guarded", googleRouteEstimatePayload.status === "not_configured");
   assertCheck("google routes estimate no values", googleRouteEstimatePayload.apiKey === undefined);
   assertCheck("google routes estimate field mask", googleRouteEstimatePayload.request?.fieldMask === "routes.duration,routes.distanceMeters");
+  assertCheck("google routes usage gate", googleRouteEstimatePayload.usageGate?.reason === "usage_pool_authorized");
+  assertCheck("google routes usage charged to pool", googleRouteEstimatePayload.usageGate?.chargedTo === "trip_usage_pool");
 
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
@@ -305,6 +309,12 @@ try {
   assertCheck("agent google places context ok", gelatoAgentResponse.ok());
   assertCheck("agent google places status", gelatoAgentPayload.contextSummary?.externalPlacesSearchStatus === "not_configured");
   assertCheck("agent google places guarded copy", gelatoAgentPayload.text?.includes("חיפוש Google Places חי עדיין לא מופעל"));
+  assertCheck(
+    "agent google places usage gate",
+    gelatoAgentPayload.contextSummary?.usageGateResults?.some(
+      (item) => item.capability === "google_places" && item.reason === "usage_pool_authorized"
+    )
+  );
 
   const futurePelionAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
