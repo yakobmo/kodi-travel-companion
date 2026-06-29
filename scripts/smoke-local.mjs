@@ -183,25 +183,24 @@ try {
   const setupPayload = await (await page.request.get("http://localhost:3001/api/trips/demo/setup")).json();
   assertCheck("setup starts disconnected", setupPayload.googleSource?.importedPlacesCount === 0);
 
-  await page.getByText("Read-only preview active").waitFor();
+  await page.locator(".guided-step").getByText("שלום, אני קודי").waitFor();
   const activationBody = await page.locator("body").innerText();
-  assertCheck("activation shell", activationBody.includes("Welcome + Activation"));
-  assertCheck("kodi activation", activationBody.includes("קודי מתעורר לחיים"));
-  assertCheck("api budget explanation", activationBody.includes("תקציב API"));
-  assertCheck("google source explanation", activationBody.includes("Google Maps Place List"));
-  assertCheck("google source read-only preview", activationBody.includes("Read-only preview active"));
-  assertCheck("location consent explanation", activationBody.includes("הסכמה מפורשת"));
+  assertCheck("guided activation shell", activationBody.includes("שלום, אני קודי"));
+  assertCheck("guided activation single purpose", activationBody.includes("הפעל את קודי"));
+  assertCheck("guided activation open questions", activationBody.includes("בית חב\"ד קרוב"));
 
-  const startButton = page.getByRole("button", { name: "התחילו עם קודי" });
-  assertCheck("start disabled before setup", await startButton.isDisabled());
-
-  await page.getByLabel("שם הטיול").fill("יוון משפחתי 2026");
-  await page.getByLabel("שם חבר קבוצה").fill("נועה");
-  await page.getByLabel("גיל חבר קבוצה").fill("8");
-  await page.getByLabel("קישור Google Maps").fill("https://maps.app.goo.gl/MspoN6j9CJDyGmtb8");
-  await page.locator('.activation-checkbox input[type="checkbox"]').nth(0).check();
-  await page.locator('.activation-checkbox input[type="checkbox"]').nth(1).check();
-  await startButton.click();
+  await page.getByRole("button", { name: "הפעל את קודי" }).click();
+  await page.getByText("מאיפה לקרוא את הטיול?").waitFor();
+  await page.locator(".guided-step").getByLabel("שם הטיול").fill("יוון משפחתי 2026");
+  await page.locator(".guided-step").getByLabel("קישור Google Maps").fill("https://maps.app.goo.gl/MspoN6j9CJDyGmtb8");
+  await page.getByText("הקישור זוהה").waitFor();
+  await page.getByRole("button", { name: "המשך למיקום מנהל" }).click();
+  await page.getByText("נפעיל מיקום מנהל").waitFor();
+  await page.getByRole("button", { name: "הפעל GPS מנהל" }).click();
+  await page.getByText("מיקום מנהל פעיל").waitFor();
+  await page.getByRole("button", { name: "המשך", exact: true }).click();
+  await page.getByText("הלב מוכן").waitFor();
+  await page.getByRole("button", { name: "כניסה למפה ולשיחה" }).click();
 
   await page.getByText("מפה חיה").waitFor();
 
@@ -286,7 +285,7 @@ try {
   assertCheck("saved setup ok", savedSetupResponse.ok());
   assertCheck("saved setup completed", savedSetupPayload.setupCompleted === true);
   assertCheck("saved setup trip", savedSetupPayload.setupSummary?.tripName === "יוון משפחתי 2026");
-  assertCheck("saved setup member", savedSetupPayload.setupSummary?.firstMemberName === "נועה");
+  assertCheck("saved setup member", savedSetupPayload.setupSummary?.firstMemberName?.length > 1);
   assertCheck("saved setup places", savedSetupPayload.googleSource?.importedPlacesCount === 108);
 
   const locationAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {

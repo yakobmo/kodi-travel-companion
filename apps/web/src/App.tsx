@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { demoMembers, demoMessages, demoPlaces, demoTripSummary } from "./demoTrip.js";
 
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
+type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
 
 interface TripPlace {
   id: string;
@@ -488,14 +489,15 @@ function getMapPosition(index: number, total: number) {
 
 export function App() {
   const [showActivation, setShowActivation] = useState(true);
+  const [activationStep, setActivationStep] = useState<ActivationStep>("welcome");
   const [setupState, setSetupState] = useState<TripSetupStateResponse | null>(null);
   const [googleSourcePreview, setGoogleSourcePreview] = useState<GoogleSourcePreviewResponse | null>(null);
   const [setupSaveState, setSetupSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [setupSaveError, setSetupSaveError] = useState("");
   const [setupDraft, setSetupDraft] = useState<SetupDraft>({
-    tripName: "",
-    memberName: "",
-    memberAge: "",
+    tripName: "טיול צפון יוון",
+    memberName: "מנהל הטיול",
+    memberAge: "40",
     googleLink: "",
     aiPlanConfirmed: false,
     locationConsentExplained: false
@@ -1142,18 +1144,29 @@ export function App() {
   const recentTripEvents = tripEvents.slice(0, 3);
   const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
+  const googleSourceRecognized =
+    normalizedGoogleLink.includes("maps.app.goo.gl") || normalizedGoogleLink.includes("google.com/maps");
+  const googleSourceReady = googleSourceRecognized || setupDraft.googleLink.trim().length === 0;
+  const managerLocationReady = locationState === "enabled" || Boolean(currentLocation);
   const setupReadiness = {
     hasOwner: setupDraft.tripName.trim().length > 1,
     hasMembers: setupDraft.memberName.trim().length > 1 && setupDraft.memberAge.trim().length > 0,
-    hasGoogleSource: normalizedGoogleLink.includes("maps.app.goo.gl") || normalizedGoogleLink.includes("google.com/maps"),
+    hasGoogleSource: googleSourceReady,
     hasLocationConsentExplained: setupDraft.locationConsentExplained,
     hasAiPlanExplained: setupDraft.aiPlanConfirmed
   };
+  const activationSteps: Array<{ id: ActivationStep; label: string }> = [
+    { id: "welcome", label: "קודי" },
+    { id: "google", label: "מקור טיול" },
+    { id: "manager_location", label: "מיקום מנהל" },
+    { id: "ready", label: "כניסה" }
+  ];
+  const activationStepIndex = activationSteps.findIndex((step) => step.id === activationStep);
   const readinessItems = [
     { label: "שם טיול", ready: setupReadiness.hasOwner },
     { label: "חבר קבוצה ראשון", ready: setupReadiness.hasMembers },
     { label: "מקור Google", ready: setupReadiness.hasGoogleSource },
-    { label: "הסבר הרשאות מיקום", ready: setupReadiness.hasLocationConsentExplained },
+    { label: "מיקום מנהל", ready: setupReadiness.hasLocationConsentExplained && managerLocationReady },
     { label: "הסבר דמו/תשלום", ready: setupReadiness.hasAiPlanExplained }
   ];
   const setupReady = readinessItems.every((item) => item.ready);
@@ -1596,6 +1609,7 @@ export function App() {
 
         setCurrentLocation(nextLocation);
         setLocationState("enabled");
+        setSetupDraft((draft) => ({ ...draft, locationConsentExplained: true }));
 
         try {
           const response = await fetch(`${apiBaseUrl}/api/trips/demo/members/${activeMember.id}/location`, {
@@ -1716,7 +1730,150 @@ export function App() {
           </div>
         </section>
 
-        <aside className="activation-panel">
+        <aside className="activation-panel guided-activation">
+          <div className="activation-progress" aria-label="שלבי התחלה">
+            {activationSteps.map((step, index) => (
+              <span
+                className={index < activationStepIndex ? "done" : index === activationStepIndex ? "current" : ""}
+                key={step.id}
+              >
+                {step.label}
+              </span>
+            ))}
+          </div>
+
+          {activationStep === "welcome" ? (
+            <section className="guided-step" aria-label="הפעלת קודי">
+              <span className="eyebrow">שלב 1 מתוך 4</span>
+              <h2>שלום, אני קודי</h2>
+              <p>
+                אני מלווה הטיול של הקבוצה. אחרי ההפעלה אעזור לחבר מקור טיול, להפעיל מיקום מנהל, ואז ניכנס למפה
+                ולשיחה.
+              </p>
+              <div className="kodi-dialogue-preview">
+                <strong>אפשר לשאול אותי כמעט הכול</strong>
+                <p>בית חב"ד קרוב, גלידה, תחנת דלק, חוף יפה, זמן נסיעה, או מה כדאי לעשות עכשיו.</p>
+              </div>
+              <button
+                className="primary-action"
+                type="button"
+                onClick={() => {
+                  setSetupDraft((draft) => ({ ...draft, aiPlanConfirmed: true }));
+                  setActivationStep("google");
+                }}
+              >
+                הפעל את קודי
+              </button>
+              <button className="quiet-action" type="button" onClick={() => setShowActivation(false)}>
+                כניסה מהירה לדמו
+              </button>
+            </section>
+          ) : null}
+
+          {activationStep === "google" ? (
+            <section className="guided-step" aria-label="חיבור מקור טיול">
+              <span className="eyebrow">שלב 2 מתוך 4</span>
+              <h2>מאיפה לקרוא את הטיול?</h2>
+              <p>
+                בעתיד קודי יתחבר לחשבון Google וישאל איזו מפה לסנכרן, למשל "טיול צפון יוון". כרגע אפשר להמשיך עם
+                הדמו או להדביק קישור צפייה כדי לסמן את מקור הטיול.
+              </p>
+              <div className="setup-form single-flow-form">
+                <label>
+                  שם הטיול
+                  <input
+                    aria-label="שם הטיול"
+                    onChange={(event) => setSetupDraft((draft) => ({ ...draft, tripName: event.target.value }))}
+                    value={setupDraft.tripName}
+                  />
+                </label>
+                <label>
+                  קישור צפייה מ-Google Maps
+                  <input
+                    aria-label="קישור Google Maps"
+                    dir="ltr"
+                    onChange={(event) => setSetupDraft((draft) => ({ ...draft, googleLink: event.target.value }))}
+                    placeholder="https://maps.app.goo.gl/..."
+                    value={setupDraft.googleLink}
+                  />
+                </label>
+              </div>
+              <div className={`source-feedback ${googleSourceRecognized ? "ready" : "waiting"}`}>
+                <strong>{googleSourceRecognized ? "הקישור זוהה" : "אפשר גם להמשיך עם הדמו"}</strong>
+                <p>
+                  {googleSourceRecognized
+                    ? "זה עדיין לא סנכרון חי מחשבון Google. OAuth יאפשר בהמשך לבחור מפה אמיתית מתוך החשבון."
+                    : `${summary.total} נקודות טיול זמינות בדמו כדי לראות את הלב של האפליקציה.`}
+                </p>
+              </div>
+              <button className="primary-action" type="button" onClick={() => setActivationStep("manager_location")}>
+                המשך למיקום מנהל
+              </button>
+              <button className="quiet-action" type="button" onClick={() => setActivationStep("welcome")}>
+                חזרה
+              </button>
+            </section>
+          ) : null}
+
+          {activationStep === "manager_location" ? (
+            <section className="guided-step" aria-label="הפעלת מיקום מנהל">
+              <span className="eyebrow">שלב 3 מתוך 4</span>
+              <h2>נפעיל מיקום מנהל</h2>
+              <p>
+                זה הלב של קודי: מפה, נקודות הטיול והמיקום החי של מנהל הטיול. בלי זה קודי לא יודע באמת איפה אתם
+                ביחס למסלול.
+              </p>
+              <div className={`location-status ${managerLocationReady ? "ready" : locationState}`}>
+                <MapPin size={20} aria-hidden="true" />
+                <div>
+                  <strong>{managerLocationReady ? "מיקום מנהל פעיל" : "ממתין להרשאת GPS"}</strong>
+                  <p>
+                    {managerLocationReady
+                      ? "קודי יוכל להשתמש במיקום הזה כהקשר לשאלות פתוחות."
+                      : "הדפדפן יבקש הרשאת מיקום. שאר חברי הקבוצה יחוברו בהמשך ובהסכמה נפרדת."}
+                  </p>
+                </div>
+              </div>
+              <button disabled={locationState === "requesting"} className="primary-action" onClick={enablePersonalGps} type="button">
+                {locationState === "requesting" ? "מבקש הרשאת מיקום..." : managerLocationReady ? "רענן מיקום" : "הפעל GPS מנהל"}
+              </button>
+              <button
+                className="quiet-action"
+                disabled={!managerLocationReady}
+                type="button"
+                onClick={() => setActivationStep("ready")}
+              >
+                המשך
+              </button>
+              {locationState === "error" ? <small className="setup-error">לא קיבלתי מיקום. אפשר לנסות שוב מהדפדפן.</small> : null}
+              <button className="quiet-action" type="button" onClick={() => setActivationStep("google")}>
+                חזרה
+              </button>
+            </section>
+          ) : null}
+
+          {activationStep === "ready" ? (
+            <section className="guided-step" aria-label="כניסה למפה ולשיחה">
+              <span className="eyebrow">שלב 4 מתוך 4</span>
+              <h2>הלב מוכן</h2>
+              <p>עכשיו נכנסים למסך הראשי: קודי, מפה, נקודות הטיול ומיקום מנהל. שאר האפשרויות יישארו בצד ולא יעמיסו.</p>
+              <div className="core-ready-grid">
+                {readinessItems.map((item) => (
+                  <span className={item.ready ? "ready" : "missing"} key={item.label}>
+                    <CheckCircle2 size={15} aria-hidden="true" />
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+              <button disabled={!setupReady || setupSaveState === "saving"} className="primary-action" type="button" onClick={saveSetupAndStart}>
+                {setupSaveState === "saving" ? "שומר..." : "כניסה למפה ולשיחה"}
+              </button>
+              <button className="quiet-action" type="button" onClick={() => setActivationStep("manager_location")}>
+                חזרה
+              </button>
+              {setupSaveError ? <small className="setup-error">{setupSaveError}</small> : null}
+            </section>
+          ) : null}
           <div className="kodi-welcome-card">
             <span className="eyebrow">קודי מתעורר לחיים</span>
             <h2>ברוכים הבאים</h2>

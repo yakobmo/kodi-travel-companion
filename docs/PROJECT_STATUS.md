@@ -68,6 +68,7 @@ Implemented locally:
 - Usage-gate authorizations are written into the group event log as system audit events, so direct API calls and Kodi agent calls leave an operational trail.
 - Owner-visible usage audit summary is exposed through `/api/trips/demo/usage` and shown in the chat surface next to live group activity.
 - Core experience and onboarding product gate documented in `docs/CORE_EXPERIENCE_AND_ONBOARDING.md`: one clear next action, manager location as minimum live context, and secondary actions kept out of the main flow.
+- Guided first-run activation added: Kodi leads one step at a time through activation, trip source, manager GPS, and then entry into the map/chat core.
 
 ## Current Storage
 
@@ -204,6 +205,7 @@ Current Supabase state:
 - Trip usage gate added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Direct Google endpoints and Kodi agent calls now return `usageGate` evidence showing `usage_pool_authorized` and `chargedTo=trip_usage_pool`; production Places status is `ready`.
 - Usage-gate audit events added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Direct Google usage and Kodi agent usage now record `system` events with capability, source, charge target, and provider configuration state.
 - Owner-visible usage audit overview added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. `/api/trips/demo/usage` now returns `usageAudit`, and the web app shows compact usage counts near live activity.
+- Guided activation flow added on `2026-06-29`; local build, QA, and local smoke passed. The first-run UI now shows one step at a time: activate Kodi, choose trip source/demo, enable manager GPS, then enter the map/chat core.
 
 ## Next Continuation Checkpoint
 

@@ -294,6 +294,19 @@ if (-not $appSource.Contains("setupDraft") -or -not $appSource.Contains("setupRe
   throw "Welcome + Activation must manage an interactive setup draft and readiness state."
 }
 
+if (
+  -not $appSource.Contains("ActivationStep") -or
+  -not $appSource.Contains("guided-step") -or
+  -not $appSource.Contains("activation-progress") -or
+  -not $appSource.Contains("managerLocationReady") -or
+  -not $appSource.Contains("manager_location") -or
+  -not $appSource.Contains("source-feedback") -or
+  -not $appSource.Contains("location-status") -or
+  -not $appSource.Contains("primary-action")
+) {
+  throw "Welcome + Activation must be a guided one-step-at-a-time flow centered on Kodi, trip source, and manager location."
+}
+
 if (-not $appSource.Contains("saveSetupAndStart") -or -not $appSource.Contains('method: "POST"')) {
   throw "Welcome + Activation must save setup through the API before entering the app."
 }

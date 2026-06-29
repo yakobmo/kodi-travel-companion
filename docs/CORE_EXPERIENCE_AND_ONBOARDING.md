@@ -38,6 +38,13 @@ Recommended onboarding sequence:
 5. Enable the manager's live location.
 6. Enter the main experience: map, trip points, manager location, and Kodi chat.
 
+Current MVP implementation:
+
+- Kodi opens with a single activation step.
+- The trip source step supports demo mode and a Google Maps viewing link, while clearly avoiding a live-sync claim.
+- Manager GPS is an explicit step before entering the core experience.
+- The main app opens only after the core is ready: Kodi, map, trip points, and manager location.
+
 Only after the core is running should the app offer:
 
 - adding participants
