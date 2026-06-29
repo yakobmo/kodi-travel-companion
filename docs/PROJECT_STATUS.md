@@ -52,6 +52,7 @@ Implemented locally:
 - Non-active Google API adapter skeleton and readiness endpoint through `/api/trips/demo/google-source/readiness`, reporting only configured/not-configured status for future Google environment requirements.
 - Guarded Google Places Text Search read path through `/api/google/places/text-search`, returning `not_configured` until `GOOGLE_MAPS_API_KEY` exists and never exposing credential values.
 - Kodi agent server flow can call the guarded Places read path for nearby external needs such as gelato, food, bathrooms, pharmacies, or nearby services, while clearly explaining `not_configured` when the Google key is absent.
+- Live Google Places smoke automation through `npm run smoke:google-places-live`, ready to verify real Places results and Kodi agent context after `GOOGLE_MAPS_API_KEY` is configured in Render.
 
 ## Current Storage
 
@@ -171,6 +172,7 @@ Current Supabase state:
 - Google API readiness skeleton added on `2026-06-28`; local build, QA, local smoke, Render deploy, and public API smoke passed. The readiness endpoint exposes only requirement names and configured booleans, not credential values.
 - First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, local smoke, Render deploy, and public API smoke passed in guarded `not_configured` mode.
 - Kodi agent Places context connection added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed in guarded `not_configured` mode.
+- Live Google Places smoke automation added on `2026-06-29`; the remaining blocker for real Places results is adding `GOOGLE_MAPS_API_KEY` to Render.
 
 ## Next Continuation Checkpoint
 
@@ -179,7 +181,7 @@ Resume from the Kodi build protocol with no new product discovery.
 Immediate next task:
 
 1. Configure `GOOGLE_MAPS_API_KEY` in Render when the user is ready to enable live Places API calls.
-2. Public-smoke a real Places query through `/api/google/places/text-search`.
+2. Run `npm run smoke:google-places-live`.
 3. Public-smoke a Kodi chat request for a nearby external need and confirm it includes live Places evidence.
 4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 

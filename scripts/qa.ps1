@@ -18,6 +18,7 @@ $requiredFiles = @(
   "scripts/apply-supabase-grants.ps1",
   "scripts/dev-api.ps1",
   "scripts/dev-web.ps1",
+  "scripts/smoke-google-places-live.mjs",
   "scripts/smoke-local.mjs",
   "apps/api/package.json",
   "apps/api/tsconfig.json",
@@ -64,6 +65,11 @@ $jsonFiles = @(
 foreach ($file in $jsonFiles) {
   $path = Join-Path $root $file
   Get-Content $path -Raw | ConvertFrom-Json | Out-Null
+}
+
+$packageSource = Get-Content (Join-Path $root "package.json") -Raw
+if (-not $packageSource.Contains("smoke:google-places-live")) {
+  throw "Root package.json must expose the live Google Places smoke script."
 }
 
 $sourcePlacesPath = Join-Path (Split-Path -Parent $root) "work\spikes\google-place-list\out\places.json"
@@ -122,6 +128,17 @@ if (
 
 if ($googlePlacesSearchSource.Contains('X-Goog-FieldMask": "*"') -or $googlePlacesSearchSource.Contains("X-Goog-FieldMask': '*'")) {
   throw "Google Places Text Search must not use wildcard field masks in production code."
+}
+
+$googlePlacesLiveSmokeSource = Get-Content (Join-Path $root "scripts\smoke-google-places-live.mjs") -Raw
+if (
+  -not $googlePlacesLiveSmokeSource.Contains("GOOGLE_MAPS_API_KEY configured") -or
+  -not $googlePlacesLiveSmokeSource.Contains("/api/google/places/text-search") -or
+  -not $googlePlacesLiveSmokeSource.Contains("/api/agent/message") -or
+  -not $googlePlacesLiveSmokeSource.Contains("externalPlacesSearchStatus") -or
+  -not $googlePlacesLiveSmokeSource.Contains("places.payload.apiKey === undefined")
+) {
+  throw "Live Google Places smoke must verify readiness, endpoint results, Kodi agent context, and no API key leakage."
 }
 
 $demoTripSource = Get-Content (Join-Path $root "apps\web\src\demoTrip.ts") -Raw
