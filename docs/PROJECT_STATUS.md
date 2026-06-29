@@ -168,7 +168,7 @@ Current Supabase state:
 - First Google integration spike added on `2026-06-28`; read-only source preview implemented with build, QA, local browser smoke, Render deploy, public API smoke, and public browser smoke passed.
 - Google source adapter boundary added on `2026-06-28`; local build, QA, local smoke, Render deploy, public API smoke, and public browser smoke passed.
 - Google API readiness skeleton added on `2026-06-28`; local build, QA, local smoke, Render deploy, and public API smoke passed. The readiness endpoint exposes only requirement names and configured booleans, not credential values.
-- First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, smoke, Render deploy, and public API smoke are the current validation gate.
+- First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, local smoke, Render deploy, and public API smoke passed in guarded `not_configured` mode.
 
 ## Next Continuation Checkpoint
 
@@ -176,9 +176,9 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Validate and deploy `/api/google/places/text-search`.
-2. Public-smoke the endpoint in `not_configured` mode and confirm no credential values are exposed.
-3. After `GOOGLE_MAPS_API_KEY` is configured, public-smoke a real Places query.
+1. Configure `GOOGLE_MAPS_API_KEY` in Render when the user is ready to enable live Places API calls.
+2. Public-smoke a real Places query through `/api/google/places/text-search`.
+3. Connect Places search results into Kodi's recommendation flow for nearby external needs such as gelato, food, bathrooms, pharmacies, or water attractions.
 4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 
 ## QA
