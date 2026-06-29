@@ -12,6 +12,7 @@ $requiredFiles = @(
   "supabase/event-log-migration.sql",
   "docs/SUPABASE_SCHEMA.md",
   "docs/GOOGLE_INTEGRATION_PLAN.md",
+  "docs/CORE_EXPERIENCE_AND_ONBOARDING.md",
   "docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md",
   "scripts/apply-supabase-schema.mjs",
   "scripts/apply-supabase-schema.ps1",
@@ -91,6 +92,17 @@ if (
   -not $ownershipModelSource.Contains("private credentials stay on the server side")
 ) {
   throw "Trip ownership and usage model must document one owner-managed usage pool and backend-only provider secrets."
+}
+
+$coreExperienceSource = Get-Content (Join-Path $root "docs\CORE_EXPERIENCE_AND_ONBOARDING.md") -Raw
+if (
+  -not $coreExperienceSource.Contains("Kodi + live map + trip points + at least the trip manager's live location") -or
+  -not $coreExperienceSource.Contains("one clear next action") -or
+  -not $coreExperienceSource.Contains("manager's live location") -or
+  -not $coreExperienceSource.Contains("hamburger") -or
+  -not $coreExperienceSource.Contains("Google account sync is not active yet")
+) {
+  throw "Core experience doc must define Kodi + map + trip points + manager location, with one clear onboarding action at a time."
 }
 
 $tripUsagePoolSource = Get-Content (Join-Path $root "apps\api\src\billing\tripUsagePool.ts") -Raw

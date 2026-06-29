@@ -6,6 +6,7 @@ The product combines:
 
 - Live trip map.
 - Google Maps Place List import.
+- At least the trip manager's consented live location as a core context anchor.
 - WhatsApp-style group conversation.
 - Kodi, the AI companion, as a participant in the family trip chat.
 - Waze / Google Maps navigation actions.
@@ -40,6 +41,8 @@ VITE_GOOGLE_MAPS_API_KEY=
 Do not put private server-only secrets in `VITE_*` variables. Browser-visible Google Maps keys must be restricted in Google Cloud.
 
 The live group map is now defined as a flagship product feature. It will be implemented in stages because it requires consent, permissions, users, realtime updates, and careful privacy boundaries.
+
+The product heart is now defined in `docs/CORE_EXPERIENCE_AND_ONBOARDING.md` as: Kodi + live map + trip points + at least the trip manager's live location. Everything else should support that core or stay in a secondary management surface.
 
 Kodi is not a separate support bot or external AI chat. The family has one shared conversation, and Kodi wakes up when addressed, reads the recent context, and responds inside the thread.
 

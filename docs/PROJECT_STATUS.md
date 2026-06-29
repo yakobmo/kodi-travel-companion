@@ -8,6 +8,7 @@ The app is built around:
 
 - A live trip map.
 - Places imported from a Google Maps trip list.
+- At least the trip manager's consented live location as the minimum live context anchor.
 - A WhatsApp-style family group chat.
 - Kodi as a participant in that chat.
 - Waze and Google Maps navigation links.
@@ -15,6 +16,8 @@ The app is built around:
 - Opt-in live member location sharing.
 - Group destination and group route state.
 - One owner-managed trip usage pool, so family members do not need separate paid AI subscriptions.
+
+Product-heart decision: the primary experience is Kodi + map + trip points + at least the manager's live location. Group member locations, external app shortcuts, participant management, usage visibility, and admin tools are important, but they should not crowd the first-run path.
 
 ## Current MVP
 
@@ -64,6 +67,7 @@ Implemented locally:
 - Usage gate now wraps costly Google Places and Google Routes calls, including calls made through Kodi's agent flow, before any provider request is attempted.
 - Usage-gate authorizations are written into the group event log as system audit events, so direct API calls and Kodi agent calls leave an operational trail.
 - Owner-visible usage audit summary is exposed through `/api/trips/demo/usage` and shown in the chat surface next to live group activity.
+- Core experience and onboarding product gate documented in `docs/CORE_EXPERIENCE_AND_ONBOARDING.md`: one clear next action, manager location as minimum live context, and secondary actions kept out of the main flow.
 
 ## Current Storage
 
