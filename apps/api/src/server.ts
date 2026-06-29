@@ -321,6 +321,26 @@ async function safeRecordTripEvent(input: {
   }
 }
 
+async function safeRecordUsageGateEvent(input: {
+  usageGate: TripUsageGateDecision;
+  actorName?: string;
+  source: "direct_api" | "kodi_agent";
+}) {
+  if (!input.usageGate.allowed) {
+    return null;
+  }
+
+  return safeRecordTripEvent({
+    eventType: "system",
+    actorMemberId: input.usageGate.audit.triggeringMemberId,
+    actorName: input.actorName ?? "Kodi usage gate",
+    relatedEntityId: input.usageGate.capability,
+    summary:
+      `Usage gate authorized ${input.usageGate.capability} via ${input.source}; ` +
+      `chargedTo=${input.usageGate.chargedTo}; providerConfigured=${input.usageGate.providerConfigured}.`
+  });
+}
+
 app.use((req, res, next) => {
   const allowedOrigins = new Set([
     process.env.APP_BASE_URL ?? "http://localhost:5173",
@@ -414,6 +434,10 @@ app.get("/api/google/places/text-search", async (req, res) => {
     });
     return;
   }
+  await safeRecordUsageGateEvent({
+    usageGate,
+    source: "direct_api"
+  });
 
   res.json({
     ...(await searchGooglePlacesText({
@@ -459,6 +483,10 @@ app.get("/api/google/routes/estimate", async (req, res) => {
     });
     return;
   }
+  await safeRecordUsageGateEvent({
+    usageGate,
+    source: "direct_api"
+  });
 
   res.json({
     ...(await estimateGoogleRoute({
@@ -1360,6 +1388,13 @@ app.post("/api/agent/message", async (req, res) => {
         languageCode: "he"
       })
     : undefined;
+  if (placesUsageGate?.allowed) {
+    await safeRecordUsageGateEvent({
+      usageGate: placesUsageGate,
+      actorName: String(normalizedMember.displayName),
+      source: "kodi_agent"
+    });
+  }
   const tripReference = resolveTripReferenceForMessage(message, tripState);
   const canEstimateRoute =
     shouldUseRouteEstimate(message) &&
@@ -1383,6 +1418,11 @@ app.post("/api/agent/message", async (req, res) => {
       destination: { lat: Number(tripReference.destination?.lat), lng: Number(tripReference.destination?.lng) },
       travelMode: includesAnyTerm(message, ["הליכה", "ברגל"]) ? "WALK" : "DRIVE",
       languageCode: "he"
+    });
+    await safeRecordUsageGateEvent({
+      usageGate: routesUsageGate,
+      actorName: String(normalizedMember.displayName),
+      source: "kodi_agent"
     });
   }
   const permissionPolicy =

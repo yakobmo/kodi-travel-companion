@@ -147,6 +147,17 @@ try {
   assertCheck("google places usage gate", googlePlacesSearchPayload.usageGate?.reason === "usage_pool_authorized");
   assertCheck("google places usage charged to pool", googlePlacesSearchPayload.usageGate?.chargedTo === "trip_usage_pool");
 
+  const directUsageEventsPayload = await (await fetch("http://localhost:3001/api/trips/demo/events")).json();
+  assertCheck(
+    "direct google usage audit event",
+    directUsageEventsPayload.events?.some(
+      (event) =>
+        event.eventType === "system" &&
+        event.relatedEntityId === "google_places" &&
+        event.summary?.includes("Usage gate authorized google_places via direct_api")
+    )
+  );
+
   const googleRouteEstimateResponse = await fetch(
     "http://localhost:3001/api/google/routes/estimate?originLat=39.2514&originLng=22.7515&destinationLat=39.935888&destinationLng=20.670744&travelMode=DRIVE"
   );
@@ -313,6 +324,16 @@ try {
     "agent google places usage gate",
     gelatoAgentPayload.contextSummary?.usageGateResults?.some(
       (item) => item.capability === "google_places" && item.reason === "usage_pool_authorized"
+    )
+  );
+  const agentUsageEventsPayload = await (await page.request.get("http://localhost:3001/api/trips/demo/events")).json();
+  assertCheck(
+    "agent google usage audit event",
+    agentUsageEventsPayload.events?.some(
+      (event) =>
+        event.eventType === "system" &&
+        event.relatedEntityId === "google_places" &&
+        event.summary?.includes("Usage gate authorized google_places via kodi_agent")
     )
   );
 

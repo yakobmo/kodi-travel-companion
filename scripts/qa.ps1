@@ -221,6 +221,9 @@ if (
   -not $serverSourceForContext.Contains("resolveTripReferenceForMessage") -or
   -not $serverSourceForContext.Contains("resolveTimelineReferenceForMessage") -or
   -not $serverSourceForContext.Contains("authorizeTripUsageCapability") -or
+  -not $serverSourceForContext.Contains("safeRecordUsageGateEvent") -or
+  -not $serverSourceForContext.Contains("Usage gate authorized") -or
+  -not $serverSourceForContext.Contains("chargedTo=") -or
   -not $serverSourceForContext.Contains("usageGateResults") -or
   -not $serverSourceForContext.Contains("/api/trips/demo/timeline") -or
   -not $serverSourceForContext.Contains("tripContextClarification") -or
