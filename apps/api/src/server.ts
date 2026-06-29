@@ -1,6 +1,7 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
+import { buildDemoTripUsagePool } from "./billing/tripUsagePool.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
 import { searchGooglePlacesText } from "./google/placesSearch.js";
 import { estimateGoogleRoute, type GoogleRouteTravelMode } from "./google/routes.js";
@@ -547,6 +548,18 @@ app.get("/api/trips/demo/storage", (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
     storage: getDemoStorageMetadata()
+  });
+});
+
+app.get("/api/trips/demo/usage", async (_req, res) => {
+  const tripState = await buildDemoTripStateAsync();
+
+  res.json({
+    tripGroupId: tripState.trip.groupId,
+    usagePool: buildDemoTripUsagePool({
+      tripGroupId: tripState.trip.groupId,
+      members: tripState.members
+    })
   });
 });
 

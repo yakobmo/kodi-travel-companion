@@ -28,6 +28,7 @@ $requiredFiles = @(
   "apps/api/src/agent/kodi.ts",
   "apps/api/src/agent/tripContextResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
+  "apps/api/src/billing/tripUsagePool.ts",
   "apps/api/src/domain/types.ts",
   "apps/api/src/data/demoStorage.ts",
   "apps/api/src/data/supabaseStatus.ts",
@@ -90,6 +91,18 @@ if (
   -not $ownershipModelSource.Contains("private credentials stay on the server side")
 ) {
   throw "Trip ownership and usage model must document one owner-managed usage pool and backend-only provider secrets."
+}
+
+$tripUsagePoolSource = Get-Content (Join-Path $root "apps\api\src\billing\tripUsagePool.ts") -Raw
+if (
+  -not $tripUsagePoolSource.Contains("buildDemoTripUsagePool") -or
+  -not $tripUsagePoolSource.Contains("participantBillingRequired: false") -or
+  -not $tripUsagePoolSource.Contains("providerSecretsStoredServerSide: true") -or
+  -not $tripUsagePoolSource.Contains("browserReceivesPrivateKeys: false") -or
+  -not $tripUsagePoolSource.Contains("chargedTo: `"trip_usage_pool`"") -or
+  -not $tripUsagePoolSource.Contains("quotaEnforcedServerSide: true")
+) {
+  throw "Trip usage pool code must enforce owner-managed billing, backend mediation, and no participant secrets."
 }
 
 $sourcePlacesPath = Join-Path (Split-Path -Parent $root) "work\spikes\google-place-list\out\places.json"

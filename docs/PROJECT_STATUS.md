@@ -60,6 +60,7 @@ Implemented locally:
 - Trip Timeline Resolver through `/api/trips/demo/timeline`, deriving lodging-based trip segments from the imported Google map order, date hints, and region hints.
 - Kodi agent external searches now prefer a resolved future trip segment, such as Pelion lodging, before falling back to live GPS or the first known place.
 - Product ownership model documented: Kodi runs through the backend as one shared trip-space agent, with the owner/admin controlling billing, usage, and operational permissions.
+- Owner-managed usage pool endpoint through `/api/trips/demo/usage`, exposing safe billing/usage policy without provider secrets.
 
 ## Current Storage
 
@@ -192,6 +193,7 @@ Current Supabase state:
 - Live Google Places smoke automation added on `2026-06-29`; public production smoke passed after adding `GOOGLE_MAPS_API_KEY` to Render. Result: `placesCount=2`, first place `Cuore Amabile Gelateria`, Kodi agent external Places status `ready`, storage driver `supabase`.
 - Trip Context Resolver and guarded Google Routes ETA path added on `2026-06-29`; local build, QA, smoke, focused agent checks, GitHub push, Render deploy, and public endpoint exposure passed. Public Routes live smoke is blocked by Google Cloud `PERMISSION_DENIED` until `Routes API` is enabled for the same Google Cloud project as the Maps key. Generic nearby requests now route to Google Places from the natural user text, while ambiguous ETA questions ask a clarification before calling Routes.
 - Trip Timeline Resolver added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Public result: timeline returned 10 lodging segments, Kodi resolved a Pelion future lodging reference with `medium` confidence, and Google Places status was `ready`.
+- Trip usage pool API foundation added on `2026-06-29`; local build, QA, and local smoke passed. The endpoint confirms owner-managed billing, backend mediation, participant billing disabled, and no private provider keys to member browsers.
 
 ## Next Continuation Checkpoint
 

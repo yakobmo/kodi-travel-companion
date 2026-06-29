@@ -114,6 +114,18 @@ try {
   assertCheck("google api skeleton no live access", googleReadinessPayload.futureGoogleApiAdapter?.liveGoogleAccess === false);
   assertCheck("google api readiness hides values", googleReadinessPayload.requirements?.every((item) => item.value === undefined));
 
+  const usageResponse = await fetch("http://localhost:3001/api/trips/demo/usage");
+  const usagePayload = await usageResponse.json();
+  assertCheck("trip usage endpoint", usageResponse.ok);
+  assertCheck("trip usage owner managed", usagePayload.usagePool?.billingModel === "owner_managed");
+  assertCheck("trip usage participants not billed", usagePayload.usagePool?.participantBillingRequired === false);
+  assertCheck("trip usage backend mediated", usagePayload.usagePool?.backendMediated === true);
+  assertCheck("trip usage hides secrets", usagePayload.usagePool?.secretBoundary?.browserReceivesPrivateKeys === false);
+  assertCheck(
+    "trip usage capabilities charged to pool",
+    usagePayload.usagePool?.capabilities?.every((item) => item.chargedTo === "trip_usage_pool")
+  );
+
   const timelineResponse = await fetch("http://localhost:3001/api/trips/demo/timeline");
   const timelinePayload = await timelineResponse.json();
   assertCheck("trip timeline endpoint", timelineResponse.ok);

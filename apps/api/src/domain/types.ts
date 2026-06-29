@@ -28,6 +28,10 @@ export type AiPlanMode = "demo" | "limited" | "full";
 
 export type GoogleSourceState = "not_connected" | "demo_link_ready" | "connected" | "needs_refresh";
 
+export type TripUsageCapability = "openai_agent" | "google_places" | "google_routes" | "google_oauth_sync";
+
+export type TripUsagePoolStatus = "demo" | "active" | "limited" | "blocked";
+
 export type TripEventType =
   | "message_created"
   | "location_updated"
@@ -202,6 +206,35 @@ export interface TripEvent {
   relatedEntityId?: string;
   summary: string;
   createdAt: string;
+}
+
+export interface TripUsagePool {
+  tripGroupId: string;
+  ownerMemberId: string;
+  ownerDisplayName: string;
+  status: TripUsagePoolStatus;
+  billingModel: "owner_managed";
+  participantBillingRequired: false;
+  backendMediated: true;
+  secretBoundary: {
+    providerSecretsStoredServerSide: true;
+    exposesProviderSecretsToMembers: false;
+    browserReceivesPrivateKeys: false;
+  };
+  capabilities: Array<{
+    capability: TripUsageCapability;
+    enabled: boolean;
+    provider: "openai" | "google" | "internal";
+    chargedTo: "trip_usage_pool";
+    triggeredByMemberAuditRequired: boolean;
+    quotaEnforcedServerSide: boolean;
+  }>;
+  policy: {
+    membersCanAskKodi: boolean;
+    operationalActionsRequireAdmin: boolean;
+    costlyCallsRequireBackendGate: boolean;
+    usageVisibleToOwner: boolean;
+  };
 }
 
 export interface AgentContextSnapshot {

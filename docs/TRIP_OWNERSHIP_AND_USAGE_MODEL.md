@@ -76,6 +76,21 @@ This means a child can ask, "Kodi, is there ice cream nearby?", but Kodi will no
 
 The current MVP can keep using server-side Render environment variables.
 
+Implemented API foundation:
+
+```text
+GET /api/trips/demo/usage
+```
+
+The endpoint returns a safe trip usage-pool summary:
+
+- owner/admin identity for the demo group
+- `participantBillingRequired=false`
+- backend-mediated provider usage
+- server-side secret boundary
+- capability list for OpenAI agent reasoning, Google Places, Google Routes, and future Google OAuth sync
+- policy flags for admin-only operational actions and server-side quota gates
+
 Future production should add:
 
 - `trip_owner_id` on trip groups.
