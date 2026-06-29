@@ -50,9 +50,9 @@ Implemented locally:
 - Read-only Google source preview through `/api/trips/demo/google-source`, exposing imported place count, coordinate coverage, and future OAuth/API requirements without claiming live Google write-back.
 - Google source adapter boundary with the active fixture adapter explicitly reporting `liveGoogleAccess=false` and `canWriteBackToGoogle=false`.
 - Non-active Google API adapter skeleton and readiness endpoint through `/api/trips/demo/google-source/readiness`, reporting only configured/not-configured status for future Google environment requirements.
-- Guarded Google Places Text Search read path through `/api/google/places/text-search`, returning `not_configured` until `GOOGLE_MAPS_API_KEY` exists and never exposing credential values.
+- Guarded Google Places Text Search read path through `/api/google/places/text-search`, returning live Google Places results when `GOOGLE_MAPS_API_KEY` exists and never exposing credential values.
 - Kodi agent server flow can call the guarded Places read path for nearby external needs such as gelato, food, bathrooms, pharmacies, or nearby services, while clearly explaining `not_configured` when the Google key is absent.
-- Live Google Places smoke automation through `npm run smoke:google-places-live`, ready to verify real Places results and Kodi agent context after `GOOGLE_MAPS_API_KEY` is configured in Render.
+- Live Google Places smoke automation through `npm run smoke:google-places-live`, verifying real Places results and Kodi agent context after `GOOGLE_MAPS_API_KEY` is configured in Render.
 
 ## Current Storage
 
@@ -172,7 +172,7 @@ Current Supabase state:
 - Google API readiness skeleton added on `2026-06-28`; local build, QA, local smoke, Render deploy, and public API smoke passed. The readiness endpoint exposes only requirement names and configured booleans, not credential values.
 - First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, local smoke, Render deploy, and public API smoke passed in guarded `not_configured` mode.
 - Kodi agent Places context connection added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed in guarded `not_configured` mode.
-- Live Google Places smoke automation added on `2026-06-29`; the remaining blocker for real Places results is adding `GOOGLE_MAPS_API_KEY` to Render.
+- Live Google Places smoke automation added on `2026-06-29`; public production smoke passed after adding `GOOGLE_MAPS_API_KEY` to Render. Result: `placesCount=2`, first place `Cuore Amabile Gelateria`, Kodi agent external Places status `ready`, storage driver `supabase`.
 
 ## Next Continuation Checkpoint
 
@@ -180,9 +180,9 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Configure `GOOGLE_MAPS_API_KEY` in Render when the user is ready to enable live Places API calls.
-2. Run `npm run smoke:google-places-live`.
-3. Public-smoke a Kodi chat request for a nearby external need and confirm it includes live Places evidence.
+1. Keep Places API as the first proven live Google read path.
+2. Build the next Google capability behind the same guarded-read pattern: either Routes API ETA/duration or OAuth account connection.
+3. Public-smoke a Kodi chat request for a nearby external need after every Google integration change and confirm it includes live Places evidence.
 4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 
 ## QA
