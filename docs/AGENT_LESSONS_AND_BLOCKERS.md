@@ -266,6 +266,19 @@ Decision:
 - For readiness endpoints, assert the response shape: names, purposes, configured booleans, and no raw values.
 - Do not treat a safe config key name as a leaked credential.
 
+### 13. Google Maps Key Does Not Enable Every Google API
+
+Problem:
+
+`GOOGLE_MAPS_API_KEY` can be valid for Places while Routes still returns `PERMISSION_DENIED` if `Routes API` is not enabled in the same Google Cloud project.
+
+Decision:
+
+- Treat each Google capability as a separate activation gate.
+- Readiness can confirm that the key exists, but live smoke must confirm the specific API works.
+- If Google returns `PERMISSION_DENIED`, ask the user for one manual action: enable the named API in Google Cloud.
+- Keep endpoint responses credential-safe and report Google status without exposing the key.
+
 ## Current Operating Checklist
 
 Before coding:

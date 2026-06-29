@@ -176,7 +176,7 @@ Current Supabase state:
 - First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, local smoke, Render deploy, and public API smoke passed in guarded `not_configured` mode.
 - Kodi agent Places context connection added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed in guarded `not_configured` mode.
 - Live Google Places smoke automation added on `2026-06-29`; public production smoke passed after adding `GOOGLE_MAPS_API_KEY` to Render. Result: `placesCount=2`, first place `Cuore Amabile Gelateria`, Kodi agent external Places status `ready`, storage driver `supabase`.
-- Trip Context Resolver and guarded Google Routes ETA path added locally on `2026-06-29`; local build, QA, smoke, and focused agent checks passed. Generic nearby requests now route to Google Places from the natural user text, while ambiguous ETA questions ask a clarification before calling Routes.
+- Trip Context Resolver and guarded Google Routes ETA path added on `2026-06-29`; local build, QA, smoke, focused agent checks, GitHub push, Render deploy, and public endpoint exposure passed. Public Routes live smoke is blocked by Google Cloud `PERMISSION_DENIED` until `Routes API` is enabled for the same Google Cloud project as the Maps key. Generic nearby requests now route to Google Places from the natural user text, while ambiguous ETA questions ask a clarification before calling Routes.
 
 ## Next Continuation Checkpoint
 
@@ -184,7 +184,7 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Push and deploy the Trip Context Resolver plus Google Routes ETA path.
+1. Enable `Routes API` in Google Cloud for the existing Maps Platform project.
 2. Run public smoke for `/api/google/routes/estimate` and a Kodi chat ETA request.
 3. Continue evolving Kodi as a true agent: natural request -> reference/context resolution -> Google Places/Routes -> answer or clarification.
 4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
