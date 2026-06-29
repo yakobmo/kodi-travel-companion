@@ -237,6 +237,23 @@ try {
   assertCheck("dad member", body.includes("אבא"));
   assertCheck("noa member", body.includes("נועה"));
   assertCheck("grandma member", body.includes("סבתא"));
+  assertCheck("invite card", body.includes("הזמנת משתתפים"));
+  assertCheck("invite per-device consent", body.includes("כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו"));
+
+  const inviteUrl = await page.getByLabel("קישור הזמנה לקבוצת הטיול").inputValue();
+  assertCheck("invite link token", inviteUrl.includes("?join=group_family_greece_demo"));
+
+  const joinPage = await context.newPage();
+  await joinPage.goto(inviteUrl, { waitUntil: "domcontentloaded" });
+  await joinPage.getByText("מצטרפים לקודי").waitFor();
+  await joinPage.getByLabel("שם משתתף להצטרפות").fill("דניאל");
+  await joinPage.getByLabel("גיל משתתף להצטרפות").fill("11");
+  await joinPage.getByRole("button", { name: "הצטרפות לקבוצה" }).click();
+  await joinPage.getByRole("heading", { name: "קבוצת הטיול" }).waitFor();
+  const joinBody = await joinPage.locator("body").innerText();
+  assertCheck("join adds participant locally", joinBody.includes("דניאל"));
+  assertCheck("join location consent copy", joinBody.includes("מיקום אישי יוצג רק אחרי אישור GPS"));
+  await joinPage.close();
 
   assertCheck("members api ok", membersResponse.ok());
   assertCheck("members api count", membersPayload.members?.length === 4);

@@ -69,6 +69,7 @@ Implemented locally:
 - Owner-visible usage audit summary is exposed through `/api/trips/demo/usage` and shown in the chat surface next to live group activity.
 - Core experience and onboarding product gate documented in `docs/CORE_EXPERIENCE_AND_ONBOARDING.md`: one clear next action, manager location as minimum live context, and secondary actions kept out of the main flow.
 - Guided first-run activation added: Kodi leads one step at a time through activation, trip source, manager GPS, and then entry into the map/chat core.
+- Participant invite link flow added: after the manager enters the map/chat core, the app exposes a group invite link; participants opening `?join=group_family_greece_demo` see a join screen, enter name and age, join the family conversation, and approve GPS separately from their own device.
 
 ## Current Storage
 
@@ -207,6 +208,7 @@ Current Supabase state:
 - Owner-visible usage audit overview added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. `/api/trips/demo/usage` now returns `usageAudit`, and the web app shows compact usage counts near live activity.
 - Guided activation flow added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public browser/API smoke passed. The first-run UI now shows one step at a time: activate Kodi, choose trip source/demo, enable manager GPS, then enter the map/chat core.
 - Guided activation cleanup added on `2026-06-29`; the hidden legacy activation panel was removed, the demo/API budget note and read-only Google preview guard remain inside the guided flow, and `npm run smoke:local` now runs the local browser smoke directly. Local build, QA, local smoke, Render deploy, and public browser/API smoke passed.
+- Participant invite flow added on `2026-06-30`; local build, QA, and local smoke passed. The current slice is UX/local-state only; production persistence for invited members still requires a real invite-token/member API and auth boundary.
 
 ## Next Continuation Checkpoint
 

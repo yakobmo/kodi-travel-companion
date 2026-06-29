@@ -54,6 +54,27 @@ Only after the core is running should the app offer:
 - usage/billing visibility
 - Booking, Airbnb, Waze, and other outbound links
 
+## Participant Invitation Flow
+
+After the trip manager completes the core setup, the next natural action is inviting the rest of the group.
+
+This should feel similar to joining a WhatsApp group:
+
+1. The manager opens the group/invite action after the main map is active.
+2. The app creates a simple trip invite link.
+3. The manager sends that link through WhatsApp, SMS, email, or any other app.
+4. A participant opens the link on their phone.
+5. The participant sees a join screen, not the manager setup flow.
+6. The participant enters name and age or age group.
+7. The participant joins the shared Kodi conversation.
+8. Location sharing is requested separately and only on that participant's device.
+
+The manager remains responsible for operational changes unless the group permissions are changed.
+
+Participants can talk in the family conversation, ask Kodi questions, approve their own location sharing, and see the shared map and trip points.
+
+Participants should not receive provider secrets, Google keys, OpenAI keys, Supabase service-role keys, or owner billing access.
+
 ## Google Source Clarity
 
 Pasting a Google Maps viewing link must not pretend to perform live sync.

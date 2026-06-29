@@ -322,6 +322,97 @@ input {
   background: #f2f4f3;
 }
 
+.join-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    linear-gradient(90deg, rgba(38, 66, 61, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(38, 66, 61, 0.08) 1px, transparent 1px),
+    #d9e4dc;
+  background-size: 54px 54px;
+}
+
+.join-card {
+  width: min(430px, 100%);
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(22, 33, 31, 0.14);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 38px rgba(22, 33, 31, 0.16);
+}
+
+.join-card h1,
+.join-card p {
+  margin: 0;
+}
+
+.join-card h1 {
+  color: #16211f;
+  font-size: 34px;
+  line-height: 1.05;
+}
+
+.join-card p {
+  color: #53615e;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.join-form {
+  display: grid;
+  gap: 10px;
+}
+
+.join-form label {
+  display: grid;
+  gap: 6px;
+  color: #16211f;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.join-form input {
+  min-height: 42px;
+  border: 1px solid #c8d3cf;
+  border-radius: 8px;
+  padding: 0 10px;
+}
+
+.join-form button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 8px;
+  background: #096b5c;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.join-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.join-consent-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid #d4ded9;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8faf9;
+}
+
+.join-consent-note svg {
+  flex: 0 0 auto;
+  color: #096b5c;
+  margin-top: 2px;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
@@ -928,6 +1019,62 @@ input {
   color: #53615e;
   font-size: 12px;
   font-weight: 700;
+}
+
+.invite-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d7e3df;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfcfb;
+}
+
+.invite-card strong,
+.invite-card p,
+.invite-card small {
+  display: block;
+}
+
+.invite-card strong {
+  color: #16211f;
+  font-size: 13px;
+}
+
+.invite-card p,
+.invite-card small {
+  margin: 3px 0 0;
+  color: #53615e;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.invite-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.invite-actions input {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid #c8d3cf;
+  border-radius: 8px;
+  padding: 0 9px;
+  color: #53615e;
+  font-size: 12px;
+}
+
+.invite-actions button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #096b5c;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .event-activity {

@@ -305,6 +305,11 @@ interface SetupDraft {
   locationConsentExplained: boolean;
 }
 
+interface JoinDraft {
+  name: string;
+  age: string;
+}
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : "");
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
 
@@ -487,8 +492,39 @@ function getMapPosition(index: number, total: number) {
   };
 }
 
+function getInitialJoinToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return new URLSearchParams(window.location.search).get("join") ?? "";
+}
+
+function getAgeGroupFromDraft(ageDraft: string) {
+  const age = Number(ageDraft);
+  if (!Number.isFinite(age)) {
+    return "adult";
+  }
+
+  if (age < 13) {
+    return "child";
+  }
+
+  if (age < 18) {
+    return "teen";
+  }
+
+  if (age >= 65) {
+    return "senior";
+  }
+
+  return "adult";
+}
+
 export function App() {
-  const [showActivation, setShowActivation] = useState(true);
+  const initialJoinToken = getInitialJoinToken();
+  const [showActivation, setShowActivation] = useState(!initialJoinToken);
+  const [showJoinFlow, setShowJoinFlow] = useState(Boolean(initialJoinToken));
   const [activationStep, setActivationStep] = useState<ActivationStep>("welcome");
   const [setupState, setSetupState] = useState<TripSetupStateResponse | null>(null);
   const [googleSourcePreview, setGoogleSourcePreview] = useState<GoogleSourcePreviewResponse | null>(null);
@@ -502,6 +538,11 @@ export function App() {
     aiPlanConfirmed: false,
     locationConsentExplained: false
   });
+  const [joinDraft, setJoinDraft] = useState<JoinDraft>({
+    name: "",
+    age: ""
+  });
+  const [inviteCopyState, setInviteCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [summary, setSummary] = useState<TripPlacesSummary>({
     total: demoTripSummary.totalPlaces,
     lodgingCount: demoTripSummary.lodgingCount,
@@ -1132,6 +1173,10 @@ export function App() {
   const canNavigate = typeof selectedPlace?.lat === "number" && typeof selectedPlace?.lng === "number";
   const externalShortcuts = buildExternalAppShortcuts(selectedPlace);
   const mapProviderStatus = getMapProviderStatus();
+  const tripInviteUrl =
+    typeof window === "undefined"
+      ? "https://kodi-travel-companion.onrender.com?join=group_family_greece_demo"
+      : `${window.location.origin}${window.location.pathname}?join=group_family_greece_demo`;
   const activeMember = members.find((member) => member.id === activeMemberId) ?? members[0] ?? {
     id: "mom",
     name: "אמא",
@@ -1141,6 +1186,7 @@ export function App() {
     liveLocation: null
   };
   const visibleMembers = members.filter((member) => member.locationSharing === "enabled" && member.liveLocation);
+  const managerMember = members.find((member) => member.role === "owner" || member.role === "admin") ?? activeMember;
   const recentTripEvents = tripEvents.slice(0, 3);
   const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
@@ -1591,6 +1637,55 @@ export function App() {
     setShortcutUrlDraft("");
   }
 
+  async function copyTripInviteLink() {
+    setInviteCopyState("idle");
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(tripInviteUrl);
+      } else {
+        throw new Error("clipboard_unavailable");
+      }
+
+      setInviteCopyState("copied");
+    } catch {
+      setInviteCopyState("error");
+    }
+  }
+
+  function joinTripFromInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const name = joinDraft.name.trim();
+    if (name.length < 2) {
+      return;
+    }
+
+    const nextMember: DemoMember = {
+      id: `guest-${Date.now()}`,
+      name,
+      role: "member",
+      ageGroup: getAgeGroupFromDraft(joinDraft.age),
+      locationSharing: "disabled",
+      liveLocation: null
+    };
+
+    setMembers((currentMembers) => [...currentMembers, nextMember]);
+    setActiveMemberId(nextMember.id);
+    setShowJoinFlow(false);
+    setShowActivation(false);
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: `local-join-${Date.now()}`,
+        author: "קודי",
+        text: `${name} הצטרף/ה לקבוצת הטיול. מיקום אישי יוצג רק אחרי אישור GPS מהמכשיר שלו/שלה.`,
+        source: "system",
+        createdAt: new Date().toISOString()
+      }
+    ]);
+  }
+
   function enablePersonalGps() {
     if (!("geolocation" in navigator)) {
       setLocationState("error");
@@ -1705,6 +1800,49 @@ export function App() {
       setSetupSaveState("error");
       setSetupSaveError("לא הצלחתי לשמור את ההקמה מול השרת המקומי. אפשר לבדוק שה-API פעיל או לדלג לדמו.");
     }
+  }
+
+  if (showJoinFlow) {
+    return (
+      <main className="join-shell" aria-label="הצטרפות לקבוצת טיול">
+        <section className="join-card">
+          <span className="eyebrow">הזמנה לקבוצת טיול</span>
+          <h1>מצטרפים לקודי</h1>
+          <p>
+            {managerMember.name} כבר הפעיל/ה את קודי, המפה ומיקום המנהל. עכשיו אפשר להצטרף לשיחת המשפחה ולאשר
+            הרשאות מהמכשיר שלך.
+          </p>
+          <form className="join-form" onSubmit={joinTripFromInvite}>
+            <label>
+              איך לקרוא לך בקבוצה?
+              <input
+                aria-label="שם משתתף להצטרפות"
+                onChange={(event) => setJoinDraft((draft) => ({ ...draft, name: event.target.value }))}
+                placeholder="שם"
+                value={joinDraft.name}
+              />
+            </label>
+            <label>
+              גיל
+              <input
+                aria-label="גיל משתתף להצטרפות"
+                inputMode="numeric"
+                onChange={(event) => setJoinDraft((draft) => ({ ...draft, age: event.target.value }))}
+                placeholder="לדוגמה 12"
+                value={joinDraft.age}
+              />
+            </label>
+            <button disabled={joinDraft.name.trim().length < 2} type="submit">
+              הצטרפות לקבוצה
+            </button>
+          </form>
+          <div className="join-consent-note">
+            <ShieldCheck size={18} aria-hidden="true" />
+            <p>אישור מיקום נעשה בנפרד מהמכשיר שלך. בלי אישור GPS, אפשר עדיין להשתתף בשיחה עם קודי.</p>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   if (showActivation) {
@@ -2170,6 +2308,25 @@ export function App() {
             <span className="kodi-pill">קודי</span>
           </div>
           <div className="active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
+          <section className="invite-card" aria-label="הזמנת משתתפים לקבוצה">
+            <div>
+              <strong>הזמנת משתתפים</strong>
+              <p>המנהל שולח קישור, וכל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו.</p>
+            </div>
+            <div className="invite-actions">
+              <input aria-label="קישור הזמנה לקבוצת הטיול" dir="ltr" readOnly value={tripInviteUrl} />
+              <button onClick={copyTripInviteLink} type="button">
+                העתק קישור
+              </button>
+            </div>
+            <small>
+              {inviteCopyState === "copied"
+                ? "הקישור הועתק. אפשר לשלוח אותו בוואטסאפ."
+                : inviteCopyState === "error"
+                  ? "לא הצלחתי להעתיק אוטומטית. אפשר לסמן ולהעתיק את הקישור."
+                  : "חוויית הצטרפות בדמו: שם, גיל, ואז אישור GPS אישי לפי בחירה."}
+            </small>
+          </section>
         </header>
 
         <section className="event-activity" aria-label="פעילות חיה בקבוצה">

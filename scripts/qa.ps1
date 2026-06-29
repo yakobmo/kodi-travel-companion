@@ -100,7 +100,10 @@ if (
   -not $coreExperienceSource.Contains("one clear next action") -or
   -not $coreExperienceSource.Contains("manager's live location") -or
   -not $coreExperienceSource.Contains("hamburger") -or
-  -not $coreExperienceSource.Contains("Google account sync is not active yet")
+  -not $coreExperienceSource.Contains("Google account sync is not active yet") -or
+  -not $coreExperienceSource.Contains("Participant Invitation Flow") -or
+  -not $coreExperienceSource.Contains("joining a WhatsApp group") -or
+  -not $coreExperienceSource.Contains("Location sharing is requested separately")
 ) {
   throw "Core experience doc must define Kodi + map + trip points + manager location, with one clear onboarding action at a time."
 }
@@ -506,6 +509,18 @@ if (-not $appSource.Contains("trip-map-layer") -or -not $appSource.Contains("map
 
 if (-not $appSource.Contains("VITE_GOOGLE_MAPS_API_KEY") -or -not $appSource.Contains("getMapProviderStatus")) {
   throw "Web app is missing map provider configuration for Google/fallback switching."
+}
+
+if (
+  -not $appSource.Contains("tripInviteUrl") -or
+  -not $appSource.Contains("copyTripInviteLink") -or
+  -not $appSource.Contains("joinTripFromInvite") -or
+  -not $appSource.Contains("showJoinFlow") -or
+  -not $appSource.Contains("join-shell") -or
+  -not $appSource.Contains("invite-card") -or
+  -not $appSource.Contains("group_family_greece_demo")
+) {
+  throw "Web app must support manager invite links and participant join flow with per-device location consent."
 }
 
 if ($appSource.Contains("agent-button")) {
