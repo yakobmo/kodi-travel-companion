@@ -290,7 +290,7 @@ if (-not $appSource.Contains("activation-shell")) {
 }
 
 if (-not $appSource.Contains("setShowActivation(false)")) {
-  throw "Welcome + Activation must allow entering the demo app."
+  throw "Welcome + Activation must allow entering the trip account experience."
 }
 
 if (-not $appSource.Contains("setupDraft") -or -not $appSource.Contains("setupReady")) {
@@ -319,7 +319,7 @@ if (-not $appSource.Contains("tripName") -or -not $appSource.Contains("googleLin
 }
 
 if (-not $appSource.Contains("aiPlanMode") -or -not $appSource.Contains("plan-note")) {
-  throw "Welcome + Activation must explain demo/paid API limitations."
+  throw "Welcome + Activation must explain the owner-managed account and API usage model."
 }
 
 if (-not $appSource.Contains("Google Maps Place List")) {

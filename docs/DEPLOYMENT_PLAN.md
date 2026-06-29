@@ -14,7 +14,7 @@ Existing PB assets are protected:
 ## Current Local Git State
 
 - Branch: `main`
-- Initial commit: `3f0d825 Initial AI travel companion MVP`
+- Initial commit: `3f0d825` (historical initial commit)
 - Render preparation commit: `5dbb07f Prepare single-service Render deploy`
 - GitHub repository: `https://github.com/yakobmo/kodi-travel-companion`
 - Remote: `origin`
@@ -73,7 +73,7 @@ Deployment implications:
 
 ## Production Dependencies Still Needed
 
-The app can run locally as an MVP, but production-grade deployment will later need:
+The app can run locally as a product core, but production-grade deployment will later need:
 
 - Supabase project and database schema.
 - Realtime channel setup.

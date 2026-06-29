@@ -21,7 +21,7 @@ The schema covers:
 - Active group destination.
 - Group routes and route stops.
 - Group event log for realtime activity.
-- A legacy `demo_storage_states` JSONB bridge table kept only for backward compatibility until a later cleanup migration.
+- A legacy JSONB bridge table kept only for backward compatibility until a later cleanup migration.
 
 ## Realtime Tables
 
@@ -40,7 +40,7 @@ These are the tables that need live UI updates first.
 
 Location is modeled as current location only.
 
-The MVP schema does not store a full location history table. That is intentional: group location is a flagship feature, but it must stay consent-based and minimal.
+The current schema does not store a full location history table. That is intentional: group location is a flagship feature, but it must stay consent-based and minimal.
 
 ## RLS Boundary
 
@@ -58,7 +58,7 @@ Completed:
 2. `supabase/schema.sql` applied.
 3. Server-only Render environment variables added.
 4. Guarded Render grants endpoint verified.
-5. Live Render service verified initial write/read access to `demo_storage_states`.
+5. Live Render service verified initial write/read access during the first storage gate.
 
 Next:
 
@@ -92,7 +92,7 @@ Do not expose it through any `VITE_*` variable.
 Current status endpoint:
 
 ```text
-GET /api/trips/demo/storage
+GET /api/trips/{tripId}/storage
 ```
 
 This endpoint reports the active driver. With `STORAGE_DRIVER=supabase` and valid server credentials, it reports `driver: "supabase"` and `realtimeReady: true`.
@@ -100,7 +100,7 @@ This endpoint reports the active driver. With `STORAGE_DRIVER=supabase` and vali
 Runtime readiness check:
 
 ```text
-GET /api/trips/demo/storage/supabase-check
+GET /api/trips/{tripId}/storage/supabase-check
 ```
 
 This endpoint checks only whether the backend has Supabase server configuration and can see the relational runtime tables. It does not expose keys.
@@ -117,10 +117,10 @@ If it reports `anon`, the wrong Supabase key was configured in Render.
 Legacy bridge verification:
 
 ```text
-POST /api/trips/demo/storage/supabase-bridge/verify
+POST /api/trips/{tripId}/storage/supabase-bridge/verify
 ```
 
-This endpoint is retained as a compatibility response only. It does not write to `demo_storage_states`; the live app uses relational Supabase tables when `STORAGE_DRIVER=supabase`.
+This endpoint is retained as a compatibility response only. It does not write to the legacy JSON bridge; the live app uses relational Supabase tables when `STORAGE_DRIVER=supabase`.
 
 ## Automated Schema Apply
 
@@ -173,7 +173,7 @@ MIGRATION_ADMIN_TOKEN=
 After running it, verify:
 
 ```text
-GET /api/trips/demo/storage/supabase-check
+GET /api/trips/{tripId}/storage/supabase-check
 ```
 
 Production verification passed on `2026-06-25`:
@@ -182,10 +182,10 @@ Production verification passed on `2026-06-25`:
 POST /api/admin/supabase/apply-grants
 Result: configured=true, authorized=true, applied=true, verified=true
 
-GET /api/trips/demo/storage/supabase-check
+GET /api/trips/{tripId}/storage/supabase-check
 Result: keyRole=service_role, reachable=true, relationalTablesReady=true
 
-POST /api/trips/demo/storage/supabase-bridge/verify
+POST /api/trips/{tripId}/storage/supabase-bridge/verify
 Result: retired=true, replacement=relational_supabase_tables
 ```
 

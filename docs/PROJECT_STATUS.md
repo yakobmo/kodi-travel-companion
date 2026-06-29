@@ -19,63 +19,65 @@ The app is built around:
 
 Product-heart decision: the primary experience is Kodi + map + trip points + at least the manager's live location. Group member locations, external app shortcuts, participant management, usage visibility, and admin tools are important, but they should not crowd the first-run path.
 
-## Current MVP
+Product-language decision: Kodi should not present a trial mode to users. The product starts with a real trip account setup: manager account, Google trip source, manager location, invite link, and participant permissions. Any remaining legacy endpoint/model names are internal technical identifiers until a rename migration is completed.
+
+## Current Core
 
 Implemented locally:
 
 - React + TypeScript web app.
 - Node + Express API.
-- Demo trip state with 108 imported places.
+- Trip state with 108 imported places.
 - Hebrew chat/map UI.
 - Kodi wake behavior inside the group conversation.
 - Active speaker selection.
 - Personal GPS opt-in.
 - Consent-aware group location display.
-- Persistent demo state through `.data/demo-state.json`.
+- Local JSON fallback state for development.
 - Group destination approval.
 - Group route creation, active stop, navigation to active stop, progress, and completion.
 - Storage driver contract that prepares a future DB/realtime migration.
 - Supabase SQL schema for the first DB/realtime gate.
-- Supabase storage configuration gate through `.env.example` and `/api/trips/demo/storage`.
+- Supabase storage configuration gate through `.env.example` and `/api/trips/{tripId}/storage`.
 - Supabase bridge compatibility endpoint marked retired after relational runtime migration.
 - Supabase relational runtime storage behind `STORAGE_DRIVER=supabase`.
 - Group chat messages backed by the relational `group_messages` table when Supabase is active.
 - Group members, consent, and live locations backed by `trip_members`, `location_sharing_consents`, and `live_locations` when Supabase is active.
 - Group destination and route state backed by `group_destinations`, `group_routes`, and `group_route_stops` when Supabase is active.
 - Trip activation/setup state backed by `trip_groups` setup columns when Supabase is active.
-- Group event log foundation through `/api/trips/demo/events`, with `group_events` prepared for Supabase Realtime.
+- Group event log foundation through `/api/trips/{tripId}/events`, with `group_events` prepared for Supabase Realtime.
 - Live activity panel in the family chat UI, polling the group event log and showing recent group activity.
 - Immediate live activity refresh after user-visible group actions, so chat/location/route actions update the activity panel without waiting for the next polling cycle.
-- Server-sent event stream for group activity through `/api/trips/demo/events/stream`, with browser fallback to polling.
-- Server-sent event stream for group chat messages through `/api/trips/demo/messages/stream`, with browser fallback to polling.
-- Server-sent event stream for member locations through `/api/trips/demo/members/stream`, with browser fallback to polling.
-- Server-sent event stream for group route state through `/api/trips/demo/group-route/stream`, with browser fallback to polling.
-- Server-sent event stream for group destination state through `/api/trips/demo/group-destination/stream`, with browser fallback to polling.
-- Read-only Google source preview through `/api/trips/demo/google-source`, exposing imported place count, coordinate coverage, and future OAuth/API requirements without claiming live Google write-back.
+- Server-sent event stream for group activity through `/api/trips/{tripId}/events/stream`, with browser fallback to polling.
+- Server-sent event stream for group chat messages through `/api/trips/{tripId}/messages/stream`, with browser fallback to polling.
+- Server-sent event stream for member locations through `/api/trips/{tripId}/members/stream`, with browser fallback to polling.
+- Server-sent event stream for group route state through `/api/trips/{tripId}/group-route/stream`, with browser fallback to polling.
+- Server-sent event stream for group destination state through `/api/trips/{tripId}/group-destination/stream`, with browser fallback to polling.
+- Read-only Google source preview through `/api/trips/{tripId}/google-source`, exposing imported place count, coordinate coverage, and future OAuth/API requirements without claiming live Google write-back.
 - Google source adapter boundary with the active fixture adapter explicitly reporting `liveGoogleAccess=false` and `canWriteBackToGoogle=false`.
-- Non-active Google API adapter skeleton and readiness endpoint through `/api/trips/demo/google-source/readiness`, reporting only configured/not-configured status for future Google environment requirements.
+- Non-active Google API adapter skeleton and readiness endpoint through `/api/trips/{tripId}/google-source/readiness`, reporting only configured/not-configured status for future Google environment requirements.
 - Guarded Google Places Text Search read path through `/api/google/places/text-search`, returning live Google Places results when `GOOGLE_MAPS_API_KEY` exists and never exposing credential values.
 - Kodi agent server flow can call the guarded Places read path for nearby external needs such as gelato, food, bathrooms, pharmacies, or nearby services, while clearly explaining `not_configured` when the Google key is absent.
 - Live Google Places smoke automation through `npm run smoke:google-places-live`, verifying real Places results and Kodi agent context after `GOOGLE_MAPS_API_KEY` is configured in Render.
 - Google Routes ETA read path through `/api/google/routes/estimate`, using the same server-side `GOOGLE_MAPS_API_KEY` guard, narrow field masks, and no credential exposure.
 - Trip Context Resolver for Kodi agent questions, so time/distance questions use live location, group destination, active route, and lodging context with confidence levels instead of choosing a stale first hotel.
 - Kodi asks a clarification question when the trip context is ambiguous, instead of pretending it knows which hotel, stop, or reference point the family means.
-- Trip Timeline Resolver through `/api/trips/demo/timeline`, deriving lodging-based trip segments from the imported Google map order, date hints, and region hints.
+- Trip Timeline Resolver through `/api/trips/{tripId}/timeline`, deriving lodging-based trip segments from the imported Google map order, date hints, and region hints.
 - Kodi agent external searches now prefer a resolved future trip segment, such as Pelion lodging, before falling back to live GPS or the first known place.
 - Product ownership model documented: Kodi runs through the backend as one shared trip-space agent, with the owner/admin controlling billing, usage, and operational permissions.
-- Owner-managed usage pool endpoint through `/api/trips/demo/usage`, exposing safe billing/usage policy without provider secrets.
+- Owner-managed usage pool endpoint through `/api/trips/{tripId}/usage`, exposing safe billing/usage policy without provider secrets.
 - Usage gate now wraps costly Google Places and Google Routes calls, including calls made through Kodi's agent flow, before any provider request is attempted.
 - Usage-gate authorizations are written into the group event log as system audit events, so direct API calls and Kodi agent calls leave an operational trail.
-- Owner-visible usage audit summary is exposed through `/api/trips/demo/usage` and shown in the chat surface next to live group activity.
+- Owner-visible usage audit summary is exposed through `/api/trips/{tripId}/usage` and shown in the chat surface next to live group activity.
 - Core experience and onboarding product gate documented in `docs/CORE_EXPERIENCE_AND_ONBOARDING.md`: one clear next action, manager location as minimum live context, and secondary actions kept out of the main flow.
 - Guided first-run activation added: Kodi leads one step at a time through activation, trip source, manager GPS, and then entry into the map/chat core.
-- Participant invite link flow added: after the manager enters the map/chat core, the app exposes a group invite link; participants opening `?join=group_family_greece_demo` see a join screen, enter name and age, join the family conversation, and approve GPS separately from their own device.
+- Participant invite link flow added: after the manager enters the map/chat core, the app exposes a group invite link; participants opening `?join=<tripInviteToken>` see a join screen, enter name and age, join the family conversation, and approve GPS separately from their own device.
 
 ## Current Storage
 
-The MVP supports two storage modes:
+The current core supports two storage modes:
 
-- `file`: local fallback using `.data/demo-state.json`
+- `file`: local development fallback using the existing local JSON state file
 - `supabase`: server-side relational storage through `trip_groups`, `group_messages`, `trip_members`, `location_sharing_consents`, `live_locations`, `group_destinations`, `group_routes`, and `group_route_stops`
 - Production default: Supabase when server credentials exist; `STORAGE_DRIVER=file` can force fallback.
 - Realtime: ready only when `STORAGE_DRIVER=supabase`
@@ -84,7 +86,7 @@ The MVP supports two storage modes:
 The API exposes this through:
 
 ```text
-GET /api/trips/demo/storage
+GET /api/trips/{tripId}/storage
 ```
 
 The endpoint now reports:
@@ -155,7 +157,7 @@ This travel app needs its own new GitHub repository and its own new Render servi
 Current local Git state:
 
 - Branch: `main`
-- Initial commit: `3f0d825 Initial AI travel companion MVP`
+- Initial commit: `3f0d825` (historical initial commit)
 - Latest pushed commit: current `origin/main` after the bridge retirement status update
 - Remote: `https://github.com/yakobmo/kodi-travel-companion.git`
 - Remote status: `origin/main` verified
@@ -179,13 +181,13 @@ Current Supabase state:
 - Guarded grants endpoint: passed on `2026-06-25`
 - Bridge verification from live Render service: write/read passed on `2026-06-25`
 - Runtime driver: Supabase active in production on `2026-06-25`
-- Production storage smoke: write/read passed, then demo state reset back to clean startup data
+- Production storage smoke: write/read passed, then trip state reset back to clean startup data
 - First relational table migration: group messages use `group_messages`; public write/read smoke passed on `2026-06-25`
 - Second relational table migration: member roster and live locations use relational tables; public smoke passed on `2026-06-25`
 - Third relational table migration: group destination and group routes use relational tables; public smoke passed on `2026-06-25`
-- Production places fixture: bundled in `data/demo-google-places.json` so Render can serve the full 108-place trip state
+- Production places fixture: bundled in the repository data folder so Render can serve the full 108-place trip state
 - Fourth relational table migration: activation/setup state uses `trip_groups`; public smoke passed on `2026-06-25`
-- Active runtime no longer reads from or writes to the legacy `demo_storage_states` JSON bridge; local build, QA, smoke, and public Render smoke passed on `2026-06-26`
+- Active runtime no longer reads from or writes to the legacy JSON bridge; local build, QA, smoke, and public Render smoke passed on `2026-06-26`
 - Event-log schema and API foundation added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public event smoke passed. Public status reports `eventLogReady=true`.
 - Live activity UI connected to the event log on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
 - Immediate activity refresh after group actions added on `2026-06-26`; local build, QA, local smoke, Render deploy, and public browser smoke passed.
@@ -205,10 +207,11 @@ Current Supabase state:
 - Trip usage pool API foundation added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Public result: Supabase storage active, owner-managed usage pool, participant billing disabled, backend mediation enabled, no private provider keys to browsers, and 4 tracked provider capabilities.
 - Trip usage gate added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Direct Google endpoints and Kodi agent calls now return `usageGate` evidence showing `usage_pool_authorized` and `chargedTo=trip_usage_pool`; production Places status is `ready`.
 - Usage-gate audit events added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Direct Google usage and Kodi agent usage now record `system` events with capability, source, charge target, and provider configuration state.
-- Owner-visible usage audit overview added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. `/api/trips/demo/usage` now returns `usageAudit`, and the web app shows compact usage counts near live activity.
-- Guided activation flow added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public browser/API smoke passed. The first-run UI now shows one step at a time: activate Kodi, choose trip source/demo, enable manager GPS, then enter the map/chat core.
-- Guided activation cleanup added on `2026-06-29`; the hidden legacy activation panel was removed, the demo/API budget note and read-only Google preview guard remain inside the guided flow, and `npm run smoke:local` now runs the local browser smoke directly. Local build, QA, local smoke, Render deploy, and public browser/API smoke passed.
+- Owner-visible usage audit overview added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. `/api/trips/{tripId}/usage` now returns `usageAudit`, and the web app shows compact usage counts near live activity.
+- Guided activation flow added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public browser/API smoke passed. The first-run UI now shows one step at a time: activate Kodi, choose trip source/trip, enable manager GPS, then enter the map/chat core.
+- Guided activation cleanup added on `2026-06-29`; the hidden legacy activation panel was removed, the trip/API budget note and read-only Google preview guard remain inside the guided flow, and `npm run smoke:local` now runs the local browser smoke directly. Local build, QA, local smoke, Render deploy, and public browser/API smoke passed.
 - Participant invite flow added on `2026-06-30`; local build, QA, local smoke, Render deploy, and public browser/API smoke passed. The current slice is UX/local-state only; production persistence for invited members still requires a real invite-token/member API and auth boundary.
+- Trial-mode language cleanup added on `2026-06-30`; product-facing UI, onboarding setup state, README, and product docs now describe a real trip account flow instead of a trial/demo path. Local build, QA, and local smoke passed. Internal legacy endpoint/module names still need a separate rename migration so production routes are not broken during a copy cleanup.
 
 ## Next Continuation Checkpoint
 
@@ -221,6 +224,7 @@ Immediate next task:
 3. Continue evolving Kodi as a true agent: natural request -> trip timeline/context resolution -> Google Places/Routes -> answer or clarification.
 4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 5. Add persistent usage-pool/account fields before real paid multi-family usage.
+6. Plan a safe internal rename migration from legacy single-trip route names to canonical trip-account route names, keeping backward-compatible aliases during the transition.
 
 ## QA
 

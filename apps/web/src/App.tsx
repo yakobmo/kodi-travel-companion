@@ -237,7 +237,7 @@ interface TripSetupStateResponse {
   tripGroupId: string;
   currentStep: string;
   setupCompleted: boolean;
-  aiPlanMode: "demo" | "limited" | "full";
+  aiPlanMode: "limited" | "full";
   setupSummary?: {
     tripName: string;
     firstMemberName: string;
@@ -634,7 +634,7 @@ export function App() {
             tripGroupId: "group_family_greece_demo",
             currentStep: "welcome",
             setupCompleted: false,
-            aiPlanMode: "demo",
+            aiPlanMode: "limited",
             setupSummary: undefined,
             googleSource: {
               state: "demo_link_ready",
@@ -658,9 +658,9 @@ export function App() {
               },
               {
                 id: "ai_plan",
-                title: "דמו או הפעלה מלאה",
+                title: "חשבון והפעלה",
                 status: "pending",
-                description: "מצב דמו מוגבל; שימוש אמיתי דורש מודל AI או תקציב API מתאים."
+                description: "המערכת פועלת דרך חשבון מנהל הטיול ותקציב API מרכזי."
               },
               {
                 id: "members",
@@ -1213,7 +1213,7 @@ export function App() {
     { label: "חבר קבוצה ראשון", ready: setupReadiness.hasMembers },
     { label: "מקור Google", ready: setupReadiness.hasGoogleSource },
     { label: "מיקום מנהל", ready: setupReadiness.hasLocationConsentExplained && managerLocationReady },
-    { label: "הסבר דמו/תשלום", ready: setupReadiness.hasAiPlanExplained }
+    { label: "חשבון והפעלה", ready: setupReadiness.hasAiPlanExplained }
   ];
   const setupReady = readinessItems.every((item) => item.ready);
 
@@ -1381,7 +1381,7 @@ export function App() {
       const routeMessage: ChatMessage = {
         id: `local-route-${Date.now()}`,
         author: "קודי",
-        text: `${activeMember.name} אישר/ה מסלול קבוצתי קצר סביב ${selectedPlace.name}. המסלול נשמר בדמו ומוצג עכשיו לכל הקבוצה.`,
+        text: `${activeMember.name} אישר/ה מסלול קבוצתי קצר סביב ${selectedPlace.name}. המסלול נשמר ומוצג עכשיו לכל הקבוצה.`,
         source: "agent",
         createdAt: new Date().toISOString()
       };
@@ -1798,7 +1798,7 @@ export function App() {
       setShowActivation(false);
     } catch {
       setSetupSaveState("error");
-      setSetupSaveError("לא הצלחתי לשמור את ההקמה מול השרת המקומי. אפשר לבדוק שה-API פעיל או לדלג לדמו.");
+      setSetupSaveError("לא הצלחתי לשמור את ההרשמה מול השרת. אפשר לבדוק שה-API פעיל ולנסות שוב.");
     }
   }
 
@@ -1862,7 +1862,7 @@ export function App() {
             <Sparkles size={42} aria-hidden="true" />
             <strong>לפני שיוצאים לדרך, קודי מפעיל את המערכת</strong>
             <span>
-              {setupState?.googleSource.importedPlacesCount ?? summary.total} נקודות טיול זמינות לדמו · קבוצה משפחתית ·
+              {setupState?.googleSource.importedPlacesCount ?? summary.total} נקודות טיול מוכנות · קבוצה משפחתית ·
               מיקום בהרשאה בלבד
             </span>
           </div>
@@ -1894,7 +1894,7 @@ export function App() {
               </div>
               <div className="plan-note">
                 <ShieldCheck size={18} aria-hidden="true" />
-                <p>בדמו רואים את הלב של קודי. בטיול אמיתי העבודה עוברת דרך תקציב API של מנהל הטיול, כדי שהמשפחה לא תצטרך מנוי נפרד.</p>
+                <p>קודי עובד דרך חשבון מנהל הטיול ותקציב API מרכזי, כדי שהמשפחה לא תצטרך מנוי נפרד.</p>
               </div>
               <button
                 className="primary-action"
@@ -1907,7 +1907,7 @@ export function App() {
                 הפעל את קודי
               </button>
               <button className="quiet-action" type="button" onClick={() => setShowActivation(false)}>
-                כניסה מהירה לדמו
+                כניסה לחשבון הטיול
               </button>
             </section>
           ) : null}
@@ -1917,8 +1917,8 @@ export function App() {
               <span className="eyebrow">שלב 2 מתוך 4</span>
               <h2>מאיפה לקרוא את הטיול?</h2>
               <p>
-                בעתיד קודי יתחבר לחשבון Google וישאל איזו מפה לסנכרן, למשל "טיול צפון יוון". כרגע אפשר להמשיך עם
-                הדמו או להדביק קישור צפייה כדי לסמן את מקור הטיול.
+                קודי מתחיל מחיבור חשבון הטיול ומקור Google. בשלב הבא הוא יבחר מפה מתוך החשבון, למשל "טיול צפון יוון".
+                כרגע מדביקים קישור צפייה כדי לסמן את מקור הטיול.
               </p>
               <div className="setup-form single-flow-form">
                 <label>
@@ -1941,11 +1941,11 @@ export function App() {
                 </label>
               </div>
               <div className={`source-feedback ${googleSourceRecognized ? "ready" : "waiting"}`}>
-                <strong>{googleSourceRecognized ? "הקישור זוהה" : "אפשר גם להמשיך עם הדמו"}</strong>
+                <strong>{googleSourceRecognized ? "הקישור זוהה" : "מחכה למקור Google"}</strong>
                 <p>
                   {googleSourceRecognized
                     ? "זה עדיין לא סנכרון חי מחשבון Google. OAuth יאפשר בהמשך לבחור מפה אמיתית מתוך החשבון."
-                    : `${summary.total} נקודות טיול זמינות בדמו כדי לראות את הלב של האפליקציה.`}
+                    : `${summary.total} נקודות טיול מוכנות אחרי חיבור מקור הטיול.`}
                 </p>
                 {googleSourcePreview ? (
                   <small className="google-source-preview">
@@ -2049,7 +2049,7 @@ export function App() {
           <span>מפה חיה</span>
           <small>
             {summary.lodgingCount} לינות · {summary.waterCount} נקודות מים ·{" "}
-            {loadState === "ready" ? "מחובר ל-API המקומי" : "נתוני fallback זמינים"}
+            {loadState === "ready" ? "מחובר לחשבון הטיול" : "מכין את נתוני הטיול"}
           </small>
           <div className={`map-provider-note ${mapProviderStatus.mode}`}>
             <strong>{mapProviderStatus.label}</strong>
@@ -2075,7 +2075,7 @@ export function App() {
               </div>
             ) : null}
           </div>
-          <div className="group-location-layer" aria-label="מיקומי חברי קבוצה בדמו">
+          <div className="group-location-layer" aria-label="מיקומי חברי קבוצה">
             {visibleMembers.map((member, index) => (
               <button className={`member-marker marker-${index}`} key={member.id} type="button">
                 <MapPin size={15} aria-hidden="true" />
@@ -2104,10 +2104,10 @@ export function App() {
             <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
               {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל GPS"}
             </button>
-            {locationState === "error" ? <small>לא הצלחתי לקבל מיקום. אפשר להמשיך בדמו בלי GPS.</small> : null}
-            {locationSyncState === "synced" ? <small>סונכרן לדמו עבור {activeMember.name}</small> : null}
+            {locationState === "error" ? <small>לא הצלחתי לקבל מיקום. אפשר להמשיך בלי לשתף GPS.</small> : null}
+            {locationSyncState === "synced" ? <small>המיקום סונכרן עבור {activeMember.name}</small> : null}
             {locationSyncState === "blocked" ? <small>לא סונכרן כי לחבר הזה אין הסכמת שיתוף.</small> : null}
-            {locationSyncState === "error" ? <small>GPS פעיל, אבל סנכרון הדמו לשרת נכשל.</small> : null}
+            {locationSyncState === "error" ? <small>GPS פעיל, אבל סנכרון המיקום לשרת נכשל.</small> : null}
           </div>
         </div>
 
@@ -2202,7 +2202,7 @@ export function App() {
                       : "מכין סנכרון מסלול"}
                 </small>
                 {groupRoute.status === "completed" ? <p className="route-completed-note">המסלול הושלם. אפשר ליצור מסלול חדש כשצריך.</p> : null}
-                <p>הסדר בדמו מתחיל בנקודה שנבחרה וממשיך לנקודות הקרובות ברשימת הטיול. ETA אמיתי יגיע רק עם Google Routes.</p>
+                <p>הסדר מתחיל בנקודה שנבחרה וממשיך לנקודות הקרובות ברשימת הטיול. ETA מדויק יגיע דרך Google Routes.</p>
                 <ol>
                   {groupRoute.stops.map((stop, index) => (
                     <li
@@ -2324,7 +2324,7 @@ export function App() {
                 ? "הקישור הועתק. אפשר לשלוח אותו בוואטסאפ."
                 : inviteCopyState === "error"
                   ? "לא הצלחתי להעתיק אוטומטית. אפשר לסמן ולהעתיק את הקישור."
-                  : "חוויית הצטרפות בדמו: שם, גיל, ואז אישור GPS אישי לפי בחירה."}
+                  : "חוויית הצטרפות: שם, גיל, ואז אישור GPS אישי לפי בחירה."}
             </small>
           </section>
         </header>

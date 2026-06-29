@@ -70,7 +70,7 @@ function buildDemoTripSetupStateFromSavedSetup(savedDemoSetup: StoredDemoSetup |
     tripGroupId: "group_family_greece_demo",
     currentStep: setupCompleted ? "ready" : "welcome",
     setupCompleted,
-    aiPlanMode: savedDemoSetup?.aiPlanConfirmed ? "limited" : "demo",
+    aiPlanMode: "limited",
     setupSummary: savedDemoSetup
       ? {
           tripName: savedDemoSetup.tripName,
@@ -97,9 +97,9 @@ function buildDemoTripSetupStateFromSavedSetup(savedDemoSetup: StoredDemoSetup |
       },
       {
         id: "ai_plan",
-        title: "דמו או הפעלה מלאה",
+        title: "חשבון והפעלה",
         status: getStepStatus("ai_plan", setupCompleted),
-        description: "המערכת מסבירה שמצב דמו מוגבל ושימוש אמיתי דורש מודל AI או תקציב API מתאים."
+        description: "המערכת פועלת דרך חשבון מנהל הטיול ותקציב API מרכזי."
       },
       {
         id: "trip_group",
@@ -117,7 +117,7 @@ function buildDemoTripSetupStateFromSavedSetup(savedDemoSetup: StoredDemoSetup |
         id: "google_source",
         title: "חיבור Google",
         status: getStepStatus("google_source", setupCompleted),
-        description: "ב-MVP מדביקים קישור צפייה של Google Maps Place List, בלי כתיבה חזרה לגוגל."
+        description: "בשלב הנוכחי מדביקים קישור צפייה של Google Maps Place List, בלי כתיבה חזרה לגוגל."
       },
       {
         id: "location",
@@ -133,7 +133,7 @@ function buildDemoTripSetupStateFromSavedSetup(savedDemoSetup: StoredDemoSetup |
       }
     ],
     kodiWelcomeMessage:
-      "אני קודי, מלווה הטיול של הקבוצה. אני קורא את נקודות הטיול, מקשיב לשיחה המשפחתית, מזהה מי פונה אליי, ועוזר לבחור מה נכון לעשות עכשיו. כדי שאוכל לעבוד באמת נחבר מקור Google, נוסיף את חברי הקבוצה, נסביר הרשאות מיקום, ונבהיר שמצב דמו מוגבל לעומת הפעלה מלאה."
+      "אני קודי, מלווה הטיול של הקבוצה. אני קורא את נקודות הטיול, מקשיב לשיחה המשפחתית, מזהה מי פונה אליי, ועוזר לבחור מה נכון לעשות עכשיו. כדי שאוכל לעבוד באמת נחבר מקור Google, נוסיף את חברי הקבוצה, נסביר הרשאות מיקום, ונפעיל חשבון טיול אמיתי דרך מנהל הקבוצה."
   };
 }
 

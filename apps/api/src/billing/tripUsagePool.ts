@@ -52,7 +52,7 @@ export function buildDemoTripUsagePool(input: {
     tripGroupId: input.tripGroupId,
     ownerMemberId: owner?.member.id ?? "unknown_owner",
     ownerDisplayName: owner?.member.displayName ?? "Trip owner",
-    status: process.env.OPENAI_API_KEY ? "active" : "demo",
+    status: process.env.OPENAI_API_KEY ? "active" : "not_configured",
     billingModel: "owner_managed",
     participantBillingRequired: false,
     backendMediated: true,

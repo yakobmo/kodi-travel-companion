@@ -1,4 +1,4 @@
-# AI Travel Companion MVP
+# AI Travel Companion
 
 Hebrew-first AI travel companion for a family/group trip.
 
@@ -17,11 +17,11 @@ The product combines:
 
 ## Current Stage
 
-This is the deployed MVP Core.
+This is the deployed product core.
 
 The app currently has:
 
-- API endpoint for the imported demo trip places.
+- API endpoint for the imported trip places.
 - 108 places loaded from the Google Maps place-list spike fixture.
 - Navigation endpoint that creates Waze and Google Maps links.
 - React UI connected to the local API.
@@ -30,7 +30,7 @@ The app currently has:
 - Supabase production project.
 - Relational Supabase storage for messages, members, live locations, group destination, group routes, and setup state.
 
-External Google APIs, OpenAI, and real auth are still future steps.
+Google Places/Routes integration is active where configured. Real Google OAuth account connection and production auth are the next major account steps.
 
 The current web map uses an internal fallback layer that connects trip places, personal GPS, selected destination, and consented group locations. To prepare the Google Maps JS switch, configure:
 
@@ -77,9 +77,9 @@ travel-companion-mvp/
   scripts/
 ```
 
-## MVP Boundaries
+## Product Boundaries
 
-In the first MVP:
+In the current core:
 
 - One group owner/admin is enough.
 - The data model already supports group members.
@@ -88,7 +88,7 @@ In the first MVP:
 - Kodi knows who is speaking.
 - There is no separate "talk to AI" channel.
 - Basic external app shortcuts should arrive early.
-- Real participant invitations and live group location are planned as staged features.
+- Participant invitations and live group location are staged features that must stay permission-aware.
 - No participant location is shown without explicit consent.
 
 ## QA
@@ -119,9 +119,9 @@ Local URLs:
 
 - Web: `http://127.0.0.1:5173`
 - API health: `http://127.0.0.1:3001/api/health`
-- Demo places: `http://127.0.0.1:3001/api/trips/demo/places`
+- Trip places: `http://127.0.0.1:3001/api/trips/{tripId}/places`
 
-Public MVP URL:
+Public URL:
 
 - `https://kodi-travel-companion.onrender.com`
 

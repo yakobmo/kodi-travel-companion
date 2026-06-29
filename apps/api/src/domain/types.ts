@@ -24,13 +24,13 @@ export type TripSetupStep =
   | "location"
   | "ready";
 
-export type AiPlanMode = "demo" | "limited" | "full";
+export type AiPlanMode = "limited" | "full";
 
 export type GoogleSourceState = "not_connected" | "demo_link_ready" | "connected" | "needs_refresh";
 
 export type TripUsageCapability = "openai_agent" | "google_places" | "google_routes" | "google_oauth_sync";
 
-export type TripUsagePoolStatus = "demo" | "active" | "limited" | "blocked";
+export type TripUsagePoolStatus = "not_configured" | "active" | "limited" | "blocked";
 
 export type TripEventType =
   | "message_created"

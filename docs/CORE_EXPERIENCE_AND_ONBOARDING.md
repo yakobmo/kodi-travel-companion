@@ -38,10 +38,10 @@ Recommended onboarding sequence:
 5. Enable the manager's live location.
 6. Enter the main experience: map, trip points, manager location, and Kodi chat.
 
-Current MVP implementation:
+Current implementation:
 
 - Kodi opens with a single activation step.
-- The trip source step supports demo mode and a Google Maps viewing link, while clearly avoiding a live-sync claim.
+- The trip source step asks for the real trip source and can temporarily accept a Google Maps viewing link while clearly avoiding a live-sync claim.
 - Manager GPS is an explicit step before entering the core experience.
 - The main app opens only after the core is ready: Kodi, map, trip points, and manager location.
 
@@ -84,7 +84,7 @@ If the app cannot read the user's Google account yet, Kodi should say that clear
 - link recognized
 - live Google account sync is not active yet
 - OAuth/account connection is required for choosing a real Google Maps trip such as "North Greece"
-- demo mode can continue with already imported fixture data
+- the user continues with a real trip account flow, not a separate trial mode
 
 When OAuth is implemented, Kodi should ask:
 

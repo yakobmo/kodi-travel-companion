@@ -36,7 +36,7 @@ The working loop is:
 
 ## Current Product Stage
 
-Kodi is past visual-only MVP.
+Kodi is past a visual-only prototype.
 
 Implemented:
 
@@ -51,7 +51,7 @@ Implemented:
 Active technical direction:
 
 - Production uses Supabase relational tables.
-- The old `demo_storage_states` JSON bridge is legacy only.
+- The old JSON bridge is legacy only.
 - Next major target is Realtime/event flow, not more mock UI.
 
 ## Recurring Blockers And Fixes
@@ -120,9 +120,9 @@ The initial `demo_storage_states` table was useful to validate production storag
 
 Decision:
 
-- Keep `demo_storage_states` only as legacy compatibility until a cleanup migration.
+- Keep the legacy JSON bridge only as compatibility until a cleanup migration.
 - Do not use it in runtime code.
-- QA must fail if runtime storage reads or writes `demo_storage_states`.
+- QA must fail if runtime storage reads or writes the legacy JSON bridge.
 - Runtime status should report `relationalTablesReady`, not bridge readiness.
 
 ### 4. QA Must Track The Product Spec
@@ -211,7 +211,7 @@ Decision:
 After each deployment:
 
 - smoke `/api/health`
-- smoke `/api/trips/demo/storage`
+- smoke the trip storage endpoint
 - smoke one endpoint touched by the change
 - update docs/status with date and result
 

@@ -220,7 +220,7 @@ try {
   const eventsPayload = await eventsResponse.json();
 
   assertCheck("map", body.includes("מפה חיה"));
-  assertCheck("api connected", body.includes("מחובר ל-API המקומי"));
+  assertCheck("trip account connected", body.includes("מחובר לחשבון הטיול"));
   assertCheck("places count", body.includes("108 נקודות"));
   assertCheck("group chat", body.includes("קבוצת הטיול"));
   assertCheck("kodi background", body.includes("קודי ברקע"));
@@ -468,7 +468,7 @@ try {
   await page.getByRole("button", { name: "בנה מסלול קבוצתי קצר" }).click();
   await page.getByText("מסלול קבוצתי אושר ונשמר.").waitFor();
   await page.getByText("מסלול קבוצתי פעיל").waitFor();
-  await page.getByText("ETA אמיתי").waitFor();
+  await page.getByText("ETA מדויק").waitFor();
   await page.getByText("עכשיו ·").waitFor();
   assertCheck("active route stop navigation", await page.getByRole("button", { name: "פתח תחנה פעילה ב-Waze" }).isVisible());
   await page.getByRole("button", { name: "סמן תחנה כהושלמה" }).click();
@@ -482,7 +482,7 @@ try {
 
   await page.getByRole("button", { name: "הפעל GPS" }).click();
   await page.getByText("פעיל · דיוק").waitFor();
-  await page.getByText("סונכרן לדמו עבור אמא").waitFor();
+  await page.getByText("המיקום סונכרן עבור אמא").waitFor();
   await page.getByText("אני כאן").waitFor();
 
   await page.getByLabel("שם קיצור אישי").fill("תרגום");

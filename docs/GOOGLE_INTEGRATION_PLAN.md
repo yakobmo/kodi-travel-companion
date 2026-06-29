@@ -17,7 +17,7 @@ This means:
 Endpoint:
 
 ```text
-GET /api/trips/demo/google-source
+GET /api/trips/{tripId}/google-source
 ```
 
 It returns:
@@ -71,7 +71,7 @@ It reports `not_configured` until the Google environment contract is ready. It d
 Readiness endpoint:
 
 ```text
-GET /api/trips/demo/google-source/readiness
+GET /api/trips/{tripId}/google-source/readiness
 ```
 
 It reports only whether required environment variables are configured. It must never expose API keys, OAuth secrets, tokens, or raw credential values.
@@ -111,7 +111,7 @@ Kodi should not be fed endless category-specific rules such as "gelato", "sushi"
 Implemented endpoint:
 
 ```text
-GET /api/trips/demo/timeline
+GET /api/trips/{tripId}/timeline
 ```
 
 Current behavior:

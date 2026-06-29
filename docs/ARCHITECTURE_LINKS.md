@@ -14,4 +14,4 @@ Source planning docs:
 - `../../outputs/google-maps-integration-risk-review.md`
 - `docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md`
 
-This MVP skeleton should stay aligned with those docs.
+This product core should stay aligned with those docs.

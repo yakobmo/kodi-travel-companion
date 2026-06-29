@@ -72,19 +72,19 @@ This means a child can ask, "Kodi, is there ice cream nearby?", but Kodi will no
 - The product should show clear owner/admin visibility into usage, without exposing secrets.
 - Abuse controls should be group-aware: one noisy participant should not silently consume the entire plan without owner visibility.
 
-## MVP Implication
+## Current Implementation Implication
 
-The current MVP can keep using server-side Render environment variables.
+The current implementation uses server-side Render environment variables.
 
 Implemented API foundation:
 
 ```text
-GET /api/trips/demo/usage
+GET /api/trips/{tripId}/usage
 ```
 
 The endpoint returns a safe trip usage-pool summary:
 
-- owner/admin identity for the demo group
+- owner/admin identity for the trip group
 - `participantBillingRequired=false`
 - backend-mediated provider usage
 - server-side secret boundary
@@ -98,9 +98,9 @@ Implemented usage gate:
 - Kodi agent calls include usage-gate evidence in `contextSummary.usageGateResults`.
 - Direct Google endpoints return `usageGate` evidence without exposing provider keys.
 - Authorized Google usage is also recorded as a system event in the group event log, with capability, source, charge target, and provider-configuration evidence.
-- `/api/trips/demo/usage` returns `usageAudit`, a safe owner-visible summary derived from the group event log.
+- `/api/trips/{tripId}/usage` returns `usageAudit`, a safe owner-visible summary derived from the group event log.
 - The web app shows a compact usage overview near the live activity panel, so the trip owner can see Google Places, Google Routes, Kodi-agent, and direct-API usage counts.
-- The current MVP authorizes calls by policy and records the intended charge target as `trip_usage_pool`; future production can replace this with persistent quotas and billing checks.
+- The current implementation authorizes calls by policy and records the intended charge target as `trip_usage_pool`; production account management can replace this with persistent quotas and billing checks.
 
 Future production should add:
 
