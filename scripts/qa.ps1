@@ -12,6 +12,7 @@ $requiredFiles = @(
   "supabase/event-log-migration.sql",
   "docs/SUPABASE_SCHEMA.md",
   "docs/GOOGLE_INTEGRATION_PLAN.md",
+  "docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md",
   "scripts/apply-supabase-schema.mjs",
   "scripts/apply-supabase-schema.ps1",
   "scripts/apply-supabase-grants.mjs",
@@ -78,6 +79,17 @@ if (-not $packageSource.Contains("smoke:google-places-live")) {
 
 if (-not $packageSource.Contains("smoke:google-routes-live")) {
   throw "Root package.json must expose the live Google Routes smoke script."
+}
+
+$ownershipModelSource = Get-Content (Join-Path $root "docs\TRIP_OWNERSHIP_AND_USAGE_MODEL.md") -Raw
+if (
+  -not $ownershipModelSource.Contains("shared trip-space agent") -or
+  -not $ownershipModelSource.Contains("Trip Owner") -or
+  -not $ownershipModelSource.Contains("Usage Pool") -or
+  -not $ownershipModelSource.Contains("Participants do not bring separate OpenAI keys") -or
+  -not $ownershipModelSource.Contains("private credentials stay on the server side")
+) {
+  throw "Trip ownership and usage model must document one owner-managed usage pool and backend-only provider secrets."
 }
 
 $sourcePlacesPath = Join-Path (Split-Path -Parent $root) "work\spikes\google-place-list\out\places.json"

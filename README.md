@@ -12,6 +12,7 @@ The product combines:
 - External app shortcuts such as Booking, Airbnb, Waze, and Google Maps.
 - Live group map with participant locations, only with explicit consent.
 - Group permissions: everyone can talk, only admins can change the trip.
+- A shared trip usage pool: participants do not need separate paid AI subscriptions.
 
 ## Current Stage
 
@@ -42,6 +43,8 @@ The live group map is now defined as a flagship product feature. It will be impl
 
 Kodi is not a separate support bot or external AI chat. The family has one shared conversation, and Kodi wakes up when addressed, reads the recent context, and responds inside the thread.
 
+Kodi is also not a separate paid AI account per family member. The product model is one shared trip space: the trip owner connects or pays for the required AI/API usage, the backend runs Kodi centrally, and participants use that shared agent according to their permissions.
+
 Kodi also has a planned "create new route" mode. In that mode, Kodi first asks for route constraints such as time, walking difficulty, interests, child suitability, and start/end points before suggesting or adding a route to the app map.
 
 Kodi also has a local guide mode: the family can ask Kodi to explain the place or attraction they are seeing, and Kodi should answer inside the group conversation using location/place context without inventing uncertain facts.
@@ -57,6 +60,7 @@ The project also uses a Codex self-review protocol: Codex acts as both builder a
 - AI: OpenAI via backend only.
 - Navigation: Waze deep links with Google Maps fallback.
 - Deploy: GitHub + Render.
+- Billing/usage: one trip owner or trip usage pool, enforced by the backend.
 
 ## Repository Shape
 
@@ -76,6 +80,7 @@ In the first MVP:
 
 - One group owner/admin is enough.
 - The data model already supports group members.
+- One owner-managed usage pool is enough; members should not need individual OpenAI or Google API credentials.
 - The chat UX is group-style.
 - Kodi knows who is speaking.
 - There is no separate "talk to AI" channel.
@@ -125,6 +130,7 @@ Repository-local docs:
 - `docs/PROJECT_STATUS.md`
 - `docs/ARCHITECTURE_LINKS.md`
 - `docs/DEPLOYMENT_PLAN.md`
+- `docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md`
 - `docs/SUPABASE_SCHEMA.md`
 - `docs/AGENT_LESSONS_AND_BLOCKERS.md`
 - `docs/CODEX_REMINDER_COMMANDS.md`

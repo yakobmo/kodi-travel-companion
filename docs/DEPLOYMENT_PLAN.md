@@ -53,6 +53,24 @@ Render setup rules:
 4. Add environment variables only through Render dashboard.
 5. Run a public smoke test after the first deploy.
 
+## Ownership And Usage Rule
+
+Production deployment should treat Kodi as a central backend agent for a trip space.
+
+The trip owner owns the usage pool. Group members do not need separate paid OpenAI, Google Maps Platform, or agent subscriptions.
+
+Deployment implications:
+
+1. Provider secrets stay in Render environment variables or a future secret manager.
+2. The frontend never receives `OPENAI_API_KEY`, server-side `GOOGLE_MAPS_API_KEY`, Supabase service-role keys, OAuth client secrets, or database URLs.
+3. Each costly backend action should be attributable to:
+   - trip group
+   - triggering member
+   - owner/usage pool
+   - provider capability, such as OpenAI, Places, Routes, or OAuth sync
+4. Quotas and rate limits should be enforced server-side before calling paid providers.
+5. Owner/admin screens should eventually show usage status without exposing raw secrets.
+
 ## Production Dependencies Still Needed
 
 The app can run locally as an MVP, but production-grade deployment will later need:
@@ -62,6 +80,8 @@ The app can run locally as an MVP, but production-grade deployment will later ne
 - Google Maps browser key with domain restrictions.
 - Google OAuth app.
 - OpenAI API key.
+- Owner/trip usage-pool configuration.
+- Server-side usage logging and quota checks.
 - Render environment variables.
 
 No secret should be committed to Git.

@@ -14,6 +14,7 @@ The app is built around:
 - Group permissions: everyone can speak, only owner/admin can perform operational changes.
 - Opt-in live member location sharing.
 - Group destination and group route state.
+- One owner-managed trip usage pool, so family members do not need separate paid AI subscriptions.
 
 ## Current MVP
 
@@ -58,6 +59,7 @@ Implemented locally:
 - Kodi asks a clarification question when the trip context is ambiguous, instead of pretending it knows which hotel, stop, or reference point the family means.
 - Trip Timeline Resolver through `/api/trips/demo/timeline`, deriving lodging-based trip segments from the imported Google map order, date hints, and region hints.
 - Kodi agent external searches now prefer a resolved future trip segment, such as Pelion lodging, before falling back to live GPS or the first known place.
+- Product ownership model documented: Kodi runs through the backend as one shared trip-space agent, with the owner/admin controlling billing, usage, and operational permissions.
 
 ## Current Storage
 
@@ -92,6 +94,14 @@ Decision:
 - Supabase for PostgreSQL and realtime.
 - Google APIs for Maps, Places, Routes, and OAuth.
 - OpenAI API for Kodi's real AI reasoning.
+- Central backend usage pool per trip owner/group, instead of each member bringing a separate AI subscription.
+
+Usage and billing decision:
+
+- Trip owner creates the trip space and owns the usage pool.
+- Members can talk to Kodi without separate OpenAI/Google API credentials.
+- Backend holds all private provider secrets and enforces role permissions, quotas, and audit.
+- Costly calls should be attributed to trip group and triggering member.
 
 Do not deploy this app over any existing PB Trading Cockpit service.
 PB is a separate product and must remain untouched.
@@ -120,6 +130,8 @@ Do not commit these to Git:
 - `OPENAI_API_KEY`
 - `GOOGLE_MAPS_API_KEY`
 - Google OAuth credentials
+
+These secrets remain backend-only. They must not be sent to member browsers or copied into participant devices.
 
 ## GitHub and Render Boundary
 
@@ -191,6 +203,7 @@ Immediate next task:
 2. Run public smoke for `/api/google/routes/estimate` and a Kodi chat ETA request.
 3. Continue evolving Kodi as a true agent: natural request -> trip timeline/context resolution -> Google Places/Routes -> answer or clarification.
 4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
+5. Add persistent usage-pool/account fields before real paid multi-family usage.
 
 ## QA
 

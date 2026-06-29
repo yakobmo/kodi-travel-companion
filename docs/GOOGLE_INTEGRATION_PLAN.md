@@ -83,6 +83,9 @@ Required future variables:
 - `GOOGLE_OAUTH_CLIENT_SECRET`
 - `GOOGLE_OAUTH_REDIRECT_URI`
 
+These variables belong to the backend service or to an owner-authorized trip connection.
+They are not participant-level credentials.
+
 ## Google Capability Split
 
 Use separate Google layers:
@@ -93,6 +96,13 @@ Use separate Google layers:
 - OAuth / user account access: required before any user-specific live sync or write-back workflow.
 - Trip Context Resolver: Kodi must resolve the current reference point before calling Places or Routes. The reference can come from live GPS, active group destination, active route stop, nearby lodging, or recent conversation context.
 - Trip Timeline Resolver: Kodi must derive a trip-stage view from the imported Google map order so future questions such as "in two days near the Pelion hotel" can use the right lodging anchor before live OAuth exists.
+
+Use one trip-space usage model:
+
+- The trip owner connects or pays for the Google/API capability.
+- Members send requests through the app backend.
+- The backend performs Google calls and returns safe results to the group.
+- Waze, Booking, Airbnb, and similar apps remain outbound links only; they do not become billing or data sources for Kodi.
 
 Kodi should not be fed endless category-specific rules such as "gelato", "sushi", "fuel", or "toilets". Those are natural-language user needs that become Google Places queries. The agent layer decides whether the reference is clear enough. If it is not clear enough, Kodi asks a short clarification question.
 
@@ -150,6 +160,7 @@ Kodi agent connection:
 - Nearby-needs questions call the guarded Places read path from the server using the natural user request as the query, with current trip context as location bias.
 - If Places is not configured, Kodi explains that live Google Places search is not active yet and continues to reason from the saved trip map.
 - When `GOOGLE_MAPS_API_KEY` is configured, the same agent path can include live Places results in the recommendation context.
+- Calls are attributed to the trip usage pool, not to each participant separately.
 
 Routes and ETA connection:
 
