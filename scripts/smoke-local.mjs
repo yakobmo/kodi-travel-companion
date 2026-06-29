@@ -114,6 +114,15 @@ try {
   assertCheck("google api skeleton no live access", googleReadinessPayload.futureGoogleApiAdapter?.liveGoogleAccess === false);
   assertCheck("google api readiness hides values", googleReadinessPayload.requirements?.every((item) => item.value === undefined));
 
+  const googlePlacesSearchResponse = await fetch(
+    "http://localhost:3001/api/google/places/text-search?query=gelato%20near%20hotel&lat=39.2514&lng=22.7515&radiusMeters=3000"
+  );
+  const googlePlacesSearchPayload = await googlePlacesSearchResponse.json();
+  assertCheck("google places text search endpoint", googlePlacesSearchResponse.ok);
+  assertCheck("google places text search guarded", googlePlacesSearchPayload.status === "not_configured");
+  assertCheck("google places text search no values", googlePlacesSearchPayload.apiKey === undefined);
+  assertCheck("google places text search field mask", googlePlacesSearchPayload.request?.fieldMask?.includes("places.displayName"));
+
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 

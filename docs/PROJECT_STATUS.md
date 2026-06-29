@@ -50,6 +50,7 @@ Implemented locally:
 - Read-only Google source preview through `/api/trips/demo/google-source`, exposing imported place count, coordinate coverage, and future OAuth/API requirements without claiming live Google write-back.
 - Google source adapter boundary with the active fixture adapter explicitly reporting `liveGoogleAccess=false` and `canWriteBackToGoogle=false`.
 - Non-active Google API adapter skeleton and readiness endpoint through `/api/trips/demo/google-source/readiness`, reporting only configured/not-configured status for future Google environment requirements.
+- Guarded Google Places Text Search read path through `/api/google/places/text-search`, returning `not_configured` until `GOOGLE_MAPS_API_KEY` exists and never exposing credential values.
 
 ## Current Storage
 
@@ -167,6 +168,7 @@ Current Supabase state:
 - First Google integration spike added on `2026-06-28`; read-only source preview implemented with build, QA, local browser smoke, Render deploy, public API smoke, and public browser smoke passed.
 - Google source adapter boundary added on `2026-06-28`; local build, QA, local smoke, Render deploy, public API smoke, and public browser smoke passed.
 - Google API readiness skeleton added on `2026-06-28`; local build, QA, local smoke, Render deploy, and public API smoke passed. The readiness endpoint exposes only requirement names and configured booleans, not credential values.
+- First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, smoke, Render deploy, and public API smoke are the current validation gate.
 
 ## Next Continuation Checkpoint
 
@@ -174,10 +176,10 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Choose the first real Google read path: Places API enrichment or OAuth account connection.
-2. Keep the fixture adapter active while building the real read path behind an explicit readiness gate.
-3. Keep write-back disabled until a proven, permissioned Google OAuth/API path exists.
-4. Keep QA failing if UI copy implies live Google editing before it is real.
+1. Validate and deploy `/api/google/places/text-search`.
+2. Public-smoke the endpoint in `not_configured` mode and confirm no credential values are exposed.
+3. After `GOOGLE_MAPS_API_KEY` is configured, public-smoke a real Places query.
+4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 
 ## QA
 

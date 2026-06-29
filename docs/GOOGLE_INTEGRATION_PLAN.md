@@ -94,10 +94,33 @@ Use separate Google layers:
 
 ## Next Slice
 
-Next implementation should prepare the first real Google API read path:
+The first real Google read path is Places API Text Search, not OAuth.
+
+Implemented endpoint:
+
+```text
+GET /api/google/places/text-search
+```
+
+Query parameters:
+
+- `query`: required natural-language search text.
+- `lat` and `lng`: optional location bias.
+- `radiusMeters`: optional search radius, clamped server-side.
+- `languageCode`: defaults to `he`.
+- `regionCode`: optional Google region bias.
+
+Behavior:
+
+- If `GOOGLE_MAPS_API_KEY` is missing, the endpoint returns `not_configured`.
+- If the key exists, the server calls Google Places Text Search.
+- The endpoint uses an explicit field mask and never exposes the API key.
+- The response is read-only and cannot modify Google Maps or the user's Google account.
+
+Next implementation should connect this read path into Kodi's recommendation flow:
 
 1. Keep the current fixture adapter as the active adapter.
-2. Decide whether the first live read uses Places API enrichment or OAuth account connection.
+2. Use Places API Text Search to find nearby external options such as gelato, restaurants, bathrooms, or pharmacies.
 3. Keep write-back disabled until a proven and permissioned Google path exists.
 4. Keep QA failing if UI copy implies live Google editing before it is real.
 

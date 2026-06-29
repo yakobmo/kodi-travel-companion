@@ -2,6 +2,7 @@ import express from "express";
 import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
+import { searchGooglePlacesText } from "./google/placesSearch.js";
 import { buildDemoGoogleSourcePreview, getGoogleSourceReadiness } from "./google/sourceAdapter.js";
 import {
   loadDemoTripMembersAsync,
@@ -146,6 +147,39 @@ app.get("/api/trips/demo/google-source", (_req, res) => {
 
 app.get("/api/trips/demo/google-source/readiness", (_req, res) => {
   res.json(getGoogleSourceReadiness());
+});
+
+app.get("/api/google/places/text-search", async (req, res) => {
+  const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+
+  if (query.length < 2) {
+    res.status(400).json({
+      error: "query is required"
+    });
+    return;
+  }
+
+  const lat = typeof req.query.lat === "string" ? Number(req.query.lat) : undefined;
+  const lng = typeof req.query.lng === "string" ? Number(req.query.lng) : undefined;
+  const radiusMeters = typeof req.query.radiusMeters === "string" ? Number(req.query.radiusMeters) : undefined;
+
+  if ((lat !== undefined && Number.isNaN(lat)) || (lng !== undefined && Number.isNaN(lng))) {
+    res.status(400).json({
+      error: "lat and lng must be valid numbers when provided"
+    });
+    return;
+  }
+
+  res.json(
+    await searchGooglePlacesText({
+      query,
+      lat,
+      lng,
+      radiusMeters,
+      languageCode: typeof req.query.languageCode === "string" ? req.query.languageCode : "he",
+      regionCode: typeof req.query.regionCode === "string" ? req.query.regionCode : undefined
+    })
+  );
 });
 
 app.get("/api/trips/demo/members", async (_req, res) => {

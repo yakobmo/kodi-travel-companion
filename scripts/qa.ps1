@@ -33,6 +33,7 @@ $requiredFiles = @(
   "apps/api/src/data/localPlaces.ts",
   "apps/api/src/data/localSetupState.ts",
   "apps/api/src/data/localTripState.ts",
+  "apps/api/src/google/placesSearch.ts",
   "apps/api/src/google/sourceAdapter.ts",
   "apps/api/src/permissions/agentActions.ts",
   "apps/web/package.json",
@@ -102,6 +103,25 @@ if (
   -not $googleSourceAdapterSource.Contains("canWriteBackToGoogle: false")
 ) {
   throw "Google source integration must go through a read-only adapter boundary before live Google sync."
+}
+
+$googlePlacesSearchSource = Get-Content (Join-Path $root "apps\api\src\google\placesSearch.ts") -Raw
+if (
+  -not $googlePlacesSearchSource.Contains("https://places.googleapis.com/v1/places:searchText") -or
+  -not $googlePlacesSearchSource.Contains("X-Goog-Api-Key") -or
+  -not $googlePlacesSearchSource.Contains("X-Goog-FieldMask") -or
+  -not $googlePlacesSearchSource.Contains("GOOGLE_MAPS_API_KEY") -or
+  -not $googlePlacesSearchSource.Contains("google_maps_api_key_required") -or
+  -not $googlePlacesSearchSource.Contains("not_configured") -or
+  -not $googlePlacesSearchSource.Contains("places.displayName") -or
+  -not $googlePlacesSearchSource.Contains("places.formattedAddress") -or
+  -not $googlePlacesSearchSource.Contains("places.googleMapsUri")
+) {
+  throw "Google Places Text Search must be implemented as a guarded server-side read path with explicit field masks."
+}
+
+if ($googlePlacesSearchSource.Contains('X-Goog-FieldMask": "*"') -or $googlePlacesSearchSource.Contains("X-Goog-FieldMask': '*'")) {
+  throw "Google Places Text Search must not use wildcard field masks in production code."
 }
 
 $demoTripSource = Get-Content (Join-Path $root "apps\web\src\demoTrip.ts") -Raw
@@ -384,9 +404,11 @@ if (
   -not $serverSource.Contains("/api/trips/demo/google-source") -or
   -not $serverSource.Contains("buildDemoGoogleSourcePreview") -or
   -not $serverSource.Contains("/api/trips/demo/google-source/readiness") -or
-  -not $serverSource.Contains("getGoogleSourceReadiness")
+  -not $serverSource.Contains("getGoogleSourceReadiness") -or
+  -not $serverSource.Contains("/api/google/places/text-search") -or
+  -not $serverSource.Contains("searchGooglePlacesText")
 ) {
-  throw "API server is missing the read-only Google source preview or readiness endpoint."
+  throw "API server is missing the read-only Google source preview, readiness, or Places Text Search endpoint."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/messages")) {
