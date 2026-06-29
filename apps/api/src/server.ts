@@ -68,6 +68,7 @@ function buildAgentContextSummary(input: {
   member: { id?: string; displayName?: string; role?: string };
   recentMessages: unknown[];
   tripState: ReturnType<typeof buildDemoTripState>;
+  externalPlacesSearchStatus?: string;
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
     canShareLiveLocation?: boolean;
@@ -85,8 +86,81 @@ function buildAgentContextSummary(input: {
     recentMessagesCount: input.recentMessages.length,
     hasTripState: true,
     visibleLiveLocationMembers: visibleLiveLocationMembers.length,
+    externalPlacesSearchStatus: input.externalPlacesSearchStatus,
     operationalChangesRequireAdmin: input.permissionPolicy?.operationalChangesRequireAdmin ?? true,
     canShareLiveLocation: input.permissionPolicy?.canShareLiveLocation ?? false
+  };
+}
+
+function includesAnyTerm(text: string, terms: string[]) {
+  return terms.some((term) => text.includes(term));
+}
+
+function shouldUseExternalPlacesSearch(message: string) {
+  return includesAnyTerm(message, [
+    "גלידה",
+    "מסעדה",
+    "אוכל",
+    "קפה",
+    "שירותים",
+    "בית מרקחת",
+    "פארם",
+    "סופר",
+    "חנות",
+    "קרוב",
+    "באזור"
+  ]);
+}
+
+function buildExternalPlacesQuery(message: string) {
+  if (includesAnyTerm(message, ["גלידה", "מתוק", "קינוח"])) {
+    return "gelato ice cream nearby";
+  }
+
+  if (includesAnyTerm(message, ["שירותים", "WC"])) {
+    return "public toilets nearby";
+  }
+
+  if (includesAnyTerm(message, ["בית מרקחת", "פארם", "תרופה"])) {
+    return "pharmacy nearby";
+  }
+
+  if (includesAnyTerm(message, ["מסעדה", "אוכל", "קפה"])) {
+    return "family friendly food nearby";
+  }
+
+  return message;
+}
+
+function getSearchLocationFromTripState(tripState: ReturnType<typeof buildDemoTripState>) {
+  const visibleMember = tripState.members.find((item) => item.consent.state === "enabled" && item.liveLocation);
+
+  if (visibleMember?.liveLocation) {
+    return {
+      lat: visibleMember.liveLocation.lat,
+      lng: visibleMember.liveLocation.lng
+    };
+  }
+
+  const destination = tripState.groupDestination;
+  if (destination && typeof destination.lat === "number" && typeof destination.lng === "number") {
+    return {
+      lat: destination.lat,
+      lng: destination.lng
+    };
+  }
+
+  const firstPlaceWithCoordinates = tripState.places.find(
+    (place) => typeof place.lat === "number" && typeof place.lng === "number"
+  );
+
+  if (!firstPlaceWithCoordinates) {
+    return {};
+  }
+
+  return {
+    lat: firstPlaceWithCoordinates.lat,
+    lng: firstPlaceWithCoordinates.lng
   };
 }
 
@@ -1036,6 +1110,14 @@ app.post("/api/agent/message", async (req, res) => {
   }
 
   const tripState = req.body?.tripState ?? (await buildDemoTripStateAsync());
+  const externalPlacesSearch = shouldUseExternalPlacesSearch(message)
+    ? await searchGooglePlacesText({
+        query: buildExternalPlacesQuery(message),
+        ...getSearchLocationFromTripState(tripState),
+        radiusMeters: 3000,
+        languageCode: "he"
+      })
+    : undefined;
   const permissionPolicy =
     context && typeof context === "object"
       ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
@@ -1043,7 +1125,8 @@ app.post("/api/agent/message", async (req, res) => {
       : undefined;
   const reply = buildKodiReplyFromContext({
     ...req.body,
-    tripState
+    tripState,
+    externalPlacesSearch
   });
 
   res.json({
@@ -1057,6 +1140,7 @@ app.post("/api/agent/message", async (req, res) => {
       },
       recentMessages,
       tripState,
+      externalPlacesSearchStatus: externalPlacesSearch?.status,
       permissionPolicy
     })
   });

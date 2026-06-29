@@ -1,4 +1,5 @@
 import type { AgeGroup, MemberRole, TripPlace, TripState } from "../domain/types.js";
+import type { GooglePlacesTextSearchResult } from "../google/placesSearch.js";
 
 export interface ConversationMessage {
   author: string;
@@ -19,6 +20,7 @@ export interface AgentMessageRequest {
   recentMessages?: ConversationMessage[];
   selectedPlace?: Pick<TripPlace, "id" | "name" | "type" | "address" | "lat" | "lng" | "note" | "tags">;
   tripState?: TripState;
+  externalPlacesSearch?: GooglePlacesTextSearchResult;
 }
 
 export interface AgentMessageResponse {
@@ -236,6 +238,34 @@ function describeRejectedAlternative(candidate: RecommendationCandidate) {
   return `${candidate.place.name} - ${reasons.join(", ")}`;
 }
 
+function buildExternalPlacesContext(search?: GooglePlacesTextSearchResult) {
+  if (!search) {
+    return "";
+  }
+
+  if (search.status === "not_configured") {
+    return " חיפוש Google Places חי עדיין לא מופעל כי חסר GOOGLE_MAPS_API_KEY, ולכן אני לא אציג מקומות חיצוניים כאילו בדקתי אותם עכשיו.";
+  }
+
+  if (search.status === "google_error") {
+    return " ניסיתי לבדוק Google Places, אבל Google החזיר שגיאה ולכן אני נשען כרגע על מפת הטיול השמורה.";
+  }
+
+  if (search.places.length === 0) {
+    return " בדקתי Google Places אבל לא קיבלתי תוצאה חיצונית מספיק טובה לשאלה הזו.";
+  }
+
+  const topPlaces = search.places
+    .slice(0, 3)
+    .map((place) => [place.displayName, place.formattedAddress].filter(Boolean).join(" - "))
+    .filter(Boolean)
+    .join("; ");
+
+  return topPlaces
+    ? ` בנוסף למפת הטיול השמורה, Google Places מציע כרגע: ${topPlaces}.`
+    : " קיבלתי תוצאות מ-Google Places, אבל הן חסרות שם או כתובת ברורים ולכן לא אציג אותן כהמלצה מובילה.";
+}
+
 export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMessageResponse {
   const message = input.message.trim();
   const recentText = joinRecentMessages(input.recentMessages);
@@ -253,6 +283,7 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
   const destinationText = conversationSummary.currentDestinationName
     ? ` היעד הקבוצתי הנוכחי הוא ${conversationSummary.currentDestinationName}, ולכן לא אשנה אותו בלי אישור מנהל.`
     : "";
+  const externalPlacesContext = buildExternalPlacesContext(input.externalPlacesSearch);
 
   if (includesAny(message, ["מה כדאי", "מה לעשות", "לאן ללכת", "תמליץ", "המלצה", "הכי טוב", "משהו עם מים"])) {
     const recommendation = selectRecommendedPlace(message, input.tripState);
@@ -288,7 +319,7 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
         `הנימוקים המרכזיים: ${reasonsText || "זו הנקודה החזקה ביותר לפי הנתונים השמורים"}. ` +
         `${cleanNote ? `הערה שמורה: ${cleanNote}. ` : "היא קיימת במפת הטיול השמורה. "}` +
         "אני לא קובע עדיין זמן נסיעה, עומס, שעות פתיחה או מרחק הליכה אמיתי בלי Google Routes/Places." +
-        `${destinationText}${caveatsText}${alternativesText} אם מנהל מאשר, אוכל לפתוח ניווט או להפוך אותה ליעד הקבוצתי הבא.`
+        `${destinationText}${externalPlacesContext}${caveatsText}${alternativesText} אם מנהל מאשר, אוכל לפתוח ניווט או להפוך אותה ליעד הקבוצתי הבא.`
     };
   }
 
@@ -344,7 +375,7 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       source: "rules",
       text:
         `שמעתי את ${speakersText}. מהשיחה אני מזהה: ${needsText}. הייתי מחפש נקודה קלה ליד ${selected}, ` +
-        `עם מינימום הליכה ובלי לדחוף את כולם לכיוון שלא מתאים לילדים.${destinationText} אני יכול להציע מקום, ואז אבקש אישור מנהל לפני שינוי יעד קבוצתי.`
+        `עם מינימום הליכה ובלי לדחוף את כולם לכיוון שלא מתאים לילדים.${destinationText}${externalPlacesContext} אני יכול להציע מקום, ואז אבקש אישור מנהל לפני שינוי יעד קבוצתי.`
     };
   }
 

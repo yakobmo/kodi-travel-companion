@@ -263,6 +263,18 @@ try {
   assertCheck("agent reasons", recommendationAgentPayload.text?.includes("הנימוקים המרכזיים"));
   assertCheck("agent alternatives", recommendationAgentPayload.text?.includes("חלופות שדחיתי"));
 
+  const gelatoAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
+    data: {
+      member: { id: "mom", displayName: "אמא", role: "owner", ageGroup: "adult" },
+      message: "קודי, בא לילדים גלידה קרוב למלון. מה יש באזור?",
+      recentMessages: []
+    }
+  });
+  const gelatoAgentPayload = await gelatoAgentResponse.json();
+  assertCheck("agent google places context ok", gelatoAgentResponse.ok());
+  assertCheck("agent google places status", gelatoAgentPayload.contextSummary?.externalPlacesSearchStatus === "not_configured");
+  assertCheck("agent google places guarded copy", gelatoAgentPayload.text?.includes("חיפוש Google Places חי עדיין לא מופעל"));
+
   const blockedActionResponse = await page.request.post("http://localhost:3001/api/trips/demo/agent-actions/authorize", {
     data: {
       member: { id: "noa", displayName: "נועה", role: "member" },

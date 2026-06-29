@@ -396,6 +396,15 @@ if (-not $serverSource.Contains("contextSummary")) {
   throw "Kodi agent endpoint must return a structured context summary."
 }
 
+if (
+  -not $serverSource.Contains("shouldUseExternalPlacesSearch") -or
+  -not $serverSource.Contains("buildExternalPlacesQuery") -or
+  -not $serverSource.Contains("externalPlacesSearchStatus") -or
+  -not $serverSource.Contains("searchGooglePlacesText")
+) {
+  throw "Kodi agent endpoint must connect eligible nearby-needs questions to the guarded Google Places read path."
+}
+
 if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {
   throw "API server is missing demo members endpoints."
 }
@@ -654,6 +663,15 @@ if (-not $kodiSource.Contains("currentDestinationName") -or -not $kodiSource.Con
 
 if (-not $kodiSource.Contains("place_recommendation")) {
   throw "Kodi agent is missing the place_recommendation intent."
+}
+
+if (
+  -not $kodiSource.Contains("externalPlacesSearch") -or
+  -not $kodiSource.Contains("buildExternalPlacesContext") -or
+  -not $kodiSource.Contains("GOOGLE_MAPS_API_KEY") -or
+  -not $kodiSource.Contains("Google Places")
+) {
+  throw "Kodi agent must explain guarded Google Places search context without pretending live results exist."
 }
 
 $storageSource = Get-Content (Join-Path $root "apps\api\src\data\demoStorage.ts") -Raw

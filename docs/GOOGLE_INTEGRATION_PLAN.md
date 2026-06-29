@@ -117,12 +117,19 @@ Behavior:
 - The endpoint uses an explicit field mask and never exposes the API key.
 - The response is read-only and cannot modify Google Maps or the user's Google account.
 
+Kodi agent connection:
+
+- Eligible nearby-needs questions, such as gelato, food, bathrooms, pharmacy, or nearby services, call the guarded Places read path from the server.
+- If Places is not configured, Kodi explains that live Google Places search is not active yet and continues to reason from the saved trip map.
+- When `GOOGLE_MAPS_API_KEY` is configured, the same agent path can include live Places results in the recommendation context.
+
 Next implementation should connect this read path into Kodi's recommendation flow:
 
 1. Keep the current fixture adapter as the active adapter.
-2. Use Places API Text Search to find nearby external options such as gelato, restaurants, bathrooms, or pharmacies.
-3. Keep write-back disabled until a proven and permissioned Google path exists.
-4. Keep QA failing if UI copy implies live Google editing before it is real.
+2. Configure and smoke `GOOGLE_MAPS_API_KEY` in Render.
+3. Use Places API Text Search results as secondary evidence in Kodi recommendations.
+4. Keep write-back disabled until a proven and permissioned Google path exists.
+5. Keep QA failing if UI copy implies live Google editing before it is real.
 
 ## Official References
 
