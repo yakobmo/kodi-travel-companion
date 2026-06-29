@@ -206,7 +206,7 @@ Current Supabase state:
 - Usage-gate audit events added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Direct Google usage and Kodi agent usage now record `system` events with capability, source, charge target, and provider configuration state.
 - Owner-visible usage audit overview added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. `/api/trips/demo/usage` now returns `usageAudit`, and the web app shows compact usage counts near live activity.
 - Guided activation flow added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public browser/API smoke passed. The first-run UI now shows one step at a time: activate Kodi, choose trip source/demo, enable manager GPS, then enter the map/chat core.
-- Guided activation cleanup added on `2026-06-29`; the hidden legacy activation panel was removed, the demo/API budget note and read-only Google preview guard remain inside the guided flow, and `npm run smoke:local` now runs the local browser smoke directly.
+- Guided activation cleanup added on `2026-06-29`; the hidden legacy activation panel was removed, the demo/API budget note and read-only Google preview guard remain inside the guided flow, and `npm run smoke:local` now runs the local browser smoke directly. Local build, QA, local smoke, Render deploy, and public browser/API smoke passed.
 
 ## Next Continuation Checkpoint
 
