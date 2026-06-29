@@ -114,6 +114,16 @@ try {
   assertCheck("google api skeleton no live access", googleReadinessPayload.futureGoogleApiAdapter?.liveGoogleAccess === false);
   assertCheck("google api readiness hides values", googleReadinessPayload.requirements?.every((item) => item.value === undefined));
 
+  const timelineResponse = await fetch("http://localhost:3001/api/trips/demo/timeline");
+  const timelinePayload = await timelineResponse.json();
+  assertCheck("trip timeline endpoint", timelineResponse.ok);
+  assertCheck("trip timeline source", timelinePayload.source === "google_map_order_lodging_segments");
+  assertCheck("trip timeline lodging segments", Array.isArray(timelinePayload.segments) && timelinePayload.segments.length >= 8);
+  assertCheck(
+    "trip timeline pelion segment",
+    timelinePayload.segments.some((segment) => segment.regionHints?.includes("pelion") && segment.lodging?.lat)
+  );
+
   const googlePlacesSearchResponse = await fetch(
     "http://localhost:3001/api/google/places/text-search?query=gelato%20near%20hotel&lat=39.2514&lng=22.7515&radiusMeters=3000"
   );
@@ -283,6 +293,18 @@ try {
   assertCheck("agent google places context ok", gelatoAgentResponse.ok());
   assertCheck("agent google places status", gelatoAgentPayload.contextSummary?.externalPlacesSearchStatus === "not_configured");
   assertCheck("agent google places guarded copy", gelatoAgentPayload.text?.includes("חיפוש Google Places חי עדיין לא מופעל"));
+
+  const futurePelionAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
+    data: {
+      member: { id: "dad", displayName: "Dad", role: "owner", ageGroup: "adult" },
+      message: "Kodi, in two days in Pelion find a beautiful beach near the hotel we will stay in.",
+      recentMessages: []
+    }
+  });
+  const futurePelionAgentPayload = await futurePelionAgentResponse.json();
+  assertCheck("agent timeline context ok", futurePelionAgentResponse.ok());
+  assertCheck("agent timeline context used", futurePelionAgentPayload.contextSummary?.timelineReferenceConfidence !== "low");
+  assertCheck("agent timeline segment title", Boolean(futurePelionAgentPayload.contextSummary?.timelineSegmentTitle));
 
   const blockedActionResponse = await page.request.post("http://localhost:3001/api/trips/demo/agent-actions/authorize", {
     data: {

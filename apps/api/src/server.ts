@@ -49,6 +49,11 @@ import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripSta
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext } from "./agent/kodi.js";
 import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
+import {
+  buildTripTimelineFromGoogleMapOrder,
+  resolveTimelineReferenceForMessage,
+  type TripTimelineResolution
+} from "./agent/tripTimelineResolver.js";
 import { canMemberRunAgentAction, isAgentActionType } from "./permissions/agentActions.js";
 import type { TripEventType } from "./domain/types.js";
 
@@ -74,6 +79,9 @@ function buildAgentContextSummary(input: {
   routeEstimateStatus?: string;
   tripContextConfidence?: string;
   tripContextReason?: string;
+  timelineReferenceConfidence?: string;
+  timelineReferenceReason?: string;
+  timelineSegmentTitle?: string;
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
     canShareLiveLocation?: boolean;
@@ -95,6 +103,9 @@ function buildAgentContextSummary(input: {
     routeEstimateStatus: input.routeEstimateStatus,
     tripContextConfidence: input.tripContextConfidence,
     tripContextReason: input.tripContextReason,
+    timelineReferenceConfidence: input.timelineReferenceConfidence,
+    timelineReferenceReason: input.timelineReferenceReason,
+    timelineSegmentTitle: input.timelineSegmentTitle,
     operationalChangesRequireAdmin: input.permissionPolicy?.operationalChangesRequireAdmin ?? true,
     canShareLiveLocation: input.permissionPolicy?.canShareLiveLocation ?? false
   };
@@ -105,6 +116,27 @@ function includesAnyTerm(text: string, terms: string[]) {
 }
 
 function shouldUseExternalPlacesSearch(message: string) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    includesAnyTerm(normalizedMessage, [
+      "near",
+      "nearby",
+      "find",
+      "search",
+      "recommend",
+      "hotel",
+      "beach",
+      "food",
+      "toilets",
+      "pharmacy",
+      "fuel",
+      "restaurant"
+    ])
+  ) {
+    return true;
+  }
+
   if (
     includesAnyTerm(message, [
       "איפה",
@@ -190,7 +222,17 @@ function buildExternalPlacesQuery(message: string) {
   return message;
 }
 
-function getSearchLocationFromTripState(tripState: ReturnType<typeof buildDemoTripState>) {
+function getSearchLocationFromTripState(
+  tripState: ReturnType<typeof buildDemoTripState>,
+  timelineReference?: TripTimelineResolution
+) {
+  if (timelineReference && timelineReference.confidence !== "low" && timelineReference.referenceLocation) {
+    return {
+      lat: timelineReference.referenceLocation.lat,
+      lng: timelineReference.referenceLocation.lng
+    };
+  }
+
   const visibleMember = tripState.members.find((item) => item.consent.state === "enabled" && item.liveLocation);
 
   if (visibleMember?.liveLocation) {
@@ -314,6 +356,16 @@ app.get("/api/trips/demo/google-source", (_req, res) => {
 
 app.get("/api/trips/demo/google-source/readiness", (_req, res) => {
   res.json(getGoogleSourceReadiness());
+});
+
+app.get("/api/trips/demo/timeline", async (_req, res) => {
+  const tripState = await buildDemoTripStateAsync();
+
+  res.json({
+    tripGroupId: tripState.trip.groupId,
+    source: "google_map_order_lodging_segments",
+    segments: buildTripTimelineFromGoogleMapOrder(tripState)
+  });
 });
 
 app.get("/api/google/places/text-search", async (req, res) => {
@@ -1226,10 +1278,11 @@ app.post("/api/agent/message", async (req, res) => {
   }
 
   const tripState = req.body?.tripState ?? (await buildDemoTripStateAsync());
+  const timelineReference = resolveTimelineReferenceForMessage(message, tripState);
   const externalPlacesSearch = shouldUseExternalPlacesSearch(message)
     ? await searchGooglePlacesText({
         query: buildExternalPlacesQuery(message),
-        ...getSearchLocationFromTripState(tripState),
+        ...getSearchLocationFromTripState(tripState, timelineReference),
         radiusMeters: 3000,
         languageCode: "he"
       })
@@ -1277,6 +1330,9 @@ app.post("/api/agent/message", async (req, res) => {
       routeEstimateStatus: routeEstimate?.status,
       tripContextConfidence: shouldUseRouteEstimate(message) ? tripReference.confidence : undefined,
       tripContextReason: shouldUseRouteEstimate(message) ? tripReference.reason : undefined,
+      timelineReferenceConfidence: timelineReference.confidence,
+      timelineReferenceReason: timelineReference.reason,
+      timelineSegmentTitle: timelineReference.segment?.title,
       permissionPolicy
     })
   });

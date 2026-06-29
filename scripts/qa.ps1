@@ -26,6 +26,7 @@ $requiredFiles = @(
   "apps/api/src/server.ts",
   "apps/api/src/agent/kodi.ts",
   "apps/api/src/agent/tripContextResolver.ts",
+  "apps/api/src/agent/tripTimelineResolver.ts",
   "apps/api/src/domain/types.ts",
   "apps/api/src/data/demoStorage.ts",
   "apps/api/src/data/supabaseStatus.ts",
@@ -176,14 +177,29 @@ if (
   throw "Kodi must resolve trip context through confidence-based origin/destination logic before using Google Routes."
 }
 
+$tripTimelineResolverSource = Get-Content (Join-Path $root "apps\api\src\agent\tripTimelineResolver.ts") -Raw
+if (
+  -not $tripTimelineResolverSource.Contains("TripTimelineSegment") -or
+  -not $tripTimelineResolverSource.Contains("buildTripTimelineFromGoogleMapOrder") -or
+  -not $tripTimelineResolverSource.Contains("resolveTimelineReferenceForMessage") -or
+  -not $tripTimelineResolverSource.Contains("google_map_order_lodging_segments") -or
+  -not $tripTimelineResolverSource.Contains("REGION_ALIASES") -or
+  -not $tripTimelineResolverSource.Contains("timeline_lodging")
+) {
+  throw "Kodi must derive a trip timeline from Google map order and resolve future lodging/region references before external searches."
+}
+
 $serverSourceForContext = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
 if (
   -not $serverSourceForContext.Contains("resolveTripReferenceForMessage") -or
+  -not $serverSourceForContext.Contains("resolveTimelineReferenceForMessage") -or
+  -not $serverSourceForContext.Contains("/api/trips/demo/timeline") -or
   -not $serverSourceForContext.Contains("tripContextClarification") -or
   -not $serverSourceForContext.Contains("tripContextConfidence") -or
+  -not $serverSourceForContext.Contains("timelineReferenceConfidence") -or
   -not $serverSourceForContext.Contains("tripReference.confidence !== `"low`"")
 ) {
-  throw "Kodi agent flow must use the trip context resolver and ask clarification instead of choosing stale destinations."
+  throw "Kodi agent flow must use trip context and trip timeline resolvers before choosing destinations or external search anchors."
 }
 
 $googleRoutesLiveSmokeSource = Get-Content (Join-Path $root "scripts\smoke-google-routes-live.mjs") -Raw

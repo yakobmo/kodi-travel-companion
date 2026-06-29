@@ -92,8 +92,33 @@ Use separate Google layers:
 - Routes API: calculate routes, distances, and ETAs after configuring a Google Maps Platform key.
 - OAuth / user account access: required before any user-specific live sync or write-back workflow.
 - Trip Context Resolver: Kodi must resolve the current reference point before calling Places or Routes. The reference can come from live GPS, active group destination, active route stop, nearby lodging, or recent conversation context.
+- Trip Timeline Resolver: Kodi must derive a trip-stage view from the imported Google map order so future questions such as "in two days near the Pelion hotel" can use the right lodging anchor before live OAuth exists.
 
 Kodi should not be fed endless category-specific rules such as "gelato", "sushi", "fuel", or "toilets". Those are natural-language user needs that become Google Places queries. The agent layer decides whether the reference is clear enough. If it is not clear enough, Kodi asks a short clarification question.
+
+## Trip Timeline Resolver
+
+Implemented endpoint:
+
+```text
+GET /api/trips/demo/timeline
+```
+
+Current behavior:
+
+- Reads the same imported Google Maps fixture as the trip state.
+- Sorts places by Google map source order.
+- Builds lodging-centered trip segments.
+- Adds date hints from saved notes when they exist.
+- Adds region hints such as Pelion, Zagori, Meteora, Tzoumerka, Athens, and Olympus when detected from place names, addresses, or nearby places.
+- Exposes a confidence level for each segment.
+
+Kodi agent connection:
+
+- Before external Places search, Kodi resolves whether the message points to a future region or lodging segment.
+- If a segment is resolved, Places search uses that lodging as the location bias.
+- If no segment is clear enough, Kodi falls back to live member location, group destination, or first known place.
+- This is still read-only. It does not claim live Google account sync or write-back.
 
 ## Next Slice
 
@@ -144,7 +169,7 @@ Next implementation should deploy and public-smoke this path:
 
 1. Keep the current fixture adapter as the active adapter.
 2. Keep Places API Text Search results as secondary evidence in Kodi recommendations.
-3. Use Routes API for ETA/distance only after context resolution.
+3. Use Routes API for ETA/distance only after context and timeline resolution.
 4. Keep write-back disabled until a proven and permissioned Google path exists.
 5. Keep QA failing if UI copy implies live Google editing before it is real.
 

@@ -56,6 +56,8 @@ Implemented locally:
 - Google Routes ETA read path through `/api/google/routes/estimate`, using the same server-side `GOOGLE_MAPS_API_KEY` guard, narrow field masks, and no credential exposure.
 - Trip Context Resolver for Kodi agent questions, so time/distance questions use live location, group destination, active route, and lodging context with confidence levels instead of choosing a stale first hotel.
 - Kodi asks a clarification question when the trip context is ambiguous, instead of pretending it knows which hotel, stop, or reference point the family means.
+- Trip Timeline Resolver through `/api/trips/demo/timeline`, deriving lodging-based trip segments from the imported Google map order, date hints, and region hints.
+- Kodi agent external searches now prefer a resolved future trip segment, such as Pelion lodging, before falling back to live GPS or the first known place.
 
 ## Current Storage
 
@@ -177,6 +179,7 @@ Current Supabase state:
 - Kodi agent Places context connection added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed in guarded `not_configured` mode.
 - Live Google Places smoke automation added on `2026-06-29`; public production smoke passed after adding `GOOGLE_MAPS_API_KEY` to Render. Result: `placesCount=2`, first place `Cuore Amabile Gelateria`, Kodi agent external Places status `ready`, storage driver `supabase`.
 - Trip Context Resolver and guarded Google Routes ETA path added on `2026-06-29`; local build, QA, smoke, focused agent checks, GitHub push, Render deploy, and public endpoint exposure passed. Public Routes live smoke is blocked by Google Cloud `PERMISSION_DENIED` until `Routes API` is enabled for the same Google Cloud project as the Maps key. Generic nearby requests now route to Google Places from the natural user text, while ambiguous ETA questions ask a clarification before calling Routes.
+- Trip Timeline Resolver added on `2026-06-29`; local build, QA, and local smoke passed. Kodi can now resolve a future region/lodging reference from the imported Google map order before calling Places, instead of searching near the wrong current or first hotel.
 
 ## Next Continuation Checkpoint
 
@@ -186,7 +189,7 @@ Immediate next task:
 
 1. Enable `Routes API` in Google Cloud for the existing Maps Platform project.
 2. Run public smoke for `/api/google/routes/estimate` and a Kodi chat ETA request.
-3. Continue evolving Kodi as a true agent: natural request -> reference/context resolution -> Google Places/Routes -> answer or clarification.
+3. Continue evolving Kodi as a true agent: natural request -> trip timeline/context resolution -> Google Places/Routes -> answer or clarification.
 4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 
 ## QA
