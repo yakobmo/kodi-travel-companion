@@ -53,18 +53,23 @@ Required future slice:
 - Selection of the real Google Maps trip/list, such as "North Greece".
 - Permissioned read path before any write-back attempt.
 
-### P1 - Kodi Is Not Yet OpenAI-Backed Reasoning
+### P1 - Kodi OpenAI Bridge Exists, Live Key Still Required
 
-The API package includes OpenAI as a dependency and the usage model includes `openai_agent`, but `/api/agent/message` currently uses the local `buildKodiReplyFromContext` rules flow.
+The API package includes OpenAI as a dependency, the usage model includes `openai_agent`, and `/api/agent/message` now has a backend-only OpenAI bridge guarded by the trip usage pool.
 
-This is useful for MVP safety, but it is not yet the full agent promised by the product vision.
+Current acceptable behavior:
+
+- If `OPENAI_API_KEY` is missing, Kodi falls back to the local rules flow and still responds.
+- The response exposes safe runtime evidence (`agentRuntime`) but never exposes provider secrets.
+- The OpenAI prompt is grounded in trip state, recent group conversation, selected map context, Places results, Routes results, and permissions.
+- The bridge tells Kodi not to claim live Google account sync or Google Maps write-back before OAuth exists.
 
 Required future slice:
 
-- Backend-only OpenAI call.
-- Prompt grounded in trip state, recent group conversation, selected map context, Places results, Routes results, and permissions.
+- Add `OPENAI_API_KEY` to Render when the owner-managed usage pool is ready for live AI cost.
+- Run a live agent smoke that confirms `source=openai` without key leakage.
 - Tool/guard layer so Kodi can ask clarifying questions before expensive or operational actions.
-- Usage accounting under the trip owner's shared pool.
+- Usage accounting for successful OpenAI calls under the trip owner's shared pool.
 
 ### P2 - Fixed In This QA: Manager Location Step Had The Wrong Primary Action
 

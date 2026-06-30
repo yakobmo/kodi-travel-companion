@@ -27,6 +27,7 @@ $requiredFiles = @(
   "apps/api/tsconfig.json",
   "apps/api/src/server.ts",
   "apps/api/src/agent/kodi.ts",
+  "apps/api/src/agent/openaiAgent.ts",
   "apps/api/src/agent/tripContextResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
   "apps/api/src/billing/tripUsagePool.ts",
@@ -118,9 +119,28 @@ if (
   -not $tripUsagePoolSource.Contains("providerSecretsStoredServerSide: true") -or
   -not $tripUsagePoolSource.Contains("browserReceivesPrivateKeys: false") -or
   -not $tripUsagePoolSource.Contains("chargedTo: `"trip_usage_pool`"") -or
-  -not $tripUsagePoolSource.Contains("quotaEnforcedServerSide: true")
+  -not $tripUsagePoolSource.Contains("quotaEnforcedServerSide: true") -or
+  -not $tripUsagePoolSource.Contains("openai_agent: Boolean(process.env.OPENAI_API_KEY)")
 ) {
   throw "Trip usage pool code must enforce owner-managed billing, backend mediation, and no participant secrets."
+}
+
+$openAiAgentSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts") -Raw
+if (
+  -not $openAiAgentSource.Contains("OpenAI") -or
+  -not $openAiAgentSource.Contains("OPENAI_API_KEY") -or
+  -not $openAiAgentSource.Contains("OPENAI_AGENT_MODEL") -or
+  -not $openAiAgentSource.Contains("fallbackRulesReply") -or
+  -not $openAiAgentSource.Contains("Google Maps is the map engine") -or
+  -not $openAiAgentSource.Contains("Do not claim live Google account sync") -or
+  -not $openAiAgentSource.Contains("Return JSON only") -or
+  -not $openAiAgentSource.Contains('source: "openai"')
+) {
+  throw "OpenAI agent bridge must be backend-only, grounded in Google/trip context, JSON validated, and guarded by a fallback."
+}
+
+if ($openAiAgentSource.Contains("dangerouslyAllowBrowser")) {
+  throw "OpenAI agent bridge must never allow browser-side OpenAI credentials."
 }
 
 $sourcePlacesPath = Join-Path (Split-Path -Parent $root) "work\spikes\google-place-list\out\places.json"
@@ -247,7 +267,11 @@ if (
   -not $serverSourceForContext.Contains("tripContextClarification") -or
   -not $serverSourceForContext.Contains("tripContextConfidence") -or
   -not $serverSourceForContext.Contains("timelineReferenceConfidence") -or
-  -not $serverSourceForContext.Contains("tripReference.confidence !== `"low`"")
+  -not $serverSourceForContext.Contains("tripReference.confidence !== `"low`"") -or
+  -not $serverSourceForContext.Contains("tryBuildKodiReplyWithOpenAi") -or
+  -not $serverSourceForContext.Contains('capability: "openai_agent"') -or
+  -not $serverSourceForContext.Contains("agentRuntime") -or
+  -not $serverSourceForContext.Contains("fallbackUsed")
 ) {
   throw "Kodi agent flow must use trip context and trip timeline resolvers before choosing destinations or external search anchors."
 }

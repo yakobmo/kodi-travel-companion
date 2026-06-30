@@ -54,6 +54,7 @@ import {
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext } from "./agent/kodi.js";
+import { tryBuildKodiReplyWithOpenAi } from "./agent/openaiAgent.js";
 import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
 import {
   buildTripTimelineFromGoogleMapOrder,
@@ -1451,16 +1452,49 @@ app.post("/api/agent/message", async (req, res) => {
       ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
           .permissionPolicy
       : undefined;
-  const reply = buildKodiReplyFromContext({
+  const rulesReply = buildKodiReplyFromContext({
     ...req.body,
     tripState,
     externalPlacesSearch,
     routeEstimate,
     tripContextClarification: shouldUseRouteEstimate(message) ? tripReference.clarificationQuestion : undefined
   });
+  const openAiUsageGate = authorizeTripUsageCapability({
+    usagePool,
+    capability: "openai_agent",
+    triggeringMember: {
+      id: normalizedMember.id,
+      role: normalizedMember.role
+    }
+  });
+  const openAiReply =
+    openAiUsageGate.allowed && openAiUsageGate.providerConfigured
+      ? await tryBuildKodiReplyWithOpenAi({
+          ...req.body,
+          tripState,
+          externalPlacesSearch,
+          routeEstimate,
+          tripContextClarification: shouldUseRouteEstimate(message) ? tripReference.clarificationQuestion : undefined,
+          permissionPolicy,
+          rulesReply
+        })
+      : undefined;
+  if (openAiUsageGate.allowed && openAiUsageGate.providerConfigured && openAiReply?.status === "ready") {
+    await safeRecordUsageGateEvent({
+      usageGate: openAiUsageGate,
+      actorName: String(normalizedMember.displayName),
+      source: "kodi_agent"
+    });
+  }
+  const reply = openAiReply?.reply ?? rulesReply;
 
   res.json({
     ...reply,
+    agentRuntime: {
+      openAiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
+      openAiModel: openAiReply?.model,
+      fallbackUsed: reply.source === "rules"
+    },
     contextSummary: buildAgentContextSummary({
       tripGroupId,
       member: {
@@ -1477,7 +1511,7 @@ app.post("/api/agent/message", async (req, res) => {
       timelineReferenceConfidence: timelineReference.confidence,
       timelineReferenceReason: timelineReference.reason,
       timelineSegmentTitle: timelineReference.segment?.title,
-      usageGateResults: [placesUsageGate, routesUsageGate].filter(
+      usageGateResults: [placesUsageGate, routesUsageGate, openAiUsageGate].filter(
         (item): item is TripUsageGateDecision => Boolean(item)
       ),
       permissionPolicy

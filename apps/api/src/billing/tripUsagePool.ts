@@ -29,7 +29,7 @@ const providerByCapability: Record<TripUsageCapability, "openai" | "google" | "i
 };
 
 const enabledByCapability: Record<TripUsageCapability, boolean> = {
-  openai_agent: false,
+  openai_agent: Boolean(process.env.OPENAI_API_KEY),
   google_places: Boolean(process.env.GOOGLE_MAPS_API_KEY),
   google_routes: Boolean(process.env.GOOGLE_MAPS_API_KEY),
   google_oauth_sync: false

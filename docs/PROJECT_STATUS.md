@@ -227,6 +227,7 @@ Current Supabase state:
 - Google Maps runtime config correction added on `2026-06-30`; local API build, web build, QA, local smoke, diff check, GitHub push, Render deploy, and public smoke passed. Public result: `/api/config/maps` is live, the public bundle contains the runtime config fetch and Google Maps JS loader, Google source and usage endpoints pass, and `mapsConfigured=false` until a browser-safe Google Maps key is configured in Render.
 - Browser Google Maps activation completed on `2026-06-30`; after enabling Maps JavaScript API in Google Cloud, public browser smoke passed with `google-map-active`, Google Maps JS loaded, 23 map tiles rendered, and no fallback text. Follow-up: switch script loading to the recommended async pattern and migrate markers to `AdvancedMarkerElement`.
 - Product QA pass added on `2026-06-30` in `docs/PRODUCT_QA_2026-06-30.md`; result: current MVP slice conditionally passes the core product rule that Google Maps is the map and Kodi is the agent layer, with P1 gaps recorded for Google OAuth live account sync and OpenAI-backed reasoning. Manager-location onboarding primary action was corrected so the next step is clear after GPS is active. Public browser smoke passed after deploy: one primary action on the manager-location step, `google-map-active`, 23 Google map tiles, and no fallback text.
+- Backend OpenAI agent bridge added on `2026-06-30`; `/api/agent/message` now authorizes `openai_agent` through the owner-managed usage pool, attempts a backend-only OpenAI response when `OPENAI_API_KEY` exists, and safely falls back to the local rules answer when the key is not configured or the model call fails. The bridge is grounded in Google Maps/trip points, recent group chat, Places/Routes results, timeline context, and admin permissions, and does not expose provider secrets to browsers.
 
 ## Next Continuation Checkpoint
 
@@ -234,7 +235,7 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Implement the real backend agent bridge: group message -> Kodi wake detection -> context resolver -> Places/Routes if needed -> OpenAI grounded response -> optional manager approval action.
+1. Verify the real backend agent bridge live after adding `OPENAI_API_KEY` to Render: group message -> Kodi wake detection -> context resolver -> Places/Routes if needed -> OpenAI grounded response -> optional manager approval action.
 2. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 3. Add persistent usage-pool/account fields before real paid multi-family usage.
 4. Plan a safe internal rename migration from legacy single-trip route names to canonical trip-account route names, keeping backward-compatible aliases during the transition.

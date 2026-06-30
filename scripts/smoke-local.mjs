@@ -357,7 +357,15 @@ try {
   const locationAgentPayload = await locationAgentResponse.json();
   assertCheck("agent location ok", locationAgentResponse.ok());
   assertCheck("agent location intent", locationAgentPayload.intent === "group_location");
+  assertCheck("agent openai fallback runtime", locationAgentPayload.agentRuntime?.fallbackUsed === true);
+  assertCheck("agent openai status safe", locationAgentPayload.agentRuntime?.openAiStatus === "not_configured");
   assertCheck("agent location context", locationAgentPayload.contextSummary?.memberId === "mom");
+  assertCheck(
+    "agent openai usage gate present",
+    locationAgentPayload.contextSummary?.usageGateResults?.some(
+      (item) => item.capability === "openai_agent" && item.providerConfigured === false
+    )
+  );
   assertCheck("agent location state", locationAgentPayload.text?.includes("אבא") && locationAgentPayload.text?.includes("נועה"));
   assertCheck("agent hides no consent", locationAgentPayload.text?.includes("לא חושף אותם בלי הסכמה"));
 
