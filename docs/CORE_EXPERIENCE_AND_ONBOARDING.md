@@ -109,6 +109,10 @@ Default map focus after manager GPS is active: show nearby trip points around th
 
 The main screen should not preload invented family dialogue, sample questions, or dense explanatory copy. If no one has written yet, the chat starts clean with a short empty state.
 
+The onboarding state must be scoped to the user's browser/session until real authentication exists. A global demo/setup flag from the backend must not make a new user skip directly into the trip map.
+
+Seeded demo participant names must not appear in the product UI. The visible group starts with the trip manager and Kodi; additional participants are added through the invite flow.
+
 The hamburger or secondary management area can contain:
 
 - add participants

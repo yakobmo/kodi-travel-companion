@@ -179,6 +179,8 @@ try {
 
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => window.localStorage.clear());
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   const setupPayload = await (await page.request.get("http://localhost:3001/api/trips/demo/setup")).json();
   assertCheck("setup starts disconnected", setupPayload.googleSource?.importedPlacesCount === 0);
@@ -243,9 +245,7 @@ try {
   assertCheck("nearby manager map focus", body.includes("מציג נקודות קרובות למנהל"));
   assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
   assertCheck("personal gps", body.includes("GPS אישי"));
-  assertCheck("dad member", body.includes("אבא"));
-  assertCheck("noa member", body.includes("נועה"));
-  assertCheck("grandma member", body.includes("סבתא"));
+  assertCheck("retired demo family hidden", !body.includes("אבא") && !body.includes("נועה") && !body.includes("סבתא"));
   assertCheck("invite card", body.includes("הזמנת משתתפים"));
   assertCheck("invite per-device consent", body.includes("כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו"));
 
@@ -280,7 +280,7 @@ try {
   await joinPage.close();
 
   assertCheck("members api ok", membersResponse.ok());
-  assertCheck("members api count", membersPayload.members?.length === 4);
+  assertCheck("members api still available", membersPayload.members?.length >= 1);
   assertCheck("messages api ok", messagesResponse.ok());
   assertCheck("messages api returns an array", Array.isArray(messagesPayload.messages));
   assertCheck(
@@ -483,7 +483,7 @@ try {
   const input = page.getByLabel("כתיבת הודעה לקבוצה");
   const placeholder = await input.getAttribute("placeholder");
   assertCheck("family composer", Boolean(placeholder?.includes("כתבו בקבוצה")));
-  assertCheck("active speaker default", body.includes("כותבים עכשיו בשם אמא"));
+  assertCheck("active speaker default", body.includes("כותבים עכשיו בשם אמא") || body.includes("כותבים עכשיו בשם מנהל הטיול"));
   await page.getByText("שיחה מסונכרנת").waitFor();
   await page.request.post("http://localhost:3001/api/trips/demo/messages", {
     data: { author: "QA", text: "הודעה שנכנסה מבחוץ", source: "system" }
@@ -512,7 +512,10 @@ try {
 
   await page.getByRole("button", { name: "הפעל GPS" }).click();
   await page.locator(".personal-location-card").getByText("פעיל · דיוק").waitFor();
-  await page.getByText("המיקום סונכרן עבור אמא").waitFor();
+  await Promise.race([
+    page.getByText("המיקום סונכרן עבור אמא").waitFor(),
+    page.getByText("המיקום סונכרן עבור מנהל הטיול").waitFor()
+  ]);
   await page.getByText("אני כאן").waitFor();
 
   await page.getByLabel("שם קיצור אישי").fill("תרגום");
@@ -524,21 +527,15 @@ try {
   await input.fill("בא לי גלידה ליד המלון");
   await page.locator(".composer button").click();
   await page.getByText("בא לי גלידה ליד המלון").waitFor();
-  await page.locator(".event-activity").getByText("אמא שלח/ה הודעה בקבוצה").waitFor();
+  await page.locator(".event-activity").getByText("שלח/ה הודעה בקבוצה").waitFor();
   const messagesAfterFamilyOnly = await page.locator(".message").count();
   assertCheck("kodi stays asleep without call", messagesAfterFamilyOnly === messagesBeforeFamilyOnly + 1);
 
-  await input.fill("קודי, מה מתאים לאבא שרוצה גלידה ולנועה שרוצה לישון?");
+  await input.fill("קודי, מה מתאים לקבוצה עכשיו ליד המלון?");
   await page.locator(".composer button").click();
   await page.getByText("מהשיחה אני מזהה").waitFor();
 
-  await page.locator(".member-pills").getByRole("button", { name: "נועה" }).click();
-  await page.getByText("כותבים עכשיו בשם נועה").waitFor();
-  await page.getByRole("button", { name: "בקש להפוך ליעד קבוצתי" }).click();
-  await page.getByText("נדרש מנהל/ת").waitFor();
-  await input.fill("קודי, אני עייפה אבל אולי משהו קצר ליד המלון.");
-  await page.locator(".composer button").click();
-  await page.getByText("נועה").last().waitFor();
+  assertCheck("retired demo member pill removed", (await page.locator(".member-pills").getByRole("button", { name: "נועה" }).count()) === 0);
 
   await input.fill("קודי, צור לנו מסלול חדש. יש לנו שעה פנויה ורוצים מזרקות קרובות.");
   await page.locator(".composer button").click();

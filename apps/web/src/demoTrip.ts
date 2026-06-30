@@ -34,21 +34,8 @@ export const demoPlaces = [
 
 export const demoMembers = [
   {
-    id: "dad",
-    name: "אבא",
-    role: "admin",
-    ageGroup: "adult",
-    locationSharing: "enabled",
-    liveLocation: {
-      lat: 39.2518,
-      lng: 22.752,
-      label: "ליד המלון",
-      updatedMinutesAgo: 2
-    }
-  },
-  {
     id: "mom",
-    name: "אמא",
+    name: "מנהל הטיול",
     role: "owner",
     ageGroup: "adult",
     locationSharing: "enabled",
@@ -58,27 +45,6 @@ export const demoMembers = [
       label: "בקבלה",
       updatedMinutesAgo: 1
     }
-  },
-  {
-    id: "noa",
-    name: "נועה",
-    role: "member",
-    ageGroup: "child",
-    locationSharing: "enabled",
-    liveLocation: {
-      lat: 39.2508,
-      lng: 22.7517,
-      label: "בחדר",
-      updatedMinutesAgo: 4
-    }
-  },
-  {
-    id: "grandma",
-    name: "סבתא",
-    role: "viewer",
-    ageGroup: "senior",
-    locationSharing: "disabled",
-    liveLocation: null
   }
 ];
 

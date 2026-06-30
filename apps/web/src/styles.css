@@ -1420,22 +1420,10 @@ input {
     border-top: 1px solid #d8dedb;
   }
 
-  .places-strip {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    width: 100%;
-    margin-top: 52vh;
-  }
-
-  .action-card {
-    position: relative;
-    top: auto;
-    right: auto;
-    width: 100%;
-    margin-top: 12px;
-  }
-
+  .places-strip,
+  .action-card,
+  .map-provider-note,
+  .privacy-note,
   .personal-location-card,
   .invite-card,
   .event-activity,

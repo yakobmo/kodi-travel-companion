@@ -6,6 +6,8 @@ type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "st
 type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
 const DEFAULT_NEARBY_MAP_RADIUS_KM = 10;
 const DEFAULT_VISIBLE_PLACE_LIMIT = 5;
+const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
+const retiredDemoMemberIds = new Set(["dad", "noa", "grandma"]);
 
 interface TripPlace {
   id: string;
@@ -140,6 +142,54 @@ interface DemoMember {
     label: string;
     updatedMinutesAgo: number;
   } | null;
+}
+
+function getLocalSetupCompleted() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.localStorage.getItem(LOCAL_SETUP_COMPLETE_KEY) === "true";
+}
+
+function rememberLocalSetupCompleted() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(LOCAL_SETUP_COMPLETE_KEY, "true");
+}
+
+function normalizeTripMembers(members: DemoMember[], managerName = "מנהל הטיול"): DemoMember[] {
+  const visibleMembers = members.filter((member) => !retiredDemoMemberIds.has(member.id));
+  const ownerIndex = visibleMembers.findIndex((member) => member.role === "owner" || member.id === "mom");
+
+  if (ownerIndex >= 0) {
+    return visibleMembers.map((member, index) =>
+      index === ownerIndex
+        ? {
+            ...member,
+            name: managerName.trim().length > 1 ? managerName.trim() : "מנהל הטיול",
+            role: "owner"
+          }
+        : member
+    );
+  }
+
+  const fallbackManager: DemoMember = {
+    id: "mom",
+    name: managerName.trim().length > 1 ? managerName.trim() : "מנהל הטיול",
+    role: "owner",
+    ageGroup: "adult",
+    locationSharing: "disabled",
+    liveLocation: null
+  };
+
+  return [
+    {
+      ...fallbackManager
+    }
+  ];
 }
 
 interface TripMemberLocationResponse {
@@ -538,7 +588,7 @@ function getAgeGroupFromDraft(ageDraft: string) {
 
 export function App() {
   const initialJoinToken = getInitialJoinToken();
-  const [showActivation, setShowActivation] = useState(!initialJoinToken);
+  const [showActivation, setShowActivation] = useState(!initialJoinToken && !getLocalSetupCompleted());
   const [showJoinFlow, setShowJoinFlow] = useState(Boolean(initialJoinToken));
   const [activationStep, setActivationStep] = useState<ActivationStep>("welcome");
   const [setupState, setSetupState] = useState<TripSetupStateResponse | null>(null);
@@ -572,7 +622,7 @@ export function App() {
   const [tripEvents, setTripEvents] = useState<TripEvent[]>([]);
   const [eventRealtimeState, setEventRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [eventLogDriver, setEventLogDriver] = useState<"file" | "supabase" | "unknown">("unknown");
-  const [members, setMembers] = useState<DemoMember[]>(demoMembers as DemoMember[]);
+  const [members, setMembers] = useState<DemoMember[]>(normalizeTripMembers(demoMembers as DemoMember[]));
   const [activeMemberId, setActiveMemberId] = useState("mom");
   const [draft, setDraft] = useState("");
   const [userShortcuts, setUserShortcuts] = useState<UserShortcut[]>([]);
@@ -656,7 +706,7 @@ export function App() {
               googleLink: savedSetup.googleLink
             }));
           }
-          if (data.setupCompleted && !initialJoinToken) {
+          if (data.setupCompleted && !initialJoinToken && getLocalSetupCompleted()) {
             setShowActivation(false);
           }
         }
@@ -753,7 +803,7 @@ export function App() {
         setSummary(data.summary);
         setPlaces(data.places);
         setSelectedPlaceId(data.places[0]?.id ?? "");
-        setMembers(mapMemberLocations(data.members));
+        setMembers(normalizeTripMembers(mapMemberLocations(data.members), setupDraft.memberName));
         setGroupDestination(data.groupDestination ?? null);
         setGroupRoute(data.groupRoute ?? null);
         setActiveRouteStopIndex(data.groupRoute?.activeStopIndex ?? 0);
@@ -779,25 +829,28 @@ export function App() {
         }
 
         setMembers(
-          data.members.map((item) => ({
-            id: item.member.id,
-            name: item.member.displayName,
-            role: item.member.role,
-            ageGroup: item.member.ageGroup ?? "adult",
-            locationSharing: item.consent.state,
-            liveLocation: item.liveLocation
-              ? {
-                  lat: item.liveLocation.lat,
-                  lng: item.liveLocation.lng,
-                  label: item.displayLabel ?? "מיקום אחרון",
-                  updatedMinutesAgo: item.updatedMinutesAgo ?? 0
-                }
-              : null
-          }))
+          normalizeTripMembers(
+            data.members.map((item) => ({
+              id: item.member.id,
+              name: item.member.displayName,
+              role: item.member.role,
+              ageGroup: item.member.ageGroup ?? "adult",
+              locationSharing: item.consent.state,
+              liveLocation: item.liveLocation
+                ? {
+                    lat: item.liveLocation.lat,
+                    lng: item.liveLocation.lng,
+                    label: item.displayLabel ?? "מיקום אחרון",
+                    updatedMinutesAgo: item.updatedMinutesAgo ?? 0
+                  }
+                : null
+            })),
+            setupDraft.memberName
+          )
         );
       } catch {
         if (!ignore) {
-          setMembers(demoMembers as DemoMember[]);
+          setMembers(normalizeTripMembers(demoMembers as DemoMember[], setupDraft.memberName));
         }
       }
     }
@@ -1064,7 +1117,7 @@ export function App() {
           return;
         }
 
-        setMembers(mapMemberLocations(data.members));
+        setMembers(normalizeTripMembers(mapMemberLocations(data.members), setupDraft.memberName));
         setMemberRealtimeState("live");
       } catch {
         if (!ignore) {
@@ -1088,7 +1141,7 @@ export function App() {
         try {
           const data = JSON.parse(event.data) as TripMemberLocationResponse;
           if (!ignore && Array.isArray(data.members)) {
-            setMembers(mapMemberLocations(data.members));
+            setMembers(normalizeTripMembers(mapMemberLocations(data.members), setupDraft.memberName));
             setMemberRealtimeState("live");
           }
         } catch {
@@ -1861,6 +1914,8 @@ export function App() {
       const nextSetupState = (await response.json()) as TripSetupStateResponse;
       setSetupState(nextSetupState);
       setSetupSaveState("saved");
+      rememberLocalSetupCompleted();
+      setMembers(normalizeTripMembers(members, setupDraft.memberName));
       setShowActivation(false);
     } catch {
       setSetupSaveState("error");
