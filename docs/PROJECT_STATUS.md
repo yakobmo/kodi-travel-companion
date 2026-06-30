@@ -75,6 +75,7 @@ Implemented locally:
 - Mobile main-screen cleanup added: the app no longer seeds invented family chat examples, filters retired seeded chat rows from storage, and keeps participant invite, usage, shortcuts, and GPS management behind the hamburger menu on mobile.
 - Default map focus now uses the manager's live GPS location: the map prioritizes trip points within a 10 km radius and falls back to the nearest points if none are inside that radius.
 - Entry cleanup added: a new browser no longer skips onboarding because of the shared backend setup state, seeded demo participant names are normalized out of the UI, and secondary map/card layers are hidden on mobile until the user reaches the core experience.
+- Public mobile smoke on 2026-06-30 passed after entry cleanup: a clean browser lands on onboarding, does not render the main app shell, and does not show seeded demo members or map/card layers before setup.
 - Public smoke on 2026-06-30 passed after manager-location map focus deploy: `/api/health`, `/api/trips/demo/storage`, and the public app shell returned successfully.
 - Public smoke on 2026-06-30 passed after mobile cleanup deploy: `/api/health`, `/api/trips/demo/storage`, and `/api/trips/demo/messages` returned successfully, with retired seeded family-dialogue messages hidden from the public API.
 
