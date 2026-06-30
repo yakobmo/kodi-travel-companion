@@ -531,9 +531,9 @@ export function App() {
   const [setupSaveState, setSetupSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [setupSaveError, setSetupSaveError] = useState("");
   const [setupDraft, setSetupDraft] = useState<SetupDraft>({
-    tripName: "טיול צפון יוון",
-    memberName: "מנהל הטיול",
-    memberAge: "40",
+    tripName: "",
+    memberName: "",
+    memberAge: "",
     googleLink: "",
     aiPlanConfirmed: false,
     locationConsentExplained: false
@@ -627,6 +627,22 @@ export function App() {
         const data = (await response.json()) as TripSetupStateResponse;
         if (!ignore) {
           setSetupState(data);
+          const savedSetup = data.setupSummary;
+          if (savedSetup) {
+            setSetupDraft((draft) => ({
+              ...draft,
+              tripName: savedSetup.tripName,
+              memberName: savedSetup.firstMemberName,
+              memberAge:
+                typeof savedSetup.firstMemberAge === "number"
+                  ? String(savedSetup.firstMemberAge)
+                  : draft.memberAge,
+              googleLink: savedSetup.googleLink
+            }));
+          }
+          if (data.setupCompleted && !initialJoinToken) {
+            setShowActivation(false);
+          }
         }
       } catch {
         if (!ignore) {
@@ -1192,15 +1208,21 @@ export function App() {
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
   const googleSourceRecognized =
     normalizedGoogleLink.includes("maps.app.goo.gl") || normalizedGoogleLink.includes("google.com/maps");
-  const googleSourceReady = googleSourceRecognized || setupDraft.googleLink.trim().length === 0;
+  const googleSourceReady = googleSourceRecognized;
+  const memberAgeNumber = Number(setupDraft.memberAge);
   const managerLocationReady = locationState === "enabled" || Boolean(currentLocation);
   const setupReadiness = {
     hasOwner: setupDraft.tripName.trim().length > 1,
-    hasMembers: setupDraft.memberName.trim().length > 1 && setupDraft.memberAge.trim().length > 0,
+    hasMembers:
+      setupDraft.memberName.trim().length > 1 &&
+      Number.isFinite(memberAgeNumber) &&
+      memberAgeNumber > 0 &&
+      memberAgeNumber < 120,
     hasGoogleSource: googleSourceReady,
     hasLocationConsentExplained: setupDraft.locationConsentExplained,
     hasAiPlanExplained: setupDraft.aiPlanConfirmed
   };
+  const tripSourceStepReady = setupReadiness.hasOwner && setupReadiness.hasMembers && setupReadiness.hasGoogleSource;
   const activationSteps: Array<{ id: ActivationStep; label: string }> = [
     { id: "welcome", label: "קודי" },
     { id: "google", label: "מקור טיול" },
@@ -1906,9 +1928,6 @@ export function App() {
               >
                 הפעל את קודי
               </button>
-              <button className="quiet-action" type="button" onClick={() => setShowActivation(false)}>
-                כניסה לחשבון הטיול
-              </button>
             </section>
           ) : null}
 
@@ -1926,6 +1945,7 @@ export function App() {
                   <input
                     aria-label="שם הטיול"
                     onChange={(event) => setSetupDraft((draft) => ({ ...draft, tripName: event.target.value }))}
+                    placeholder="לדוגמה: טיול צפון יוון"
                     value={setupDraft.tripName}
                   />
                 </label>
@@ -1937,6 +1957,25 @@ export function App() {
                     onChange={(event) => setSetupDraft((draft) => ({ ...draft, googleLink: event.target.value }))}
                     placeholder="https://maps.app.goo.gl/..."
                     value={setupDraft.googleLink}
+                  />
+                </label>
+                <label>
+                  שם מנהל הטיול
+                  <input
+                    aria-label="שם מנהל הטיול"
+                    onChange={(event) => setSetupDraft((draft) => ({ ...draft, memberName: event.target.value }))}
+                    placeholder="לדוגמה: אבא"
+                    value={setupDraft.memberName}
+                  />
+                </label>
+                <label>
+                  גיל מנהל הטיול
+                  <input
+                    aria-label="גיל מנהל הטיול"
+                    inputMode="numeric"
+                    onChange={(event) => setSetupDraft((draft) => ({ ...draft, memberAge: event.target.value }))}
+                    placeholder="לדוגמה: 40"
+                    value={setupDraft.memberAge}
                   />
                 </label>
               </div>
@@ -1956,7 +1995,15 @@ export function App() {
                   <small className="google-source-preview">Read-only preview active · write-back requires Google OAuth</small>
                 )}
               </div>
-              <button className="primary-action" type="button" onClick={() => setActivationStep("manager_location")}>
+              {!tripSourceStepReady ? (
+                <small className="setup-error">כדי להמשיך צריך שם טיול, קישור Google Maps תקין, שם מנהל וגיל.</small>
+              ) : null}
+              <button
+                className="primary-action"
+                disabled={!tripSourceStepReady}
+                type="button"
+                onClick={() => setActivationStep("manager_location")}
+              >
                 המשך למיקום מנהל
               </button>
               <button className="quiet-action" type="button" onClick={() => setActivationStep("welcome")}>

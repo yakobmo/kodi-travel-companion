@@ -41,7 +41,8 @@ Recommended onboarding sequence:
 Current implementation:
 
 - Kodi opens with a single activation step.
-- The trip source step asks for the real trip source and can temporarily accept a Google Maps viewing link while clearly avoiding a live-sync claim.
+- The trip source step asks for the real trip name, Google Maps viewing link, manager name, and manager age while clearly avoiding a live-sync claim.
+- The first-run flow has no bypass button into the main app. The user must complete the real account/trip setup path before entering the map and chat.
 - Manager GPS is an explicit step before entering the core experience.
 - The main app opens only after the core is ready: Kodi, map, trip points, and manager location.
 

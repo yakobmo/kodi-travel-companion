@@ -188,11 +188,15 @@ try {
   assertCheck("guided activation shell", activationBody.includes("שלום, אני קודי"));
   assertCheck("guided activation single purpose", activationBody.includes("הפעל את קודי"));
   assertCheck("guided activation open questions", activationBody.includes("בית חב\"ד קרוב"));
+  assertCheck("guided activation no bypass", !activationBody.includes("כניסה לחשבון הטיול"));
 
   await page.getByRole("button", { name: "הפעל את קודי" }).click();
   await page.getByText("מאיפה לקרוא את הטיול?").waitFor();
+  assertCheck("trip source continue initially disabled", await page.getByRole("button", { name: "המשך למיקום מנהל" }).isDisabled());
   await page.locator(".guided-step").getByLabel("שם הטיול").fill("יוון משפחתי 2026");
   await page.locator(".guided-step").getByLabel("קישור Google Maps").fill("https://maps.app.goo.gl/MspoN6j9CJDyGmtb8");
+  await page.locator(".guided-step").getByLabel("שם מנהל הטיול").fill("אמא");
+  await page.locator(".guided-step").getByLabel("גיל מנהל הטיול").fill("40");
   await page.getByText("הקישור זוהה").waitFor();
   await page.getByRole("button", { name: "המשך למיקום מנהל" }).click();
   await page.getByText("נפעיל מיקום מנהל").waitFor();
@@ -203,6 +207,10 @@ try {
   await page.getByRole("button", { name: "כניסה למפה ולשיחה" }).click();
 
   await page.getByText("מפה חיה").waitFor();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByText("מפה חיה").waitFor();
+  const returningUserBody = await page.locator("body").innerText();
+  assertCheck("returning user skips completed onboarding", !returningUserBody.includes("שלום, אני קודי"));
 
   await page.getByText("סנכרון חי פעיל").waitFor();
   const body = await page.locator("body").innerText();
