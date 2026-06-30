@@ -125,6 +125,13 @@ Usage and billing decision:
 - Backend holds all private provider secrets and enforces role permissions, quotas, and audit.
 - Costly calls should be attributed to trip group and triggering member.
 
+Development-stage decision:
+
+- Current target: a working prototype for one real trip group at a time, good enough for hands-on family testing and product learning.
+- Near-term product target: multi-trip SaaS with authentication, trip ownership, invite-token API, persistent usage pools, owner-visible quotas, and billing/credits.
+- Scale target: hundreds or thousands of concurrent users only after queues, rate limits, provider-cost controls, caching, monitoring, and load testing are added.
+- End users never receive Render access or provider credentials; they only use the app, join trips, grant permissions, and optionally pay for a plan or trip package.
+
 Do not deploy this app over any existing PB Trading Cockpit service.
 PB is a separate product and must remain untouched.
 
@@ -236,10 +243,11 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Verify the real backend agent bridge live after adding `OPENAI_API_KEY` to Render: group message -> Kodi wake detection -> context resolver -> Places/Routes if needed -> OpenAI grounded response -> optional manager approval action.
+1. Continue shaping the working prototype around real usage: clean onboarding, Google Maps core, live Kodi chat, Places/Routes answers, Waze links, and participant invite flow.
 2. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
-3. Add persistent usage-pool/account fields before real paid multi-family usage.
-4. Plan a safe internal rename migration from legacy single-trip route names to canonical trip-account route names, keeping backward-compatible aliases during the transition.
+3. Add persistent trip-account, invite-token, and usage-pool fields before real paid multi-family usage.
+4. Add rate limits, quotas, caching, monitoring, queues, and load tests before claiming support for hundreds or thousands of concurrent users.
+5. Plan a safe internal rename migration from legacy single-trip route names to canonical trip-account route names, keeping backward-compatible aliases during the transition.
 
 ## QA
 

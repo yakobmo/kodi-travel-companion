@@ -31,6 +31,51 @@ All costly work is attributed to the trip space:
 Participants do not bring separate OpenAI keys or Google API keys.
 They send messages and actions to Kodi through the application backend.
 
+## Development Stages
+
+### Stage 1 - Working Prototype
+
+The current product target is a usable prototype for one real trip group at a time.
+
+Prototype expectation:
+
+- One deployed Kodi backend holds the system OpenAI, Google, and Supabase credentials.
+- A trip manager opens the app, connects/identifies a trip source, enables manager location, and invites participants.
+- Participants join through an invite link and do not see Render, OpenAI keys, Google Cloud, or Supabase.
+- Kodi can answer through the backend agent bridge and can use Google Maps, Places, Routes, trip points, chat history, and permissions.
+- The prototype is good for real family testing and product learning, but it is not yet designed for 1,000 concurrent users.
+
+### Stage 2 - Multi-Trip Product
+
+The next product stage is turning the prototype into a reliable SaaS-style product for many trip groups.
+
+Required capabilities:
+
+- Real authentication and separate trip accounts.
+- Persistent trip ownership and participant membership boundaries.
+- Invite-token API with expiration, role assignment, and audit.
+- Per-trip usage pool records instead of only environment-level provider keys.
+- Quotas and budget visibility per trip owner.
+- Rate limiting by trip, member, and capability.
+- Cached Google Places/Routes results where safe, to reduce cost and latency.
+- Clear billing model: subscription, credits, or paid trip package.
+
+### Stage 3 - Scale-Ready Service
+
+Serving hundreds or thousands of concurrent users is an infrastructure stage, not a requirement for the first prototype.
+
+Scale-readiness requires:
+
+- Job queues for slower or expensive agent/tool calls.
+- Background workers for enrichment, sync, and summarization.
+- Provider rate-limit handling for OpenAI and Google APIs.
+- Observability for latency, errors, token usage, Google API usage, and cost.
+- Abuse controls so one member or one trip cannot silently consume the whole system budget.
+- Horizontal scaling of the API service or a move to infrastructure that supports it.
+- Load tests that simulate concurrent chat, location updates, Places, Routes, and realtime streams.
+
+Architecture rule: users never manage Render or provider credentials. Scaling changes the backend and billing layer, not the end-user setup flow.
+
 ## Server Boundary
 
 Kodi runs through the backend service.

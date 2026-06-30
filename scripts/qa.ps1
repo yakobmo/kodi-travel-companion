@@ -90,7 +90,11 @@ if (
   -not $ownershipModelSource.Contains("Trip Owner") -or
   -not $ownershipModelSource.Contains("Usage Pool") -or
   -not $ownershipModelSource.Contains("Participants do not bring separate OpenAI keys") -or
-  -not $ownershipModelSource.Contains("private credentials stay on the server side")
+  -not $ownershipModelSource.Contains("private credentials stay on the server side") -or
+  -not $ownershipModelSource.Contains("Stage 1 - Working Prototype") -or
+  -not $ownershipModelSource.Contains("Stage 2 - Multi-Trip Product") -or
+  -not $ownershipModelSource.Contains("Stage 3 - Scale-Ready Service") -or
+  -not $ownershipModelSource.Contains("users never manage Render or provider credentials")
 ) {
   throw "Trip ownership and usage model must document one owner-managed usage pool and backend-only provider secrets."
 }
