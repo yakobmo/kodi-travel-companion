@@ -14,6 +14,8 @@ The map engine is Google Maps. Kodi must not recreate Google Maps behavior such 
 
 Implementation rule: browser map rendering must use Google Maps JavaScript API when a browser-safe key is configured through `GOOGLE_MAPS_BROWSER_API_KEY` or `VITE_GOOGLE_MAPS_API_KEY`. `GOOGLE_MAPS_API_KEY` is server-side for Places/Routes and is not exposed to browsers unless explicitly allowed by `GOOGLE_MAPS_ALLOW_SERVER_KEY_IN_BROWSER=true` during controlled testing. The internal map drawing layer is a development fallback only, not the product map.
 
+Product framing rule: the user experience is "Kodi inside Google Maps context", not "Kodi built its own map". Location, movement, zoom, compass, map gestures, and route-like map behavior should feel like the normal Google Maps experience. Kodi should add the conversation and decision layer on top of Google Maps, not compete with Google Maps.
+
 Without the manager's live location, Kodi cannot reliably answer "what now?", "what is nearby?", "how long to the hotel?", or "open this in Waze" in a travel-specific way.
 
 Group member locations are a flagship extension, but the minimum viable live context is:
@@ -23,7 +25,9 @@ Group member locations are a flagship extension, but the minimum viable live con
 - Kodi's chat context
 - the active day/route/lodging context when available
 
-Live location means browser GPS tracking, not a one-time coordinate read. After consent, the app should use the browser geolocation watch flow, update the manager/member marker on Google Maps, and sync the latest approved location to the backend with consent-aware visibility.
+Live location is conceptually part of the Google Maps experience. In the web app, the browser still requires device/location permission before any app can use the user's current location; Kodi cannot silently inherit the private live location from the user's Google Maps app or Google account. After consent, the app should show and update the manager/member marker on Google Maps, use Google Maps as the visible map surface, and sync the latest approved location to the backend with consent-aware visibility.
+
+UX wording should avoid suggesting that Kodi has a separate GPS system. Prefer language such as "Google Maps location is active" or "live location on the map" over infrastructure wording.
 
 ## UX Principle
 
@@ -41,7 +45,7 @@ Recommended onboarding sequence:
 2. Kodi explains what it needs next.
 3. Connect trip source.
 4. Confirm which Google trip/list/map should be used.
-5. Enable the manager's live location.
+5. Enable live location on the Google Maps view when the device/browser asks for permission.
 6. Enter the main experience: map, trip points, manager location, and Kodi chat.
 
 Current implementation:
@@ -49,7 +53,7 @@ Current implementation:
 - Kodi opens with a single activation step.
 - The trip source step asks for the real trip name, Google Maps viewing link, manager name, and manager age while clearly avoiding a live-sync claim.
 - The first-run flow has no bypass button into the main app. The user must complete the real account/trip setup path before entering the map and chat.
-- Manager GPS is an explicit step before entering the core experience.
+- Manager live location is an explicit step before entering the core experience, but it should be framed as enabling location on the Google Maps view, not as a separate Kodi navigation engine.
 - The main app opens only after the core is ready: Kodi, map, trip points, and manager location.
 
 Only after the core is running should the app offer:
@@ -107,7 +111,7 @@ The main screen should prioritize:
 
 - Google Maps first
 - trip points visible on the map
-- manager live location visible on the map after consent
+- manager live location visible on Google Maps after device/browser consent
 - Kodi available in the same family conversation
 - one obvious next action
 

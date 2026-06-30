@@ -90,12 +90,21 @@ They are not participant-level credentials.
 
 Use separate Google layers:
 
+- Google Maps JavaScript API: the visible map engine for the app. Kodi overlays trip points, group context, and conversation state on top of this map instead of recreating map behavior.
 - Maps URLs: open Google Maps search, directions, and map views without an API key.
 - Places API: enrich or search places after configuring a Google Maps Platform key.
 - Routes API: calculate routes, distances, and ETAs after configuring a Google Maps Platform key.
 - OAuth / user account access: required before any user-specific live sync or write-back workflow.
 - Trip Context Resolver: Kodi must resolve the current reference point before calling Places or Routes. The reference can come from live GPS, active group destination, active route stop, nearby lodging, or recent conversation context.
 - Trip Timeline Resolver: Kodi must derive a trip-stage view from the imported Google map order so future questions such as "in two days near the Pelion hotel" can use the right lodging anchor before live OAuth exists.
+
+Location clarification:
+
+- Product-wise, Kodi is connected to the Google Maps context.
+- Implementation-wise, a web app cannot silently read the private live location from the user's Google Maps app/session.
+- The app must use the device/browser location permission or a future permissioned Google account flow.
+- Once permission exists, the live location is displayed on Google Maps and used by Kodi as map context.
+- The UI should make this feel like normal Google Maps location behavior, not a separate custom GPS product.
 
 Use one trip-space usage model:
 

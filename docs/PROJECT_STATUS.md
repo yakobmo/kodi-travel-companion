@@ -23,6 +23,8 @@ Product-language decision: Kodi should not present a trial mode to users. The pr
 
 Map architecture correction: Google Maps is the product map engine. Kodi does not recreate Google Maps behaviors; it adds the agent/group/trip layer on top of Google Maps and uses fallback rendering only when a browser-visible Google Maps key is not configured.
 
+Location architecture correction: product-wise, Kodi is connected to the Google Maps context. The app should feel like normal Google Maps with Kodi over it. Implementation-wise, the browser still requires device/location permission before the app can use the user's live location; Kodi cannot silently inherit private live location from the user's Google Maps app or account.
+
 ## Current Core
 
 Implemented locally:
