@@ -18,8 +18,19 @@ const retiredSeedMessageIds = new Set([
   "msg_demo_kodi_reply"
 ]);
 
+const retiredSeedMessageTextFragments = [
+  "בא לי גלידה.",
+  "בא לי לישון.",
+  "אפשר לאכול שם גלידה",
+  "אבא רוצה גלידה",
+  "נועה עייפה"
+];
+
 function isRetiredSeedMessage(message: StoredDemoMessage) {
-  return retiredSeedMessageIds.has(message.id);
+  return (
+    retiredSeedMessageIds.has(message.id) ||
+    retiredSeedMessageTextFragments.some((fragment) => message.text.includes(fragment))
+  );
 }
 
 function createMessageId(source: StoredDemoMessage["source"]) {
