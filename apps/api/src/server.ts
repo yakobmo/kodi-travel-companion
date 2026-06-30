@@ -370,6 +370,24 @@ app.get("/api/health", (_req, res) => {
   res.json(buildHealthPayload());
 });
 
+app.get("/api/config/maps", (_req, res) => {
+  const browserKey =
+    process.env.GOOGLE_MAPS_BROWSER_API_KEY?.trim() || process.env.VITE_GOOGLE_MAPS_API_KEY?.trim() || "";
+  const allowServerKeyInBrowser = process.env.GOOGLE_MAPS_ALLOW_SERVER_KEY_IN_BROWSER === "true";
+  const fallbackServerKey = allowServerKeyInBrowser ? process.env.GOOGLE_MAPS_API_KEY?.trim() ?? "" : "";
+  const apiKey = browserKey || fallbackServerKey;
+
+  res.json({
+    provider: "google_maps",
+    configured: apiKey.length > 0,
+    apiKey: apiKey || undefined,
+    source: browserKey ? "browser_key" : fallbackServerKey ? "explicit_server_key_fallback" : "not_configured",
+    warning: browserKey
+      ? undefined
+      : "Google Maps browser rendering requires GOOGLE_MAPS_BROWSER_API_KEY or VITE_GOOGLE_MAPS_API_KEY. Server-only GOOGLE_MAPS_API_KEY is not exposed unless GOOGLE_MAPS_ALLOW_SERVER_KEY_IN_BROWSER=true."
+  });
+});
+
 app.get("/api/trips/demo/places", (_req, res) => {
   const places = loadDemoTripPlaces();
   res.json({

@@ -241,7 +241,10 @@ try {
   assertCheck("airbnb shortcut", body.includes("Airbnb"));
   assertCheck("group location consent copy", body.includes("מיקום חברי קבוצה מוצג רק למי שאישר שיתוף"));
   assertCheck("google maps is target provider", body.includes("ממתין ל-Google Maps"));
-  assertCheck("map provider fallback reason", body.includes("חסר VITE_GOOGLE_MAPS_API_KEY"));
+  assertCheck(
+    "map provider fallback reason",
+    body.includes("GOOGLE_MAPS_BROWSER_API_KEY") || body.includes("VITE_GOOGLE_MAPS_API_KEY")
+  );
   assertCheck("nearby manager map focus", body.includes("מציג נקודות קרובות למנהל"));
   assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
   assertCheck("personal gps", body.includes("GPS אישי"));

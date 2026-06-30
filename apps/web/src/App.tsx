@@ -358,6 +358,14 @@ interface GoogleSourcePreviewResponse {
   previewPlaces: TripPlace[];
 }
 
+interface MapsRuntimeConfigResponse {
+  provider: "google_maps";
+  configured: boolean;
+  apiKey?: string;
+  source: "browser_key" | "explicit_server_key_fallback" | "not_configured";
+  warning?: string;
+}
+
 interface SetupDraft {
   tripName: string;
   memberName: string;
@@ -373,7 +381,7 @@ interface JoinDraft {
 }
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : "");
-const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
+const buildTimeGoogleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
 
 function loadGoogleMapsSdk(apiKey: string) {
   if (window.google?.maps) {
@@ -407,8 +415,8 @@ function loadGoogleMapsSdk(apiKey: string) {
   return window.__kodiGoogleMapsPromise;
 }
 
-function getMapProviderStatus() {
-  if (googleMapsApiKey) {
+function getMapProviderStatus(apiKey: string, configLoaded: boolean) {
+  if (apiKey) {
     return {
       mode: "google-ready" as const,
       label: "Google Maps פעיל",
@@ -418,8 +426,10 @@ function getMapProviderStatus() {
 
   return {
     mode: "internal-fallback" as const,
-    label: "ממתין ל-Google Maps",
-    detail: "חסר VITE_GOOGLE_MAPS_API_KEY בדפדפן; מוצג fallback זמני בלבד, לא מנוע המפה של המוצר"
+    label: configLoaded ? "ממתין ל-Google Maps" : "בודק חיבור Google Maps",
+    detail: configLoaded
+      ? "חסר GOOGLE_MAPS_BROWSER_API_KEY או VITE_GOOGLE_MAPS_API_KEY; מוצג fallback זמני בלבד, לא מנוע המפה של המוצר"
+      : "קודי בודק אם מוגדר מפתח דפדפן בטוח ל-Google Maps"
   };
 }
 
@@ -687,6 +697,8 @@ export function App() {
   );
   const [activeRouteStopIndex, setActiveRouteStopIndex] = useState(0);
   const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState(buildTimeGoogleMapsApiKey);
+  const [mapsConfigLoaded, setMapsConfigLoaded] = useState(Boolean(buildTimeGoogleMapsApiKey));
   const googleMapElementRef = useRef<HTMLDivElement | null>(null);
 
   function applyTripEvents(data: TripEventsResponse) {
@@ -722,6 +734,39 @@ export function App() {
     setGroupDestination(destination);
     setDestinationRealtimeState("live");
   }
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchMapsRuntimeConfig() {
+      if (buildTimeGoogleMapsApiKey) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/config/maps`);
+        if (!response.ok) {
+          throw new Error(`Maps config failed with ${response.status}`);
+        }
+
+        const data = (await response.json()) as MapsRuntimeConfigResponse;
+        if (!ignore) {
+          setGoogleMapsApiKey(data.apiKey?.trim() ?? "");
+          setMapsConfigLoaded(true);
+        }
+      } catch {
+        if (!ignore) {
+          setMapsConfigLoaded(true);
+        }
+      }
+    }
+
+    void fetchMapsRuntimeConfig();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -1285,7 +1330,7 @@ export function App() {
 
   const activeMember = members.find((member) => member.id === activeMemberId) ?? members[0] ?? {
     id: "mom",
-    name: "אמא",
+    name: "מנהל הטיול",
     role: "owner",
     ageGroup: "adult",
     locationSharing: "enabled",
@@ -1334,7 +1379,7 @@ export function App() {
   const selectedPlace = visiblePlaces.find((place) => place.id === selectedPlaceId) ?? visiblePlaces[0];
   const canNavigate = typeof selectedPlace?.lat === "number" && typeof selectedPlace?.lng === "number";
   const externalShortcuts = buildExternalAppShortcuts(selectedPlace);
-  const mapProviderStatus = getMapProviderStatus();
+  const mapProviderStatus = getMapProviderStatus(googleMapsApiKey, mapsConfigLoaded);
   const mapFocusSummary = mapAnchorLocation
     ? `מציג נקודות קרובות למנהל · עד ${DEFAULT_NEARBY_MAP_RADIUS_KM} ק״מ כשיש כאלה`
     : "מציג נקודות מרכזיות עד להפעלת GPS מנהל";
@@ -1431,7 +1476,7 @@ export function App() {
       cancelled = true;
       markers.forEach((marker) => marker.setMap?.(null));
     };
-  }, [currentLocation, mapAnchorLocation, selectedPlace, visibleMembers, visiblePlaces]);
+  }, [currentLocation, googleMapsApiKey, mapAnchorLocation, selectedPlace, visibleMembers, visiblePlaces]);
 
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
   const googleSourceRecognized =

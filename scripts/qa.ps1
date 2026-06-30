@@ -507,7 +507,12 @@ if (-not $appSource.Contains("trip-map-layer") -or -not $appSource.Contains("map
   throw "Web app is missing the internal map layer that connects places, GPS and group locations."
 }
 
-if (-not $appSource.Contains("VITE_GOOGLE_MAPS_API_KEY") -or -not $appSource.Contains("getMapProviderStatus")) {
+if (
+  -not $appSource.Contains("GOOGLE_MAPS_BROWSER_API_KEY") -or
+  -not $appSource.Contains("VITE_GOOGLE_MAPS_API_KEY") -or
+  -not $appSource.Contains("getMapProviderStatus") -or
+  -not $serverSourceForContext.Contains("/api/config/maps")
+) {
   throw "Web app is missing map provider configuration for Google/fallback switching."
 }
 
