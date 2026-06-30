@@ -513,11 +513,11 @@ if (
   -not $appSource.Contains("clearWatch") -or
   -not $appSource.Contains("locationWatchIdRef")
 ) {
-  throw "Web app is missing explicit live GPS tracking with cleanup."
+  throw "Web app is missing explicit live location tracking with cleanup."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/members/") -or -not $appSource.Contains("locationSyncState")) {
-  throw "Web app must sync personal GPS to the demo member location endpoint."
+  throw "Web app must sync personal live location to the demo member location endpoint."
 }
 
 if (
@@ -538,7 +538,7 @@ if (-not $appSource.Contains("group-location-layer")) {
 }
 
 if (-not $appSource.Contains("trip-map-layer") -or -not $appSource.Contains("map-provider-note")) {
-  throw "Web app is missing the internal map layer that connects places, GPS and group locations."
+  throw "Web app is missing the internal map layer that connects places, live location and group locations."
 }
 
 if (

@@ -849,7 +849,7 @@ export function App() {
                 id: "location",
                 title: "מיקום והרשאות",
                 status: "pending",
-                description: "GPS ושיתוף מיקום רק בהסכמה מפורשת."
+                description: "מיקום חי במפה ושיתוף מיקום רק בהסכמה מפורשת."
               }
             ],
             kodiWelcomeMessage:
@@ -1383,7 +1383,7 @@ export function App() {
   const mapProviderStatus = getMapProviderStatus(googleMapsApiKey, mapsConfigLoaded);
   const mapFocusSummary = mapAnchorLocation
     ? `מציג נקודות קרובות למנהל · עד ${DEFAULT_NEARBY_MAP_RADIUS_KM} ק״מ כשיש כאלה`
-    : "מציג נקודות מרכזיות עד להפעלת GPS מנהל";
+    : "מציג נקודות מרכזיות עד להפעלת מיקום מנהל במפה";
   const tripInviteUrl =
     typeof window === "undefined"
       ? "https://kodi-travel-companion.onrender.com?join=group_family_greece_demo"
@@ -1984,7 +1984,7 @@ export function App() {
       {
         id: `local-join-${Date.now()}`,
         author: "קודי",
-        text: `${name} הצטרף/ה לקבוצת הטיול. מיקום אישי יוצג רק אחרי אישור GPS מהמכשיר שלו/שלה.`,
+        text: `${name} הצטרף/ה לקבוצת הטיול. מיקום אישי במפה יוצג רק אחרי אישור מיקום מהמכשיר שלו/שלה.`,
         source: "system",
         createdAt: new Date().toISOString()
       }
@@ -2048,7 +2048,7 @@ export function App() {
                       ? {
                           lat: payload.member.liveLocation.lat,
                           lng: payload.member.liveLocation.lng,
-                          label: payload.member.displayLabel ?? "GPS אישי",
+                          label: payload.member.displayLabel ?? "מיקום חי במפה",
                           updatedMinutesAgo: payload.member.updatedMinutesAgo ?? 0
                         }
                       : member.liveLocation
@@ -2149,7 +2149,7 @@ export function App() {
           </form>
           <div className="join-consent-note">
             <ShieldCheck size={18} aria-hidden="true" />
-            <p>אישור מיקום נעשה בנפרד מהמכשיר שלך. בלי אישור GPS, אפשר עדיין להשתתף בשיחה עם קודי.</p>
+            <p>אישור מיקום נעשה בנפרד מהמכשיר שלך. בלי אישור מיקום, אפשר עדיין להשתתף בשיחה עם קודי.</p>
           </div>
         </section>
       </main>
@@ -2312,10 +2312,10 @@ export function App() {
               <div className={`location-status ${managerLocationReady ? "ready" : locationState}`}>
                 <MapPin size={20} aria-hidden="true" />
                 <div>
-                  <strong>{managerLocationReady ? "מיקום מנהל פעיל" : "ממתין להרשאת GPS"}</strong>
+                  <strong>{managerLocationReady ? "מיקום מנהל פעיל במפה" : "ממתין להרשאת מיקום"}</strong>
                   <p>
                     {managerLocationReady
-                      ? "קודי משתמש במעקב החי הזה כהקשר לשאלות פתוחות."
+                      ? "קודי משתמש במיקום החי במפה כהקשר לשאלות פתוחות."
                       : "הדפדפן יבקש הרשאת מיקום. שאר חברי הקבוצה יחוברו בהמשך ובהסכמה נפרדת."}
                   </p>
                 </div>
@@ -2336,7 +2336,7 @@ export function App() {
                 </>
               ) : (
                 <button disabled={locationState === "requesting"} className="primary-action" onClick={enablePersonalGps} type="button">
-                  {locationState === "requesting" ? "מבקש הרשאת מיקום..." : "הפעל GPS מנהל"}
+                  {locationState === "requesting" ? "מבקש הרשאת מיקום..." : "הפעל מיקום מנהל במפה"}
                 </button>
               )}
               {locationState === "error" ? <small className="setup-error">לא קיבלתי מיקום. אפשר לנסות שוב מהדפדפן.</small> : null}
@@ -2444,22 +2444,22 @@ export function App() {
                 ? "סנכרון חי ממתין לחיבור"
                 : "מכין סנכרון חי"}
           </div>
-          <div className="personal-location-card" aria-label="GPS אישי">
-            <strong>GPS אישי</strong>
+          <div className="personal-location-card" aria-label="מיקום חי במפה">
+            <strong>מיקום חי במפה</strong>
             {currentLocation ? (
               <p>
-                מעקב חי פעיל · דיוק {Math.round(currentLocation.accuracyMeters ?? 0)} מ'
+                מיקום חי על Google Maps · דיוק {Math.round(currentLocation.accuracyMeters ?? 0)} מ'
               </p>
             ) : (
               <p>כבוי · נדרש אישור בדפדפן</p>
             )}
             <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
-              {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל GPS"}
+              {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל מיקום במפה"}
             </button>
-            {locationState === "error" ? <small>לא הצלחתי לקבל מיקום. אפשר להמשיך בלי לשתף GPS.</small> : null}
+            {locationState === "error" ? <small>לא הצלחתי לקבל מיקום. אפשר להמשיך בלי לשתף מיקום.</small> : null}
             {locationSyncState === "synced" ? <small>המיקום סונכרן עבור {activeMember.name}</small> : null}
             {locationSyncState === "blocked" ? <small>לא סונכרן כי לחבר הזה אין הסכמת שיתוף.</small> : null}
-            {locationSyncState === "error" ? <small>GPS פעיל, אבל סנכרון המיקום לשרת נכשל.</small> : null}
+            {locationSyncState === "error" ? <small>המיקום פעיל, אבל סנכרון המיקום לשרת נכשל.</small> : null}
           </div>
         </div>
 
@@ -2639,9 +2639,9 @@ export function App() {
         </div>
         <section className="menu-block">
           <strong>מיקום מנהל</strong>
-          <p>{currentLocation ? `מעקב חי פעיל · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "GPS כבוי"}</p>
+          <p>{currentLocation ? `מיקום חי על Google Maps · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "מיקום כבוי"}</p>
           <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
-            {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל GPS"}
+            {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל מיקום במפה"}
           </button>
         </section>
         <section className="menu-block">
@@ -2721,7 +2721,7 @@ export function App() {
                 ? "הקישור הועתק. אפשר לשלוח אותו בוואטסאפ."
                 : inviteCopyState === "error"
                   ? "לא הצלחתי להעתיק אוטומטית. אפשר לסמן ולהעתיק את הקישור."
-                  : "חוויית הצטרפות: שם, גיל, ואז אישור GPS אישי לפי בחירה."}
+                  : "חוויית הצטרפות: שם, גיל, ואז אישור מיקום אישי במפה לפי בחירה."}
             </small>
           </section>
         </header>

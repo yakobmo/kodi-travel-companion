@@ -202,8 +202,8 @@ try {
   await page.getByText("הקישור זוהה").waitFor();
   await page.getByRole("button", { name: "המשך למיקום מנהל" }).click();
   await page.getByText("נפעיל מיקום מנהל").waitFor();
-  await page.getByRole("button", { name: "הפעל GPS מנהל" }).click();
-  await page.getByText("מיקום מנהל פעיל").waitFor();
+  await page.getByRole("button", { name: "הפעל מיקום מנהל במפה" }).click();
+  await page.getByText("מיקום מנהל פעיל במפה").waitFor();
   assertCheck("manager location primary continue", await page.getByRole("button", { name: "המשך למפה ולשיחה" }).isVisible());
   assertCheck("manager location refresh is secondary", await page.getByRole("button", { name: "רענן מיקום" }).isVisible());
   await page.getByRole("button", { name: "המשך למפה ולשיחה" }).click();
@@ -256,7 +256,7 @@ try {
   }
   assertCheck("nearby manager map focus", body.includes("מציג נקודות קרובות למנהל"));
   assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
-  assertCheck("personal gps", body.includes("GPS אישי"));
+  assertCheck("personal live location copy", body.includes("מיקום חי במפה"));
   assertCheck("retired demo family hidden", !body.includes("אבא") && !body.includes("נועה") && !body.includes("סבתא"));
   assertCheck("invite card", body.includes("הזמנת משתתפים"));
   assertCheck("invite per-device consent", body.includes("כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו"));
@@ -288,7 +288,7 @@ try {
   await joinPage.getByRole("heading", { name: "קבוצת הטיול" }).waitFor();
   const joinBody = await joinPage.locator("body").innerText();
   assertCheck("join adds participant locally", joinBody.includes("דניאל"));
-  assertCheck("join location consent copy", joinBody.includes("מיקום אישי יוצג רק אחרי אישור GPS"));
+  assertCheck("join location consent copy", joinBody.includes("מיקום אישי במפה יוצג רק אחרי אישור מיקום"));
   await joinPage.close();
 
   assertCheck("members api ok", membersResponse.ok());
@@ -530,8 +530,8 @@ try {
   await page.getByText("המסלול הושלם.").waitFor();
   assertCheck("route completion disables progress", await page.getByRole("button", { name: "סמן תחנה כהושלמה" }).isDisabled());
 
-  await page.getByRole("button", { name: "הפעל GPS" }).click();
-  await page.locator(".personal-location-card").getByText("מעקב חי פעיל").waitFor();
+  await page.getByRole("button", { name: "הפעל מיקום במפה" }).click();
+  await page.locator(".personal-location-card").getByText("מיקום חי על Google Maps").waitFor();
   await Promise.race([
     page.getByText("המיקום סונכרן עבור אמא").waitFor(),
     page.getByText("המיקום סונכרן עבור מנהל הטיול").waitFor()
