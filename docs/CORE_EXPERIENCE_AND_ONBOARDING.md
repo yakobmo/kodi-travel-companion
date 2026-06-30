@@ -23,6 +23,8 @@ Group member locations are a flagship extension, but the minimum viable live con
 - Kodi's chat context
 - the active day/route/lodging context when available
 
+Live location means browser GPS tracking, not a one-time coordinate read. After consent, the app should use the browser geolocation watch flow, update the manager/member marker on Google Maps, and sync the latest approved location to the backend with consent-aware visibility.
+
 ## UX Principle
 
 The user should see one clear next action at a time.

@@ -506,8 +506,14 @@ if (-not $appSource.Contains("visibleMembers")) {
   throw "Web app must filter visible member locations by sharing consent."
 }
 
-if (-not $appSource.Contains("enablePersonalGps") -or -not $appSource.Contains("navigator.geolocation")) {
-  throw "Web app is missing explicit personal GPS opt-in."
+if (
+  -not $appSource.Contains("enablePersonalGps") -or
+  -not $appSource.Contains("navigator.geolocation") -or
+  -not $appSource.Contains("watchPosition") -or
+  -not $appSource.Contains("clearWatch") -or
+  -not $appSource.Contains("locationWatchIdRef")
+) {
+  throw "Web app is missing explicit live GPS tracking with cleanup."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/members/") -or -not $appSource.Contains("locationSyncState")) {

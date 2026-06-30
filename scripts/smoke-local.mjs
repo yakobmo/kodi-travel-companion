@@ -531,7 +531,7 @@ try {
   assertCheck("route completion disables progress", await page.getByRole("button", { name: "סמן תחנה כהושלמה" }).isDisabled());
 
   await page.getByRole("button", { name: "הפעל GPS" }).click();
-  await page.locator(".personal-location-card").getByText("פעיל · דיוק").waitFor();
+  await page.locator(".personal-location-card").getByText("מעקב חי פעיל").waitFor();
   await Promise.race([
     page.getByText("המיקום סונכרן עבור אמא").waitFor(),
     page.getByText("המיקום סונכרן עבור מנהל הטיול").waitFor()

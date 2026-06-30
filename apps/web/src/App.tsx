@@ -700,6 +700,7 @@ export function App() {
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState(buildTimeGoogleMapsApiKey);
   const [mapsConfigLoaded, setMapsConfigLoaded] = useState(Boolean(buildTimeGoogleMapsApiKey));
   const googleMapElementRef = useRef<HTMLDivElement | null>(null);
+  const locationWatchIdRef = useRef<number | null>(null);
 
   function applyTripEvents(data: TripEventsResponse) {
     setTripEvents(data.events);
@@ -1478,6 +1479,15 @@ export function App() {
     };
   }, [currentLocation, googleMapsApiKey, mapAnchorLocation, selectedPlace, visibleMembers, visiblePlaces]);
 
+  useEffect(
+    () => () => {
+      if (locationWatchIdRef.current !== null && "geolocation" in navigator) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      }
+    },
+    []
+  );
+
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
   const googleSourceRecognized =
     normalizedGoogleLink.includes("maps.app.goo.gl") || normalizedGoogleLink.includes("google.com/maps");
@@ -1987,8 +1997,12 @@ export function App() {
       return;
     }
 
+    if (locationWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(locationWatchIdRef.current);
+    }
+
     setLocationState("requesting");
-    navigator.geolocation.getCurrentPosition(
+    locationWatchIdRef.current = navigator.geolocation.watchPosition(
       async (position) => {
         const nextLocation = {
           lat: position.coords.latitude,
@@ -2053,8 +2067,8 @@ export function App() {
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 60_000,
-        timeout: 10_000
+        maximumAge: 5_000,
+        timeout: 15_000
       }
     );
   }
@@ -2301,7 +2315,7 @@ export function App() {
                   <strong>{managerLocationReady ? "מיקום מנהל פעיל" : "ממתין להרשאת GPS"}</strong>
                   <p>
                     {managerLocationReady
-                      ? "קודי יוכל להשתמש במיקום הזה כהקשר לשאלות פתוחות."
+                      ? "קודי משתמש במעקב החי הזה כהקשר לשאלות פתוחות."
                       : "הדפדפן יבקש הרשאת מיקום. שאר חברי הקבוצה יחוברו בהמשך ובהסכמה נפרדת."}
                   </p>
                 </div>
@@ -2434,7 +2448,7 @@ export function App() {
             <strong>GPS אישי</strong>
             {currentLocation ? (
               <p>
-                פעיל · דיוק {Math.round(currentLocation.accuracyMeters ?? 0)} מ'
+                מעקב חי פעיל · דיוק {Math.round(currentLocation.accuracyMeters ?? 0)} מ'
               </p>
             ) : (
               <p>כבוי · נדרש אישור בדפדפן</p>
@@ -2625,7 +2639,7 @@ export function App() {
         </div>
         <section className="menu-block">
           <strong>מיקום מנהל</strong>
-          <p>{currentLocation ? `GPS פעיל · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "GPS כבוי"}</p>
+          <p>{currentLocation ? `מעקב חי פעיל · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "GPS כבוי"}</p>
           <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
             {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל GPS"}
           </button>
