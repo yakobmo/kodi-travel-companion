@@ -556,7 +556,8 @@ if (
   -not $appSource.Contains("joinTripFromInvite") -or
   -not $appSource.Contains("showJoinFlow") -or
   -not $appSource.Contains("join-shell") -or
-  -not $appSource.Contains("invite-card") -or
+  -not $appSource.Contains("invite-menu") -or
+  -not $appSource.Contains("per-device-location-consent") -or
   -not $appSource.Contains("group_family_greece_demo")
 ) {
   throw "Web app must support manager invite links and participant join flow with per-device location consent."

@@ -216,7 +216,6 @@ try {
   const returningUserBody = await page.locator("body").innerText();
   assertCheck("returning user skips completed onboarding", !returningUserBody.includes("שלום, אני קודי"));
 
-  await page.getByText("סנכרון חי פעיל").waitFor();
   const body = await page.locator("body").innerText();
   const tripStateResponse = await page.request.get("http://localhost:3001/api/trips/demo/state");
   const tripStatePayload = await tripStateResponse.json();
@@ -238,28 +237,29 @@ try {
   assertCheck("places count", body.includes("108 נקודות"));
   assertCheck("group chat", body.includes("קבוצת הטיול"));
   assertCheck("kodi background", body.includes("קודי ברקע"));
-  assertCheck("event activity", body.includes("פעילות חיה"));
-  assertCheck("waze", body.includes("פתח ב-Waze"));
-  assertCheck("google maps shortcut", body.includes("Google Maps"));
-  assertCheck("booking shortcut", body.includes("Booking"));
-  assertCheck("airbnb shortcut", body.includes("Airbnb"));
-  assertCheck("group location consent copy", body.includes("מיקום חברי קבוצה מוצג רק למי שאישר שיתוף"));
   assertCheck("google maps is target provider", body.includes("Google Maps"));
   if (googleMapsActive) {
-    assertCheck("google maps active", body.includes("Google Maps פעיל"));
+    assertCheck("google maps active", googleMapsActive);
   } else {
-    assertCheck("google maps fallback marked temporary", body.includes("fallback זמני"));
-    assertCheck(
-      "map provider fallback reason",
-      body.includes("GOOGLE_MAPS_BROWSER_API_KEY") || body.includes("VITE_GOOGLE_MAPS_API_KEY")
-    );
+    assertCheck("google maps fallback marked temporary", String(mapShellClass).includes("internal-map-fallback"));
   }
   assertCheck("nearby manager map focus", body.includes("מציג נקודות קרובות למנהל"));
   assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
-  assertCheck("personal live location copy", body.includes("מיקום חי במפה"));
   assertCheck("retired demo family hidden", !body.includes("אבא") && !body.includes("נועה") && !body.includes("סבתא"));
-  assertCheck("invite card", body.includes("הזמנת משתתפים"));
-  assertCheck("invite per-device consent", body.includes("כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו"));
+  await page.getByRole("button", { name: "תפריט" }).click();
+  const menu = page.locator(".secondary-menu");
+  const menuBody = await menu.innerText();
+  assertCheck("personal live location copy in menu", menuBody.includes("מיקום מנהל"));
+  assertCheck("group location consent copy in menu", menuBody.includes("מיקום חברי קבוצה מוצג רק למי שאישר שיתוף"));
+  assertCheck("event activity in menu", menuBody.includes("פעילות חיה"));
+  assertCheck("waze in menu", menuBody.includes("פתח ב-Waze"));
+  assertCheck("google maps shortcut in menu", menuBody.includes("Google Maps"));
+  assertCheck("booking shortcut in menu", menuBody.includes("Booking"));
+  assertCheck("airbnb shortcut in menu", menuBody.includes("Airbnb"));
+  assertCheck("invite moved to menu", menuBody.includes("הזמנת משתתפים"));
+  assertCheck("invite per-device consent in menu", menuBody.includes("כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו"));
+  assertCheck("map surface stays clean", await page.locator(".map-surface > .action-card").isHidden());
+  assertCheck("chat invite card hidden", await page.locator(".chat-sheet .invite-card").count() === 0);
 
   const mobilePage = await context.newPage();
   await mobilePage.setViewportSize({ width: 390, height: 844 });
@@ -267,7 +267,10 @@ try {
   await mobilePage.locator(".map-surface").waitFor();
   assertCheck("mobile map visible", await mobilePage.locator(".map-surface").isVisible());
   assertCheck("mobile chat visible", await mobilePage.locator(".chat-sheet").isVisible());
-  assertCheck("mobile invite hidden by default", !(await mobilePage.locator(".invite-card").isVisible()));
+  assertCheck(
+    "mobile menu closed by default",
+    !(await mobilePage.locator(".app-shell").evaluate((element) => element.classList.contains("secondary-menu-visible")))
+  );
   assertCheck("mobile activity hidden by default", !(await mobilePage.locator(".event-activity").isVisible()));
   await mobilePage.locator(".top-bar .icon-button").click();
   assertCheck(
@@ -276,7 +279,7 @@ try {
   );
   await mobilePage.close();
 
-  const inviteUrl = await page.getByLabel("קישור הזמנה לקבוצת הטיול").inputValue();
+  const inviteUrl = await page.getByLabel("קישור הזמנה בתפריט ניהול").inputValue();
   assertCheck("invite link token", inviteUrl.includes("?join=group_family_greece_demo"));
 
   const joinPage = await context.newPage();
@@ -311,7 +314,7 @@ try {
       body.includes("קודי הכין את יומן הפעילות") ||
       body.includes("הודעה")
   );
-  const usageOverviewText = await page.locator(".usage-overview").innerText();
+  const usageOverviewText = await page.locator(".secondary-menu .usage-overview-grid").innerText();
   assertCheck("usage overview visible", usageOverviewText.includes("Google Places") && usageOverviewText.includes("Google Routes"));
 
   const savedMessageResponse = await page.request.post("http://localhost:3001/api/trips/demo/messages", {
@@ -510,37 +513,39 @@ try {
   });
   await page.getByText("הודעה שנכנסה מבחוץ").waitFor();
 
-  const wazeButton = page.getByRole("button", { name: "פתח ב-Waze" });
+  const wazeButton = menu.getByRole("button", { name: "פתח ב-Waze" });
   const disabled = await wazeButton.isDisabled();
-  await page.getByRole("button", { name: "בקש להפוך ליעד קבוצתי" }).click();
-  await page.getByText("אושר על ידי מנהל/ת").waitFor();
-  await page.getByText("יעד קבוצתי נוכחי").waitFor();
-  await page.getByRole("button", { name: "בנה מסלול קבוצתי קצר" }).click();
-  await page.getByText("מסלול קבוצתי אושר ונשמר.").waitFor();
-  await page.getByText("מסלול קבוצתי פעיל").waitFor();
-  await page.getByText("ETA מדויק").waitFor();
-  await page.getByText("עכשיו ·").waitFor();
-  assertCheck("active route stop navigation", await page.getByRole("button", { name: "פתח תחנה פעילה ב-Waze" }).isVisible());
-  await page.getByRole("button", { name: "סמן תחנה כהושלמה" }).click();
-  await page.getByText("הושלם ·").waitFor();
+  await menu.getByRole("button", { name: "בקש להפוך ליעד קבוצתי" }).click();
+  await menu.getByText("אושר על ידי מנהל/ת").waitFor();
+  await menu.getByText("יעד קבוצתי נוכחי").waitFor();
+  await menu.getByRole("button", { name: "בנה מסלול קבוצתי קצר" }).click();
+  await menu.getByText("מסלול קבוצתי אושר ונשמר.").waitFor();
+  await menu.getByText("מסלול קבוצתי פעיל").waitFor();
+  await menu.getByText("ETA מדויק").waitFor();
+  await menu.getByText("עכשיו ·").waitFor();
+  assertCheck("active route stop navigation", await menu.getByRole("button", { name: "פתח תחנה פעילה ב-Waze" }).isVisible());
+  await menu.getByRole("button", { name: "סמן תחנה כהושלמה" }).click();
+  await menu.getByText("הושלם ·").waitFor();
   await page.getByText("סימן/ה את").waitFor();
   for (let index = 0; index < 3; index += 1) {
-    await page.getByRole("button", { name: "סמן תחנה כהושלמה" }).click();
+    await menu.getByRole("button", { name: "סמן תחנה כהושלמה" }).click();
   }
-  await page.getByText("המסלול הושלם.").waitFor();
-  assertCheck("route completion disables progress", await page.getByRole("button", { name: "סמן תחנה כהושלמה" }).isDisabled());
+  await menu.getByText("המסלול הושלם.").waitFor();
+  assertCheck("route completion disables progress", await menu.getByRole("button", { name: "סמן תחנה כהושלמה" }).isDisabled());
 
-  await page.getByRole("button", { name: "הפעל מיקום במפה" }).click();
-  await page.locator(".personal-location-card").getByText("מיקום חי על Google Maps").waitFor();
-  await Promise.race([
-    page.getByText("המיקום סונכרן עבור אמא").waitFor(),
-    page.getByText("המיקום סונכרן עבור מנהל הטיול").waitFor()
-  ]);
+  await menu.getByRole("button", { name: "הפעל מיקום במפה" }).click();
+  await menu.getByText("מיקום חי על Google Maps").waitFor();
+  await page.locator(".self-marker").waitFor();
+  const syncedMembersAfterLocation = await (await page.request.get("http://localhost:3001/api/trips/demo/members")).json();
+  assertCheck(
+    "live location synced after menu action",
+    syncedMembersAfterLocation.members?.some((item) => item.liveLocation?.lat && item.liveLocation?.lng)
+  );
   await page.getByText("אני כאן").waitFor();
 
-  await page.getByLabel("שם קיצור אישי").fill("תרגום");
-  await page.getByLabel("כתובת קיצור אישי").fill("https://translate.google.com/");
-  await page.locator(".shortcut-form button").click();
+  await menu.getByLabel("שם קיצור אישי").fill("תרגום");
+  await menu.getByLabel("כתובת קיצור אישי").fill("https://translate.google.com/");
+  await page.locator(".menu-shortcut-form button").click();
   await page.getByRole("link", { name: "תרגום" }).waitFor();
 
   const messagesBeforeFamilyOnly = await page.locator(".message").count();

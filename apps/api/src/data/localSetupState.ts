@@ -123,7 +123,7 @@ function buildDemoTripSetupStateFromSavedSetup(savedDemoSetup: StoredDemoSetup |
         id: "location",
         title: "מיקום והרשאות",
         status: getStepStatus("location", setupCompleted),
-        description: "GPS אישי ושיתוף מיקום קבוצתי רק לאחר הסכמה מפורשת."
+        description: "מיקום חי במפה ושיתוף מיקום קבוצתי רק לאחר הסכמה מפורשת."
       },
       {
         id: "ready",

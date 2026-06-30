@@ -2637,16 +2637,108 @@ export function App() {
             סגור
           </button>
         </div>
+        {selectedPlace ? (
+          <section className="menu-block selected-place-menu" aria-label="פעולות לנקודה נבחרת">
+            <span>{getPlaceTypeLabel(selectedPlace.type)}</span>
+            <strong>{selectedPlace.name}</strong>
+            <p>{canNavigate ? "ניווט וקבוצת יעד דרך הנקודה שנבחרה במפה." : "לנקודה הזו חסרות קואורדינטות."}</p>
+            <button disabled={!canNavigate || navigationState === "opening"} onClick={openSelectedPlaceInWaze} type="button">
+              <Navigation size={18} aria-hidden="true" />
+              פתח ב-Waze
+            </button>
+            <button disabled={actionApprovalState === "checking"} onClick={requestGroupDestinationApproval} type="button">
+              <CheckCircle2 size={18} aria-hidden="true" />
+              בקש להפוך ליעד קבוצתי
+            </button>
+            <small className="action-approval-status">
+              {actionApprovalState === "approved"
+                ? "אושר על ידי מנהל/ת ונשמר בשיחה."
+                : actionApprovalState === "blocked"
+                  ? "נדרש מנהל/ת כדי לשנות יעד קבוצתי."
+                  : actionApprovalState === "error"
+                    ? "לא הצלחתי לבדוק הרשאה כרגע."
+                    : actionApprovalState === "checking"
+                      ? "בודק הרשאות מול השרת..."
+                      : "פעולה קבוצתית תיבדק מול הרשאות השרת."}
+            </small>
+            {groupDestination ? (
+              <div className="group-destination-card" aria-label="יעד קבוצתי נוכחי">
+                <span>יעד קבוצתי נוכחי</span>
+                <strong>{groupDestination.placeName}</strong>
+                <small>נקבע על ידי {groupDestination.setByName}</small>
+              </div>
+            ) : null}
+            <button disabled={routeApprovalState === "checking"} onClick={requestGroupRouteApproval} type="button">
+              <CheckCircle2 size={18} aria-hidden="true" />
+              בנה מסלול קבוצתי קצר
+            </button>
+            <small className="action-approval-status">
+              {routeApprovalState === "approved"
+                ? "מסלול קבוצתי אושר ונשמר."
+                : routeApprovalState === "blocked"
+                  ? "נדרש מנהל/ת כדי ליצור מסלול קבוצתי."
+                  : routeApprovalState === "error"
+                    ? "לא הצלחתי ליצור מסלול כרגע."
+                    : routeApprovalState === "checking"
+                      ? "בודק הרשאה ובונה מסלול..."
+                      : "מסלול קבוצתי דורש אישור מנהל/ת."}
+            </small>
+            {groupRoute ? (
+              <div className="group-route-card" aria-label="מסלול קבוצתי פעיל">
+                <span>מסלול קבוצתי פעיל</span>
+                <strong>{groupRoute.title}</strong>
+                {groupRoute.status === "completed" ? <p className="route-completed-note">המסלול הושלם. אפשר ליצור מסלול חדש כשצריך.</p> : null}
+                <p>הסדר מתחיל בנקודה שנבחרה וממשיך לנקודות הקרובות ברשימת הטיול. ETA מדויק יגיע דרך Google Routes.</p>
+                <ol>
+                  {groupRoute.stops.map((stop, index) => (
+                    <li
+                      className={`${index === activeRouteStopIndex ? "active-route-stop" : ""} ${
+                        groupRoute.completedStopIds.includes(stop.placeId) ? "completed-route-stop" : ""
+                      }`}
+                      key={stop.placeId}
+                    >
+                      <button onClick={() => setActiveRouteStopIndex(index)} type="button">
+                        {groupRoute.completedStopIds.includes(stop.placeId) ? "הושלם · " : index === activeRouteStopIndex ? "עכשיו · " : ""}
+                        {stop.placeName}
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+                <button
+                  className="route-navigation-action"
+                  disabled={navigationState === "opening" || groupRoute.status === "completed"}
+                  onClick={openActiveRouteStopInWaze}
+                  type="button"
+                >
+                  <Navigation size={18} aria-hidden="true" />
+                  פתח תחנה פעילה ב-Waze
+                </button>
+                <button
+                  className="route-navigation-action"
+                  disabled={routeApprovalState === "checking" || groupRoute.status === "completed"}
+                  onClick={completeActiveRouteStop}
+                  type="button"
+                >
+                  <CheckCircle2 size={18} aria-hidden="true" />
+                  סמן תחנה כהושלמה
+                </button>
+                <small>נוצר על ידי {groupRoute.createdByName}</small>
+              </div>
+            ) : null}
+            {navigationState === "error" ? <small>לא הצלחתי ליצור קישור ניווט כרגע.</small> : null}
+          </section>
+        ) : null}
         <section className="menu-block">
           <strong>מיקום מנהל</strong>
           <p>{currentLocation ? `מיקום חי על Google Maps · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "מיקום כבוי"}</p>
+          <small>מיקום חברי קבוצה מוצג רק למי שאישר שיתוף.</small>
           <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
             {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל מיקום במפה"}
           </button>
         </section>
-        <section className="menu-block">
+        <section className="menu-block invite-menu" data-consent-model="per-device-location-consent">
           <strong>הזמנת משתתפים</strong>
-          <p>שליחת קישור הצטרפות לקבוצת הטיול.</p>
+          <p>שליחת קישור הצטרפות לקבוצת הטיול. כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו.</p>
           <input aria-label="קישור הזמנה בתפריט ניהול" dir="ltr" readOnly value={tripInviteUrl} />
           <button onClick={copyTripInviteLink} type="button">
             העתק קישור
@@ -2668,10 +2760,71 @@ export function App() {
               </a>
             ))}
           </div>
+          <form className="shortcut-form menu-shortcut-form" onSubmit={addUserShortcut}>
+            <input
+              aria-label="שם קיצור אישי"
+              onChange={(event) => setShortcutLabelDraft(event.target.value)}
+              placeholder="שם קיצור"
+              value={shortcutLabelDraft}
+            />
+            <input
+              aria-label="כתובת קיצור אישי"
+              dir="ltr"
+              onChange={(event) => setShortcutUrlDraft(event.target.value)}
+              placeholder="https://..."
+              value={shortcutUrlDraft}
+            />
+            <button type="submit">הוסף</button>
+          </form>
+        </section>
+        <section className="menu-block event-menu" aria-label="פעילות חיה בקבוצה">
+          <strong>פעילות חיה</strong>
+          <p>
+            {eventRealtimeState === "live"
+              ? eventLogDriver === "supabase"
+                ? "סנכרון פעיל"
+                : "סנכרון מקומי"
+              : eventRealtimeState === "error"
+                ? "ממתין לחיבור"
+                : "מכין סנכרון"}
+          </p>
+          <div className="event-items">
+            {recentTripEvents.length > 0 ? (
+              recentTripEvents.map((event) => (
+                <article key={event.id}>
+                  <span>{getTripEventLabel(event.eventType)}</span>
+                  <p>{getTripEventText(event)}</p>
+                </article>
+              ))
+            ) : (
+              <article>
+                <span>מערכת</span>
+                <p>קודי מחכה לפעילות ראשונה בקבוצה</p>
+              </article>
+            )}
+          </div>
         </section>
         <section className="menu-block">
           <strong>בקרת קודי</strong>
           <p>{usageAuditOverview.totalAuthorizedCalls} פעולות נרשמו בטיול הזה.</p>
+          <div className="usage-overview-grid">
+            <span>
+              <strong>{usageAuditOverview.googlePlacesCalls}</strong>
+              Google Places
+            </span>
+            <span>
+              <strong>{usageAuditOverview.googleRoutesCalls}</strong>
+              Google Routes
+            </span>
+            <span>
+              <strong>{usageAuditOverview.kodiAgentCalls}</strong>
+              דרך קודי
+            </span>
+            <span>
+              <strong>{usageAuditOverview.directApiCalls}</strong>
+              API ישיר
+            </span>
+          </div>
         </section>
       </aside>
 
@@ -2705,25 +2858,6 @@ export function App() {
             <span className="kodi-pill">קודי</span>
           </div>
           <div className="active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
-          <section className="invite-card" aria-label="הזמנת משתתפים לקבוצה">
-            <div>
-              <strong>הזמנת משתתפים</strong>
-              <p>המנהל שולח קישור, וכל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו.</p>
-            </div>
-            <div className="invite-actions">
-              <input aria-label="קישור הזמנה לקבוצת הטיול" dir="ltr" readOnly value={tripInviteUrl} />
-              <button onClick={copyTripInviteLink} type="button">
-                העתק קישור
-              </button>
-            </div>
-            <small>
-              {inviteCopyState === "copied"
-                ? "הקישור הועתק. אפשר לשלוח אותו בוואטסאפ."
-                : inviteCopyState === "error"
-                  ? "לא הצלחתי להעתיק אוטומטית. אפשר לסמן ולהעתיק את הקישור."
-                  : "חוויית הצטרפות: שם, גיל, ואז אישור מיקום אישי במפה לפי בחירה."}
-            </small>
-          </section>
         </header>
 
         <section className="event-activity" aria-label="פעילות חיה בקבוצה">

@@ -1246,7 +1246,24 @@ input {
 }
 
 .secondary-menu {
-  display: none;
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 8;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  width: min(420px, 92vw);
+  padding: 18px;
+  border-right: 1px solid #d8dedb;
+  background: #ffffff;
+  box-shadow: -14px 0 28px rgba(22, 33, 31, 0.18);
+  transform: translateX(105%);
+  transition: transform 160ms ease;
+  overflow: auto;
+}
+
+.secondary-menu-visible .secondary-menu {
+  transform: translateX(0);
 }
 
 .secondary-menu-header,
@@ -1287,6 +1304,31 @@ input {
   padding-top: 12px;
 }
 
+.selected-place-menu span,
+.selected-place-menu small {
+  color: #53615e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.selected-place-menu button,
+.menu-block button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.map-surface > .places-strip,
+.map-surface > .action-card,
+.map-surface > .map-placeholder > .map-provider-note,
+.map-surface > .map-placeholder > .privacy-note,
+.map-surface > .map-placeholder > .personal-location-card,
+.chat-sheet > .event-activity,
+.chat-sheet > .usage-overview {
+  display: none;
+}
+
 .menu-block p {
   margin: 0;
   color: #53615e;
@@ -1307,6 +1349,13 @@ input {
 .menu-shortcuts {
   position: static;
   inset: auto;
+}
+
+.menu-shortcut-form {
+  position: static;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
 
 .messages {
@@ -1443,6 +1492,25 @@ input {
     min-height: 58vh;
   }
 
+  .place-marker,
+  .member-marker,
+  .self-marker {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .place-marker span,
+  .member-marker span,
+  .member-marker small,
+  .self-marker span {
+    display: none;
+  }
+
   .chat-sheet {
     min-height: 42vh;
     border-right: 0;
@@ -1480,8 +1548,7 @@ input {
   }
 
   .kodi-presence {
-    position: fixed;
-    z-index: 4;
+    display: none;
   }
 
   .usage-overview-grid {

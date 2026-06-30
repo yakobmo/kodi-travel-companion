@@ -265,7 +265,7 @@ function mapSupabaseMembers(input: {
             source: location.source
           }
         : null,
-      displayLabel: location?.source === "gps" ? "GPS אישי" : seed?.displayLabel,
+      displayLabel: location?.source === "gps" ? "מיקום חי במפה" : seed?.displayLabel,
       updatedMinutesAgo: location?.source === "gps" ? 0 : getSeedUpdatedMinutesAgo(seed)
     };
 
@@ -454,7 +454,7 @@ export function updateDemoMemberLocation(input: {
       updatedAt,
       source: "gps"
     },
-    displayLabel: "GPS אישי",
+    displayLabel: "מיקום חי במפה",
     updatedMinutesAgo: 0
   };
 
@@ -497,7 +497,7 @@ export async function updateDemoMemberLocationAsync(input: {
       updatedAt,
       source: "gps"
     },
-    displayLabel: "GPS ׳׳™׳©׳™",
+    displayLabel: "מיקום חי במפה",
     updatedMinutesAgo: 0
   };
 
