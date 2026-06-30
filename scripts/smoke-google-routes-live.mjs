@@ -59,14 +59,31 @@ assertCheck("route has duration", route.payload.route?.durationSeconds > 0);
 assertCheck("route has distance", route.payload.route?.distanceMeters > 0);
 assertCheck("route hides api key", route.payload.apiKey === undefined);
 
-const agent = await postJson("/api/agent/message", {
-  member: { id: "dad", displayName: "אבא", role: "owner", ageGroup: "adult" },
-  message: "קודי, כמה זמן נסיעה יש לנו עד המלון?",
+const clearDestinationAgent = await postJson("/api/agent/message", {
+  member: { id: "dad", displayName: "\u05d0\u05d1\u05d0", role: "owner", ageGroup: "adult" },
+  message:
+    "\u05e7\u05d5\u05d3\u05d9, \u05db\u05de\u05d4 \u05d6\u05de\u05df \u05e0\u05e1\u05d9\u05e2\u05d4 \u05e2\u05d3 \u05d4\u05d9\u05e2\u05d3 \u05d4\u05e7\u05d1\u05d5\u05e6\u05ea\u05d9 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9?",
   recentMessages: []
 });
-assertCheck("agent response ok", agent.response.ok);
-assertCheck("agent route status ready", agent.payload.contextSummary?.routeEstimateStatus === "ready");
-assertCheck("agent mentions Google Routes", String(agent.payload.text ?? "").includes("Google Routes"));
+assertCheck("clear destination agent response ok", clearDestinationAgent.response.ok);
+assertCheck(
+  "clear destination agent route status ready",
+  clearDestinationAgent.payload.contextSummary?.routeEstimateStatus === "ready"
+);
+assertCheck("clear destination agent mentions Google Routes", String(clearDestinationAgent.payload.text ?? "").includes("Google Routes"));
+
+const ambiguousHotelAgent = await postJson("/api/agent/message", {
+  member: { id: "dad", displayName: "\u05d0\u05d1\u05d0", role: "owner", ageGroup: "adult" },
+  message:
+    "\u05e7\u05d5\u05d3\u05d9, \u05db\u05de\u05d4 \u05d6\u05de\u05df \u05e0\u05e1\u05d9\u05e2\u05d4 \u05d9\u05e9 \u05dc\u05e0\u05d5 \u05e2\u05d3 \u05d4\u05de\u05dc\u05d5\u05df?",
+  recentMessages: []
+});
+assertCheck("ambiguous hotel agent response ok", ambiguousHotelAgent.response.ok);
+assertCheck(
+  "ambiguous hotel agent asks clarification",
+  Boolean(ambiguousHotelAgent.payload.contextSummary?.tripContextClarification) ||
+    String(ambiguousHotelAgent.payload.text ?? "").includes("\u05e8\u05e7 \u05dc\u05d5\u05d5\u05d3\u05d0")
+);
 
 console.log(
   JSON.stringify(
@@ -76,8 +93,10 @@ console.log(
       storageDriver: storage.payload.storage.driver,
       routeDurationText: route.payload.route.durationText,
       routeDistanceText: route.payload.route.distanceText,
-      agentIntent: agent.payload.intent,
-      agentRouteEstimateStatus: agent.payload.contextSummary.routeEstimateStatus
+      clearDestinationAgentIntent: clearDestinationAgent.payload.intent,
+      clearDestinationAgentRouteEstimateStatus: clearDestinationAgent.payload.contextSummary.routeEstimateStatus,
+      ambiguousHotelAgentIntent: ambiguousHotelAgent.payload.intent,
+      ambiguousHotelClarification: ambiguousHotelAgent.payload.contextSummary.tripContextClarification ?? ambiguousHotelAgent.payload.text
     },
     null,
     2

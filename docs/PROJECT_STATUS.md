@@ -202,7 +202,8 @@ Current Supabase state:
 - First real Google read path selected on `2026-06-29`: Places API Text Search before OAuth. Local build, QA, local smoke, Render deploy, and public API smoke passed in guarded `not_configured` mode.
 - Kodi agent Places context connection added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed in guarded `not_configured` mode.
 - Live Google Places smoke automation added on `2026-06-29`; public production smoke passed after adding `GOOGLE_MAPS_API_KEY` to Render. Result: `placesCount=2`, first place `Cuore Amabile Gelateria`, Kodi agent external Places status `ready`, storage driver `supabase`.
-- Trip Context Resolver and guarded Google Routes ETA path added on `2026-06-29`; local build, QA, smoke, focused agent checks, GitHub push, Render deploy, and public endpoint exposure passed. Public Routes live smoke is blocked by Google Cloud `PERMISSION_DENIED` until `Routes API` is enabled for the same Google Cloud project as the Maps key. Generic nearby requests now route to Google Places from the natural user text, while ambiguous ETA questions ask a clarification before calling Routes.
+- Trip Context Resolver and guarded Google Routes ETA path added on `2026-06-29`; local build, QA, smoke, focused agent checks, GitHub push, Render deploy, and public endpoint exposure passed. Public Routes live smoke passed on `2026-06-30` after `Routes API` was enabled in Google Cloud. Clear destination ETA questions now return Google Routes duration/distance, while ambiguous hotel questions ask a clarification before calculating.
+- Live Google Routes smoke automation updated on `2026-06-30`; public production smoke now verifies both the direct Routes endpoint and Kodi's agent behavior: clear destination request -> `routeEstimateStatus=ready`, ambiguous hotel request -> clarification.
 - Trip Timeline Resolver added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Public result: timeline returned 10 lodging segments, Kodi resolved a Pelion future lodging reference with `medium` confidence, and Google Places status was `ready`.
 - Trip usage pool API foundation added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Public result: Supabase storage active, owner-managed usage pool, participant billing disabled, backend mediation enabled, no private provider keys to browsers, and 4 tracked provider capabilities.
 - Trip usage gate added on `2026-06-29`; local build, QA, local smoke, Render deploy, and public smoke passed. Direct Google endpoints and Kodi agent calls now return `usageGate` evidence showing `usage_pool_authorized` and `chargedTo=trip_usage_pool`; production Places status is `ready`.
@@ -219,12 +220,10 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Enable `Routes API` in Google Cloud for the existing Maps Platform project.
-2. Run public smoke for `/api/google/routes/estimate` and a Kodi chat ETA request.
-3. Continue evolving Kodi as a true agent: natural request -> trip timeline/context resolution -> Google Places/Routes -> answer or clarification.
-4. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
-5. Add persistent usage-pool/account fields before real paid multi-family usage.
-6. Plan a safe internal rename migration from legacy single-trip route names to canonical trip-account route names, keeping backward-compatible aliases during the transition.
+1. Continue evolving Kodi as a true agent: natural request -> trip timeline/context resolution -> Google Places/Routes -> answer or clarification.
+2. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
+3. Add persistent usage-pool/account fields before real paid multi-family usage.
+4. Plan a safe internal rename migration from legacy single-trip route names to canonical trip-account route names, keeping backward-compatible aliases during the transition.
 
 ## QA
 
