@@ -82,16 +82,4 @@ export const demoMembers = [
   }
 ];
 
-export const demoMessages = [
-  { author: "אבא", text: "בא לי גלידה." },
-  { author: "נועה", text: "בא לי לישון." },
-  {
-    author: "אמא",
-    text: "קודי, יש לך המלצה למשהו שיהיה קרוב למלון ואפשר לאכול שם גלידה?"
-  },
-  {
-    author: "קודי",
-    text:
-      "שמעתי: אבא רוצה גלידה, נועה עייפה, ואמא מחפשת משהו קרוב למלון. הייתי מחפש מקום קל ליד Hotel Marathia, בלי סטייה גדולה ובלי הליכה ארוכה. אם תרצו, אסמן הצעה ואפתח ניווט."
-  }
-];
+export const demoMessages: { author: string; text: string }[] = [];

@@ -1202,6 +1202,70 @@ input {
   line-height: 1.35;
 }
 
+.secondary-menu {
+  display: none;
+}
+
+.secondary-menu-header,
+.menu-block {
+  display: grid;
+  gap: 8px;
+}
+
+.secondary-menu-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.secondary-menu-header strong,
+.menu-block strong {
+  color: #16211f;
+  font-size: 14px;
+}
+
+.secondary-menu button,
+.menu-block button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: #096b5c;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.secondary-menu-header button {
+  padding: 0 12px;
+  background: #eef3f1;
+  color: #16211f;
+}
+
+.menu-block {
+  border-top: 1px solid #e1e6e3;
+  padding-top: 12px;
+}
+
+.menu-block p {
+  margin: 0;
+  color: #53615e;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.menu-block input {
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid #c8d3cf;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #ffffff;
+}
+
+.menu-shortcuts {
+  position: static;
+  inset: auto;
+}
+
 .messages {
   flex: 1;
   display: flex;
@@ -1231,6 +1295,31 @@ input {
 }
 
 .message p {
+  line-height: 1.45;
+}
+
+.empty-chat-state {
+  display: grid;
+  gap: 6px;
+  margin: auto;
+  max-width: 360px;
+  padding: 18px;
+  border: 1px solid #d7e3df;
+  border-radius: 8px;
+  background: #f6faf8;
+  color: #16211f;
+  text-align: center;
+}
+
+.empty-chat-state strong {
+  color: #0f483e;
+}
+
+.empty-chat-state p {
+  margin: 0;
+  color: #53615e;
+  font-size: 13px;
+  font-weight: 700;
   line-height: 1.45;
 }
 
@@ -1286,6 +1375,27 @@ input {
     grid-template-columns: 1fr;
   }
 
+  .secondary-menu {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 8;
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    width: min(86vw, 360px);
+    padding: 18px;
+    border-right: 1px solid #d8dedb;
+    background: #ffffff;
+    box-shadow: -14px 0 28px rgba(22, 33, 31, 0.18);
+    transform: translateX(105%);
+    transition: transform 160ms ease;
+    overflow: auto;
+  }
+
+  .secondary-menu-visible .secondary-menu {
+    transform: translateX(0);
+  }
+
   .map-surface {
     min-height: 58vh;
   }
@@ -1310,6 +1420,32 @@ input {
     right: auto;
     width: 100%;
     margin-top: 12px;
+  }
+
+  .personal-location-card,
+  .invite-card,
+  .event-activity,
+  .usage-overview,
+  .action-card .external-shortcuts,
+  .action-card .shortcut-form,
+  .action-card .group-route-card,
+  .action-card .group-destination-card {
+    display: none;
+  }
+
+  .chat-sheet header p,
+  .chat-sync-status,
+  .active-speaker-note {
+    display: none;
+  }
+
+  .member-pills {
+    padding-top: 8px;
+  }
+
+  .messages {
+    min-height: 22vh;
+    padding: 14px;
   }
 
   .kodi-presence {

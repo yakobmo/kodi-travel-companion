@@ -105,6 +105,8 @@ The main screen should prioritize:
 - Kodi available in the same family conversation
 - one obvious next action
 
+The main screen should not preload invented family dialogue, sample questions, or dense explanatory copy. If no one has written yet, the chat starts clean with a short empty state.
+
 The hamburger or secondary management area can contain:
 
 - add participants

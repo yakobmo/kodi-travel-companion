@@ -472,7 +472,7 @@ function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPla
   }
 
   if (recentText.includes("גלידה") || recentText.includes("לישון") || recentText.includes("מלון")) {
-    return `שמעתי שיש פה שני צרכים: משהו מתוק, וגם לא להתרחק כי נועה עייפה. הייתי מחפש נקודה קלה ליד ${selected}, עם מינימום הליכה. אני יכול להציע מקום, ואז אבקש אישור לפני שינוי יעד קבוצתי.`;
+    return `אני מבין שצריך החלטה לפי ההקשר של הטיול, המיקום והקבוצה. אבדוק אפשרות קרובה ל-${selected}, ואבחר מינימום סטייה והליכה קצרה. אם זה שינוי יעד קבוצתי, אבקש אישור מנהל לפני ביצוע.`;
   }
 
   if (recentText.includes("איפה") || recentText.includes("כולם")) {
@@ -579,6 +579,7 @@ export function App() {
     "idle"
   );
   const [activeRouteStopIndex, setActiveRouteStopIndex] = useState(0);
+  const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
 
   function applyTripEvents(data: TripEventsResponse) {
     setTripEvents(data.events);
@@ -1850,7 +1851,7 @@ export function App() {
                 aria-label="גיל משתתף להצטרפות"
                 inputMode="numeric"
                 onChange={(event) => setJoinDraft((draft) => ({ ...draft, age: event.target.value }))}
-                placeholder="לדוגמה 12"
+                placeholder="גיל"
                 value={joinDraft.age}
               />
             </label>
@@ -1911,8 +1912,8 @@ export function App() {
                 ולשיחה.
               </p>
               <div className="kodi-dialogue-preview">
-                <strong>אפשר לשאול אותי כמעט הכול</strong>
-                <p>בית חב"ד קרוב, גלידה, תחנת דלק, חוף יפה, זמן נסיעה, או מה כדאי לעשות עכשיו.</p>
+                <strong>אחרי החיבור נכנסים למפה ולשיחה</strong>
+                <p>קודי יפעל מתוך ההקשר של הטיול, המיקום והשיחה הקבוצתית.</p>
               </div>
               <div className="plan-note">
                 <ShieldCheck size={18} aria-hidden="true" />
@@ -1945,7 +1946,7 @@ export function App() {
                   <input
                     aria-label="שם הטיול"
                     onChange={(event) => setSetupDraft((draft) => ({ ...draft, tripName: event.target.value }))}
-                    placeholder="לדוגמה: טיול צפון יוון"
+                    placeholder="שם הטיול"
                     value={setupDraft.tripName}
                   />
                 </label>
@@ -1964,7 +1965,7 @@ export function App() {
                   <input
                     aria-label="שם מנהל הטיול"
                     onChange={(event) => setSetupDraft((draft) => ({ ...draft, memberName: event.target.value }))}
-                    placeholder="לדוגמה: אבא"
+                    placeholder="שם מלא"
                     value={setupDraft.memberName}
                   />
                 </label>
@@ -1974,7 +1975,7 @@ export function App() {
                     aria-label="גיל מנהל הטיול"
                     inputMode="numeric"
                     onChange={(event) => setSetupDraft((draft) => ({ ...draft, memberAge: event.target.value }))}
-                    placeholder="לדוגמה: 40"
+                    placeholder="גיל"
                     value={setupDraft.memberAge}
                   />
                 </label>
@@ -2077,10 +2078,16 @@ export function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${secondaryMenuOpen ? "secondary-menu-visible" : ""}`}>
       <section className="map-surface" aria-label="מפת הטיול">
         <div className="top-bar">
-          <button className="icon-button" aria-label="תפריט">
+          <button
+            aria-expanded={secondaryMenuOpen}
+            className="icon-button"
+            aria-label="תפריט"
+            onClick={() => setSecondaryMenuOpen((isOpen) => !isOpen)}
+            type="button"
+          >
             <Menu size={22} aria-hidden="true" />
           </button>
           <div>
@@ -2325,6 +2332,51 @@ export function App() {
         </div>
       </section>
 
+      <aside className="secondary-menu" aria-label="ניהול הטיול">
+        <div className="secondary-menu-header">
+          <strong>ניהול</strong>
+          <button onClick={() => setSecondaryMenuOpen(false)} type="button">
+            סגור
+          </button>
+        </div>
+        <section className="menu-block">
+          <strong>מיקום מנהל</strong>
+          <p>{currentLocation ? `GPS פעיל · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "GPS כבוי"}</p>
+          <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
+            {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל GPS"}
+          </button>
+        </section>
+        <section className="menu-block">
+          <strong>הזמנת משתתפים</strong>
+          <p>שליחת קישור הצטרפות לקבוצת הטיול.</p>
+          <input aria-label="קישור הזמנה בתפריט ניהול" dir="ltr" readOnly value={tripInviteUrl} />
+          <button onClick={copyTripInviteLink} type="button">
+            העתק קישור
+          </button>
+        </section>
+        <section className="menu-block">
+          <strong>קישורים חיצוניים</strong>
+          <div className="external-shortcuts menu-shortcuts" aria-label="קיצורי אפליקציות חיצוניות בתפריט">
+            {externalShortcuts.map((shortcut) => (
+              <a href={shortcut.href} key={shortcut.label} rel="noreferrer" target="_blank">
+                <ExternalLink size={14} aria-hidden="true" />
+                {shortcut.label}
+              </a>
+            ))}
+            {userShortcuts.map((shortcut) => (
+              <a href={shortcut.url} key={shortcut.id} rel="noreferrer" target="_blank">
+                <ExternalLink size={14} aria-hidden="true" />
+                {shortcut.label}
+              </a>
+            ))}
+          </div>
+        </section>
+        <section className="menu-block">
+          <strong>בקרת קודי</strong>
+          <p>{usageAuditOverview.totalAuthorizedCalls} פעולות נרשמו בטיול הזה.</p>
+        </section>
+      </aside>
+
       <aside className="chat-sheet" aria-label="שיחת המשפחה">
         <header>
           <div>
@@ -2442,12 +2494,19 @@ export function App() {
         </section>
 
         <div className="messages">
-          {messages.map((message, index) => (
-            <article className={message.author === "קודי" ? "message kodi" : "message"} key={`${message.author}-${index}-${message.text}`}>
-              <strong>{message.author}</strong>
-              <p>{message.text}</p>
-            </article>
-          ))}
+          {messages.length === 0 ? (
+            <div className="empty-chat-state">
+              <strong>השיחה מוכנה</strong>
+              <p>כתבו בקבוצה. כשצריך את קודי, פונים אליו בשם.</p>
+            </div>
+          ) : (
+            messages.map((message, index) => (
+              <article className={message.author === "קודי" ? "message kodi" : "message"} key={`${message.author}-${index}-${message.text}`}>
+                <strong>{message.author}</strong>
+                <p>{message.text}</p>
+              </article>
+            ))
+          )}
         </div>
 
         <form className="composer" onSubmit={sendMessageWithPersistence}>

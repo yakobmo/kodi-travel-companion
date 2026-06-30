@@ -187,7 +187,7 @@ try {
   const activationBody = await page.locator("body").innerText();
   assertCheck("guided activation shell", activationBody.includes("שלום, אני קודי"));
   assertCheck("guided activation single purpose", activationBody.includes("הפעל את קודי"));
-  assertCheck("guided activation open questions", activationBody.includes("בית חב\"ד קרוב"));
+  assertCheck("guided activation clean copy", !activationBody.includes("בית חב\"ד קרוב") && !activationBody.includes("תחנת דלק"));
   assertCheck("guided activation no bypass", !activationBody.includes("כניסה לחשבון הטיול"));
 
   await page.getByRole("button", { name: "הפעל את קודי" }).click();
@@ -240,13 +240,28 @@ try {
   assertCheck("group location consent copy", body.includes("מיקום חברי קבוצה מוצג רק למי שאישר שיתוף"));
   assertCheck("internal map provider", body.includes("שכבת מפה פנימית"));
   assertCheck("map provider fallback reason", body.includes("חסר Google Maps API key"));
-  assertCheck("place marker", body.includes("Hotel Marathia"));
+  assertCheck("place marker", tripStatePayload.places?.length > 0 && body.includes(tripStatePayload.places[0].name));
   assertCheck("personal gps", body.includes("GPS אישי"));
   assertCheck("dad member", body.includes("אבא"));
   assertCheck("noa member", body.includes("נועה"));
   assertCheck("grandma member", body.includes("סבתא"));
   assertCheck("invite card", body.includes("הזמנת משתתפים"));
   assertCheck("invite per-device consent", body.includes("כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו"));
+
+  const mobilePage = await context.newPage();
+  await mobilePage.setViewportSize({ width: 390, height: 844 });
+  await mobilePage.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
+  await mobilePage.locator(".map-surface").waitFor();
+  assertCheck("mobile map visible", await mobilePage.locator(".map-surface").isVisible());
+  assertCheck("mobile chat visible", await mobilePage.locator(".chat-sheet").isVisible());
+  assertCheck("mobile invite hidden by default", !(await mobilePage.locator(".invite-card").isVisible()));
+  assertCheck("mobile activity hidden by default", !(await mobilePage.locator(".event-activity").isVisible()));
+  await mobilePage.locator(".top-bar .icon-button").click();
+  assertCheck(
+    "mobile hamburger opens management",
+    await mobilePage.locator(".app-shell").evaluate((element) => element.classList.contains("secondary-menu-visible"))
+  );
+  await mobilePage.close();
 
   const inviteUrl = await page.getByLabel("קישור הזמנה לקבוצת הטיול").inputValue();
   assertCheck("invite link token", inviteUrl.includes("?join=group_family_greece_demo"));
@@ -266,7 +281,13 @@ try {
   assertCheck("members api ok", membersResponse.ok());
   assertCheck("members api count", membersPayload.members?.length === 4);
   assertCheck("messages api ok", messagesResponse.ok());
-  assertCheck("messages api initial", messagesPayload.messages?.length >= 4);
+  assertCheck("messages api returns an array", Array.isArray(messagesPayload.messages));
+  assertCheck(
+    "retired seed messages hidden",
+    !messagesPayload.messages?.some((message) =>
+      ["msg_demo_dad_ice_cream", "msg_demo_noa_sleep", "msg_demo_mom_kodi", "msg_demo_kodi_reply"].includes(message.id)
+    )
+  );
   assertCheck("storage status ok", storageResponse.ok() && storagePayload.storage?.driver === "file");
   assertCheck("storage realtime not ready", storagePayload.storage?.realtimeReady === false);
   assertCheck("events api ok", eventsResponse.ok() && Array.isArray(eventsPayload.events));
@@ -489,7 +510,7 @@ try {
   assertCheck("route completion disables progress", await page.getByRole("button", { name: "סמן תחנה כהושלמה" }).isDisabled());
 
   await page.getByRole("button", { name: "הפעל GPS" }).click();
-  await page.getByText("פעיל · דיוק").waitFor();
+  await page.locator(".personal-location-card").getByText("פעיל · דיוק").waitFor();
   await page.getByText("המיקום סונכרן עבור אמא").waitFor();
   await page.getByText("אני כאן").waitFor();
 
