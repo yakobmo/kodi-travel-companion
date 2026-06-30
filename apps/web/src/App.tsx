@@ -2306,17 +2306,25 @@ export function App() {
                   </p>
                 </div>
               </div>
-              <button disabled={locationState === "requesting"} className="primary-action" onClick={enablePersonalGps} type="button">
-                {locationState === "requesting" ? "מבקש הרשאת מיקום..." : managerLocationReady ? "רענן מיקום" : "הפעל GPS מנהל"}
-              </button>
-              <button
-                className="quiet-action"
-                disabled={!managerLocationReady}
-                type="button"
-                onClick={() => setActivationStep("ready")}
-              >
-                המשך
-              </button>
+              {managerLocationReady ? (
+                <>
+                  <button className="primary-action" type="button" onClick={() => setActivationStep("ready")}>
+                    המשך למפה ולשיחה
+                  </button>
+                  <button
+                    disabled={locationState === "requesting"}
+                    className="quiet-action"
+                    onClick={enablePersonalGps}
+                    type="button"
+                  >
+                    {locationState === "requesting" ? "מרענן מיקום..." : "רענן מיקום"}
+                  </button>
+                </>
+              ) : (
+                <button disabled={locationState === "requesting"} className="primary-action" onClick={enablePersonalGps} type="button">
+                  {locationState === "requesting" ? "מבקש הרשאת מיקום..." : "הפעל GPS מנהל"}
+                </button>
+              )}
               {locationState === "error" ? <small className="setup-error">לא קיבלתי מיקום. אפשר לנסות שוב מהדפדפן.</small> : null}
               <button className="quiet-action" type="button" onClick={() => setActivationStep("google")}>
                 חזרה

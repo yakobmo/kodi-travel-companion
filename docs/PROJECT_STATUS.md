@@ -226,6 +226,7 @@ Current Supabase state:
 - First-run onboarding clarity pass added on `2026-06-30`; the activation flow no longer has a bypass into the main app, the trip-source step requires a valid Google Maps viewing link plus manager name and age, and returning users with completed setup skip the wizard and enter the map/chat core. Local build, QA, local browser smoke, Render deploy, and public bundle smoke passed.
 - Google Maps runtime config correction added on `2026-06-30`; local API build, web build, QA, local smoke, diff check, GitHub push, Render deploy, and public smoke passed. Public result: `/api/config/maps` is live, the public bundle contains the runtime config fetch and Google Maps JS loader, Google source and usage endpoints pass, and `mapsConfigured=false` until a browser-safe Google Maps key is configured in Render.
 - Browser Google Maps activation completed on `2026-06-30`; after enabling Maps JavaScript API in Google Cloud, public browser smoke passed with `google-map-active`, Google Maps JS loaded, 23 map tiles rendered, and no fallback text. Follow-up: switch script loading to the recommended async pattern and migrate markers to `AdvancedMarkerElement`.
+- Product QA pass added on `2026-06-30` in `docs/PRODUCT_QA_2026-06-30.md`; result: current MVP slice conditionally passes the core product rule that Google Maps is the map and Kodi is the agent layer, with P1 gaps recorded for Google OAuth live account sync and OpenAI-backed reasoning. Manager-location onboarding primary action was corrected so the next step is clear after GPS is active.
 
 ## Next Continuation Checkpoint
 
@@ -233,7 +234,7 @@ Resume from the Kodi build protocol with no new product discovery.
 
 Immediate next task:
 
-1. Continue evolving Kodi as a true agent: natural request -> trip timeline/context resolution -> Google Places/Routes -> answer or clarification.
+1. Implement the real backend agent bridge: group message -> Kodi wake detection -> context resolver -> Places/Routes if needed -> OpenAI grounded response -> optional manager approval action.
 2. Keep OAuth and write-back disabled until a proven, permissioned Google account path exists.
 3. Add persistent usage-pool/account fields before real paid multi-family usage.
 4. Plan a safe internal rename migration from legacy single-trip route names to canonical trip-account route names, keeping backward-compatible aliases during the transition.

@@ -204,7 +204,9 @@ try {
   await page.getByText("נפעיל מיקום מנהל").waitFor();
   await page.getByRole("button", { name: "הפעל GPS מנהל" }).click();
   await page.getByText("מיקום מנהל פעיל").waitFor();
-  await page.getByRole("button", { name: "המשך", exact: true }).click();
+  assertCheck("manager location primary continue", await page.getByRole("button", { name: "המשך למפה ולשיחה" }).isVisible());
+  assertCheck("manager location refresh is secondary", await page.getByRole("button", { name: "רענן מיקום" }).isVisible());
+  await page.getByRole("button", { name: "המשך למפה ולשיחה" }).click();
   await page.getByText("הלב מוכן").waitFor();
   await page.getByRole("button", { name: "כניסה למפה ולשיחה" }).click();
 
@@ -230,7 +232,9 @@ try {
   const eventsPayload = await eventsResponse.json();
 
   assertCheck("map", body.includes("מפה חיה"));
-  assertCheck("trip account connected", body.includes("מחובר לחשבון הטיול"));
+  const mapShellClass = await page.locator(".map-placeholder").evaluate((element) => element.className);
+  const googleMapsActive = String(mapShellClass).includes("google-map-active");
+  assertCheck("trip source loaded", storageResponse.ok() && Boolean(storagePayload.storage));
   assertCheck("places count", body.includes("108 נקודות"));
   assertCheck("group chat", body.includes("קבוצת הטיול"));
   assertCheck("kodi background", body.includes("קודי ברקע"));
@@ -240,11 +244,16 @@ try {
   assertCheck("booking shortcut", body.includes("Booking"));
   assertCheck("airbnb shortcut", body.includes("Airbnb"));
   assertCheck("group location consent copy", body.includes("מיקום חברי קבוצה מוצג רק למי שאישר שיתוף"));
-  assertCheck("google maps is target provider", body.includes("ממתין ל-Google Maps"));
-  assertCheck(
-    "map provider fallback reason",
-    body.includes("GOOGLE_MAPS_BROWSER_API_KEY") || body.includes("VITE_GOOGLE_MAPS_API_KEY")
-  );
+  assertCheck("google maps is target provider", body.includes("Google Maps"));
+  if (googleMapsActive) {
+    assertCheck("google maps active", body.includes("Google Maps פעיל"));
+  } else {
+    assertCheck("google maps fallback marked temporary", body.includes("fallback זמני"));
+    assertCheck(
+      "map provider fallback reason",
+      body.includes("GOOGLE_MAPS_BROWSER_API_KEY") || body.includes("VITE_GOOGLE_MAPS_API_KEY")
+    );
+  }
   assertCheck("nearby manager map focus", body.includes("מציג נקודות קרובות למנהל"));
   assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
   assertCheck("personal gps", body.includes("GPS אישי"));
