@@ -10,6 +10,8 @@ Kodi + live map + trip points + at least the trip manager's live location
 
 This is the heart of the app.
 
+The map engine is Google Maps. Kodi must not recreate Google Maps behavior such as map movement, zoom gestures, compass, follow-location, or native route/map interaction. Kodi's unique layer is the trip agent: conversation, group context, imported trip points, recommendations, admin approvals, and opening the selected point in Waze or Google Maps.
+
 Without the manager's live location, Kodi cannot reliably answer "what now?", "what is nearby?", "how long to the hotel?", or "open this in Waze" in a travel-specific way.
 
 Group member locations are a flagship extension, but the minimum viable live context is:
@@ -99,13 +101,13 @@ Then the user selects the real trip source, such as "טיול צפון יוון"
 
 The main screen should prioritize:
 
-- map first
+- Google Maps first
 - trip points visible on the map
 - manager live location visible on the map after consent
 - Kodi available in the same family conversation
 - one obvious next action
 
-Default map focus after manager GPS is active: show nearby trip points around the manager, targeting a 10 km radius. If there are no trip points inside that radius, show the nearest trip points rather than zooming out to the whole trip.
+Default map focus after manager GPS is active: Google Maps should be centered around the manager and show nearby trip points, targeting a 10 km context radius. If there are no trip points inside that radius, Kodi can prioritize the nearest trip points, but the map interaction itself remains Google Maps.
 
 The main screen should not preload invented family dialogue, sample questions, or dense explanatory copy. If no one has written yet, the chat starts clean with a short empty state.
 

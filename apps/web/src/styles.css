@@ -492,6 +492,35 @@ input {
   text-align: center;
 }
 
+.google-map-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: none;
+}
+
+.google-map-active {
+  background: #d9e4dc;
+}
+
+.google-map-active .google-map-canvas {
+  display: block;
+}
+
+.google-map-active > svg,
+.google-map-active > span,
+.google-map-active > small,
+.google-map-active .trip-map-layer {
+  display: none;
+}
+
+.google-map-active .map-provider-note,
+.google-map-active .privacy-note,
+.google-map-active .personal-location-card,
+.google-map-active .group-location-layer {
+  z-index: 2;
+}
+
 .map-placeholder svg {
   justify-self: center;
   color: #096b5c;

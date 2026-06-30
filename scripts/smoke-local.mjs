@@ -240,8 +240,8 @@ try {
   assertCheck("booking shortcut", body.includes("Booking"));
   assertCheck("airbnb shortcut", body.includes("Airbnb"));
   assertCheck("group location consent copy", body.includes("מיקום חברי קבוצה מוצג רק למי שאישר שיתוף"));
-  assertCheck("internal map provider", body.includes("שכבת מפה פנימית"));
-  assertCheck("map provider fallback reason", body.includes("חסר Google Maps API key"));
+  assertCheck("google maps is target provider", body.includes("ממתין ל-Google Maps"));
+  assertCheck("map provider fallback reason", body.includes("חסר VITE_GOOGLE_MAPS_API_KEY"));
   assertCheck("nearby manager map focus", body.includes("מציג נקודות קרובות למנהל"));
   assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
   assertCheck("personal gps", body.includes("GPS אישי"));
@@ -527,7 +527,10 @@ try {
   await input.fill("בא לי גלידה ליד המלון");
   await page.locator(".composer button").click();
   await page.getByText("בא לי גלידה ליד המלון").waitFor();
-  await page.locator(".event-activity").getByText("שלח/ה הודעה בקבוצה").waitFor();
+  assertCheck(
+    "message activity visible",
+    (await page.locator(".event-activity").getByText("שלח/ה הודעה בקבוצה").count()) >= 1
+  );
   const messagesAfterFamilyOnly = await page.locator(".message").count();
   assertCheck("kodi stays asleep without call", messagesAfterFamilyOnly === messagesBeforeFamilyOnly + 1);
 

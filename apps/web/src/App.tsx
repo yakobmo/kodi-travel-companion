@@ -1,5 +1,5 @@
 import { CheckCircle2, ExternalLink, MapPin, Menu, Navigation, Radio, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { demoMembers, demoMessages, demoPlaces, demoTripSummary } from "./demoTrip.js";
 
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
@@ -7,7 +7,17 @@ type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
 const DEFAULT_NEARBY_MAP_RADIUS_KM = 10;
 const DEFAULT_VISIBLE_PLACE_LIMIT = 5;
 const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
+const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
 const retiredDemoMemberIds = new Set(["dad", "noa", "grandma"]);
+
+declare global {
+  interface Window {
+    google?: {
+      maps: any;
+    };
+    __kodiGoogleMapsPromise?: Promise<void>;
+  }
+}
 
 interface TripPlace {
   id: string;
@@ -365,19 +375,51 @@ interface JoinDraft {
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : "");
 const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
 
+function loadGoogleMapsSdk(apiKey: string) {
+  if (window.google?.maps) {
+    return Promise.resolve();
+  }
+
+  if (window.__kodiGoogleMapsPromise) {
+    return window.__kodiGoogleMapsPromise;
+  }
+
+  window.__kodiGoogleMapsPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID) as HTMLScriptElement | null;
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Google Maps JS failed to load")), {
+        once: true
+      });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = GOOGLE_MAPS_SCRIPT_ID;
+    script.async = true;
+    script.defer = true;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}`;
+    script.addEventListener("load", () => resolve(), { once: true });
+    script.addEventListener("error", () => reject(new Error("Google Maps JS failed to load")), { once: true });
+    document.head.appendChild(script);
+  });
+
+  return window.__kodiGoogleMapsPromise;
+}
+
 function getMapProviderStatus() {
   if (googleMapsApiKey) {
     return {
       mode: "google-ready" as const,
-      label: "Google Maps JS מוגדר",
-      detail: "נמצא API key; שכבת Google תחובר כאן בלי לשנות את הלוגיקה"
+      label: "Google Maps פעיל",
+      detail: "המפה, התנועה, הזום והמעקב מגיעים מ-Google Maps; קודי מוסיף נקודות ושיחה מעליה"
     };
   }
 
   return {
     mode: "internal-fallback" as const,
-    label: "שכבת מפה פנימית",
-    detail: "חסר Google Maps API key; מציגים fallback שמחבר נקודות, GPS וקבוצה"
+    label: "ממתין ל-Google Maps",
+    detail: "חסר VITE_GOOGLE_MAPS_API_KEY בדפדפן; מוצג fallback זמני בלבד, לא מנוע המפה של המוצר"
   };
 }
 
@@ -645,6 +687,7 @@ export function App() {
   );
   const [activeRouteStopIndex, setActiveRouteStopIndex] = useState(0);
   const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
+  const googleMapElementRef = useRef<HTMLDivElement | null>(null);
 
   function applyTripEvents(data: TripEventsResponse) {
     setTripEvents(data.events);
@@ -1302,6 +1345,94 @@ export function App() {
   const visibleMembers = members.filter((member) => member.locationSharing === "enabled" && member.liveLocation);
   const recentTripEvents = tripEvents.slice(0, 3);
   const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
+
+  useEffect(() => {
+    if (!googleMapsApiKey || !googleMapElementRef.current) {
+      return;
+    }
+
+    const fallbackCenter =
+      mapAnchorLocation ??
+      (typeof selectedPlace?.lat === "number" && typeof selectedPlace.lng === "number"
+        ? { lat: selectedPlace.lat, lng: selectedPlace.lng }
+        : visiblePlaces.find((place) => typeof place.lat === "number" && typeof place.lng === "number"));
+
+    if (!fallbackCenter) {
+      return;
+    }
+
+    const center = { lat: Number(fallbackCenter.lat), lng: Number(fallbackCenter.lng) };
+    let cancelled = false;
+    const mapElement = googleMapElementRef.current;
+    const markers: any[] = [];
+
+    async function renderGoogleMap() {
+      try {
+        await loadGoogleMapsSdk(googleMapsApiKey);
+        if (cancelled || !window.google?.maps) {
+          return;
+        }
+
+        const google = window.google;
+        const map = new google.maps.Map(mapElement, {
+          center,
+          zoom: mapAnchorLocation ? 13 : 9,
+          clickableIcons: true,
+          fullscreenControl: true,
+          mapTypeControl: false,
+          streetViewControl: true
+        });
+
+        visiblePlaces.forEach((place) => {
+          if (typeof place.lat !== "number" || typeof place.lng !== "number") {
+            return;
+          }
+
+          const marker = new google.maps.Marker({
+            map,
+            position: { lat: place.lat, lng: place.lng },
+            title: place.name
+          });
+          marker.addListener("click", () => setSelectedPlaceId(place.id));
+          markers.push(marker);
+        });
+
+        if (currentLocation) {
+          markers.push(
+            new google.maps.Marker({
+              map,
+              position: { lat: currentLocation.lat, lng: currentLocation.lng },
+              title: "אני כאן"
+            })
+          );
+        }
+
+        visibleMembers.forEach((member) => {
+          if (!member.liveLocation) {
+            return;
+          }
+
+          markers.push(
+            new google.maps.Marker({
+              map,
+              position: { lat: member.liveLocation.lat, lng: member.liveLocation.lng },
+              title: member.name
+            })
+          );
+        });
+      } catch {
+        // The fallback layer remains visible if Google Maps JS fails to load.
+      }
+    }
+
+    void renderGoogleMap();
+
+    return () => {
+      cancelled = true;
+      markers.forEach((marker) => marker.setMap?.(null));
+    };
+  }, [currentLocation, mapAnchorLocation, selectedPlace, visibleMembers, visiblePlaces]);
+
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
   const googleSourceRecognized =
     normalizedGoogleLink.includes("maps.app.goo.gl") || normalizedGoogleLink.includes("google.com/maps");
@@ -2196,7 +2327,8 @@ export function App() {
           </div>
         </div>
 
-        <div className="map-placeholder">
+        <div className={`map-placeholder ${googleMapsApiKey ? "google-map-active" : "internal-map-fallback"}`}>
+          <div className="google-map-canvas" ref={googleMapElementRef} aria-label="Google Maps" />
           <Radio size={34} aria-hidden="true" />
           <span>מפה חיה</span>
           <small>

@@ -21,6 +21,8 @@ Product-heart decision: the primary experience is Kodi + map + trip points + at 
 
 Product-language decision: Kodi should not present a trial mode to users. The product starts with a real trip account setup: manager account, Google trip source, manager location, invite link, and participant permissions. Any remaining legacy endpoint/model names are internal technical identifiers until a rename migration is completed.
 
+Map architecture correction: Google Maps is the product map engine. Kodi does not recreate Google Maps behaviors; it adds the agent/group/trip layer on top of Google Maps and uses fallback rendering only when a browser-visible Google Maps key is not configured.
+
 ## Current Core
 
 Implemented locally:
@@ -70,6 +72,7 @@ Implemented locally:
 - Usage-gate authorizations are written into the group event log as system audit events, so direct API calls and Kodi agent calls leave an operational trail.
 - Owner-visible usage audit summary is exposed through `/api/trips/{tripId}/usage` and shown in the chat surface next to live group activity.
 - Core experience and onboarding product gate documented in `docs/CORE_EXPERIENCE_AND_ONBOARDING.md`: one clear next action, manager location as minimum live context, and secondary actions kept out of the main flow.
+- Google Maps JS path added for the web map: when `VITE_GOOGLE_MAPS_API_KEY` is configured, the app loads Google Maps JavaScript API, centers around the manager/trip context, and places trip/member markers on Google Maps. The internal layer is now explicitly fallback-only.
 - Guided first-run activation added: Kodi leads one step at a time through activation, trip source, manager GPS, and then entry into the map/chat core.
 - Participant invite link flow added: after the manager enters the map/chat core, the app exposes a group invite link; participants opening `?join=<tripInviteToken>` see a join screen, enter name and age, join the family conversation, and approve GPS separately from their own device.
 - Mobile main-screen cleanup added: the app no longer seeds invented family chat examples, filters retired seeded chat rows from storage, and keeps participant invite, usage, shortcuts, and GPS management behind the hamburger menu on mobile.

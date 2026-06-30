@@ -32,13 +32,13 @@ The app currently has:
 
 Google Places/Routes integration is active where configured. Real Google OAuth account connection and production auth are the next major account steps.
 
-The current web map uses an internal fallback layer that connects trip places, personal GPS, selected destination, and consented group locations. To prepare the Google Maps JS switch, configure:
+Google Maps is the product map engine. Kodi does not recreate Google Maps navigation, gestures, compass, follow-location, or route UI; Kodi adds the trip-agent layer on top of Google Maps. Configure the browser-visible Maps key so the web app can load Google Maps JavaScript API:
 
 ```text
 VITE_GOOGLE_MAPS_API_KEY=
 ```
 
-Do not put private server-only secrets in `VITE_*` variables. Browser-visible Google Maps keys must be restricted in Google Cloud.
+Do not put private server-only secrets in `VITE_*` variables. Browser-visible Google Maps keys must be restricted in Google Cloud. If this key is missing, the app shows a temporary internal fallback only so development can continue; it is not the target product map.
 
 The live group map is now defined as a flagship product feature. It will be implemented in stages because it requires consent, permissions, users, realtime updates, and careful privacy boundaries.
 
