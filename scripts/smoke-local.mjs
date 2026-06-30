@@ -240,7 +240,8 @@ try {
   assertCheck("group location consent copy", body.includes("מיקום חברי קבוצה מוצג רק למי שאישר שיתוף"));
   assertCheck("internal map provider", body.includes("שכבת מפה פנימית"));
   assertCheck("map provider fallback reason", body.includes("חסר Google Maps API key"));
-  assertCheck("place marker", tripStatePayload.places?.length > 0 && body.includes(tripStatePayload.places[0].name));
+  assertCheck("nearby manager map focus", body.includes("מציג נקודות קרובות למנהל"));
+  assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
   assertCheck("personal gps", body.includes("GPS אישי"));
   assertCheck("dad member", body.includes("אבא"));
   assertCheck("noa member", body.includes("נועה"));

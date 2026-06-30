@@ -4,6 +4,8 @@ import { demoMembers, demoMessages, demoPlaces, demoTripSummary } from "./demoTr
 
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
 type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
+const DEFAULT_NEARBY_MAP_RADIUS_KM = 10;
+const DEFAULT_VISIBLE_PLACE_LIMIT = 5;
 
 interface TripPlace {
   id: string;
@@ -490,6 +492,19 @@ function getMapPosition(index: number, total: number) {
     left: `${50 + Math.cos(angle) * radius}%`,
     top: `${50 + Math.sin(angle) * radius}%`
   };
+}
+
+function getDistanceKm(first: { lat: number; lng: number }, second: { lat: number; lng: number }) {
+  const earthRadiusKm = 6371;
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latDelta = toRadians(second.lat - first.lat);
+  const lngDelta = toRadians(second.lng - first.lng);
+  const firstLat = toRadians(first.lat);
+  const secondLat = toRadians(second.lat);
+  const haversine =
+    Math.sin(latDelta / 2) ** 2 + Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(lngDelta / 2) ** 2;
+
+  return 2 * earthRadiusKm * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
 function getInitialJoinToken() {
@@ -1172,6 +1187,17 @@ export function App() {
     };
   }, []);
 
+  const activeMember = members.find((member) => member.id === activeMemberId) ?? members[0] ?? {
+    id: "mom",
+    name: "אמא",
+    role: "owner",
+    ageGroup: "adult",
+    locationSharing: "enabled",
+    liveLocation: null
+  };
+  const managerMember = members.find((member) => member.role === "owner" || member.role === "admin") ?? activeMember;
+  const mapAnchorLocation = currentLocation ?? managerMember.liveLocation;
+
   const visiblePlaces = useMemo(() => {
     const priority: Record<PlaceType, number> = {
       lodging: 0,
@@ -1183,27 +1209,44 @@ export function App() {
       unknown: 6
     };
 
-    return [...places].sort((first, second) => priority[first.type] - priority[second.type]).slice(0, 5);
-  }, [places]);
+    if (mapAnchorLocation) {
+      const placesWithDistance = places
+        .filter((place) => typeof place.lat === "number" && typeof place.lng === "number")
+        .map((place) => ({
+          place,
+          distanceKm: getDistanceKm(mapAnchorLocation, { lat: Number(place.lat), lng: Number(place.lng) })
+        }))
+        .sort((first, second) => first.distanceKm - second.distanceKm);
+      const nearbyPlaces = placesWithDistance.filter((item) => item.distanceKm <= DEFAULT_NEARBY_MAP_RADIUS_KM);
 
-  const selectedPlace = places.find((place) => place.id === selectedPlaceId) ?? visiblePlaces[0];
+      return (nearbyPlaces.length > 0 ? nearbyPlaces : placesWithDistance)
+        .slice(0, DEFAULT_VISIBLE_PLACE_LIMIT)
+        .map((item) => item.place);
+    }
+
+    return [...places]
+      .sort((first, second) => priority[first.type] - priority[second.type])
+      .slice(0, DEFAULT_VISIBLE_PLACE_LIMIT);
+  }, [mapAnchorLocation, places]);
+
+  useEffect(() => {
+    if (visiblePlaces.length > 0 && !visiblePlaces.some((place) => place.id === selectedPlaceId)) {
+      setSelectedPlaceId(visiblePlaces[0].id);
+    }
+  }, [selectedPlaceId, visiblePlaces]);
+
+  const selectedPlace = visiblePlaces.find((place) => place.id === selectedPlaceId) ?? visiblePlaces[0];
   const canNavigate = typeof selectedPlace?.lat === "number" && typeof selectedPlace?.lng === "number";
   const externalShortcuts = buildExternalAppShortcuts(selectedPlace);
   const mapProviderStatus = getMapProviderStatus();
+  const mapFocusSummary = mapAnchorLocation
+    ? `מציג נקודות קרובות למנהל · עד ${DEFAULT_NEARBY_MAP_RADIUS_KM} ק״מ כשיש כאלה`
+    : "מציג נקודות מרכזיות עד להפעלת GPS מנהל";
   const tripInviteUrl =
     typeof window === "undefined"
       ? "https://kodi-travel-companion.onrender.com?join=group_family_greece_demo"
       : `${window.location.origin}${window.location.pathname}?join=group_family_greece_demo`;
-  const activeMember = members.find((member) => member.id === activeMemberId) ?? members[0] ?? {
-    id: "mom",
-    name: "אמא",
-    role: "owner",
-    ageGroup: "adult",
-    locationSharing: "enabled",
-    liveLocation: null
-  };
   const visibleMembers = members.filter((member) => member.locationSharing === "enabled" && member.liveLocation);
-  const managerMember = members.find((member) => member.role === "owner" || member.role === "admin") ?? activeMember;
   const recentTripEvents = tripEvents.slice(0, 3);
   const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
@@ -2105,6 +2148,7 @@ export function App() {
             {summary.lodgingCount} לינות · {summary.waterCount} נקודות מים ·{" "}
             {loadState === "ready" ? "מחובר לחשבון הטיול" : "מכין את נתוני הטיול"}
           </small>
+          <small className="map-focus-summary">{mapFocusSummary}</small>
           <div className={`map-provider-note ${mapProviderStatus.mode}`}>
             <strong>{mapProviderStatus.label}</strong>
             <p>{mapProviderStatus.detail}</p>

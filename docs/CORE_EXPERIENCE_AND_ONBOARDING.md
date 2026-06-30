@@ -105,6 +105,8 @@ The main screen should prioritize:
 - Kodi available in the same family conversation
 - one obvious next action
 
+Default map focus after manager GPS is active: show nearby trip points around the manager, targeting a 10 km radius. If there are no trip points inside that radius, show the nearest trip points rather than zooming out to the whole trip.
+
 The main screen should not preload invented family dialogue, sample questions, or dense explanatory copy. If no one has written yet, the chat starts clean with a short empty state.
 
 The hamburger or secondary management area can contain:

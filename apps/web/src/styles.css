@@ -506,6 +506,20 @@ input {
   font-size: 15px;
 }
 
+.map-focus-summary {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  min-height: 28px;
+  border: 1px solid rgba(9, 107, 92, 0.18);
+  border-radius: 999px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #184d43;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .map-provider-note {
   position: absolute;
   right: 24px;
