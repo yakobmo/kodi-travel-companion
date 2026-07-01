@@ -40,7 +40,7 @@ function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
   if (!Number.isFinite(value) || value <= 0) {
-    return 12_000;
+    return 8_000;
   }
 
   return Math.min(Math.max(Math.round(value), 3_000), 20_000);
