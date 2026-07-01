@@ -48,6 +48,11 @@ $requiredFiles = @(
   "apps/web/package.json",
   "apps/web/tsconfig.json",
   "apps/web/index.html",
+  "apps/web/public/manifest.webmanifest",
+  "apps/web/public/sw.js",
+  "apps/web/public/kodi-icon.svg",
+  "apps/web/public/icons/kodi-192.png",
+  "apps/web/public/icons/kodi-512.png",
   "apps/web/src/vite-env.d.ts",
   "apps/web/src/demoTrip.ts",
   "apps/web/src/App.tsx",
@@ -76,12 +81,35 @@ foreach ($file in $jsonFiles) {
 }
 
 $packageSource = Get-Content (Join-Path $root "package.json") -Raw
+if (-not $packageSource.Contains("icons:pwa")) {
+  throw "Root package.json must expose the PWA icon generation script."
+}
+
 if (-not $packageSource.Contains("smoke:google-places-live")) {
   throw "Root package.json must expose the live Google Places smoke script."
 }
 
 if (-not $packageSource.Contains("smoke:google-routes-live")) {
   throw "Root package.json must expose the live Google Routes smoke script."
+}
+
+$webIndexSource = Get-Content (Join-Path $root "apps\web\index.html") -Raw
+$webManifestSource = Get-Content (Join-Path $root "apps\web\public\manifest.webmanifest") -Raw
+$webMainSource = Get-Content (Join-Path $root "apps\web\src\main.tsx") -Raw
+$webServiceWorkerSource = Get-Content (Join-Path $root "apps\web\public\sw.js") -Raw
+if (
+  -not $webIndexSource.Contains('rel="manifest"') -or
+  -not $webIndexSource.Contains('apple-touch-icon') -or
+  -not $webIndexSource.Contains('theme-color') -or
+  -not $webManifestSource.Contains('"short_name"') -or
+  -not $webManifestSource.Contains('"display": "standalone"') -or
+  -not $webManifestSource.Contains('"purpose": "any maskable"') -or
+  -not $webMainSource.Contains('navigator.serviceWorker.register("/sw.js")') -or
+  -not $webMainSource.Contains("import.meta.env.PROD") -or
+  -not $webServiceWorkerSource.Contains("CACHE_NAME") -or
+  -not $webServiceWorkerSource.Contains("fetch")
+) {
+  throw "Web app must expose a production PWA install path with manifest, icons, and service worker."
 }
 
 $ownershipModelSource = Get-Content (Join-Path $root "docs\TRIP_OWNERSHIP_AND_USAGE_MODEL.md") -Raw

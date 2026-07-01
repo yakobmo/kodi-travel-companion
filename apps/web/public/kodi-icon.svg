@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi Travel Companion">
+  <rect width="512" height="512" rx="112" fill="#0f6f5f"/>
+  <circle cx="256" cy="256" r="182" fill="#f6faf8"/>
+  <path d="M256 88c-61 0-110 49-110 110 0 82 110 226 110 226s110-144 110-226c0-61-49-110-110-110Zm0 153a43 43 0 1 1 0-86 43 43 0 0 1 0 86Z" fill="#0f6f5f"/>
+  <path d="M172 357c37 20 131 20 168 0" fill="none" stroke="#1f7fbf" stroke-width="24" stroke-linecap="round"/>
+  <text x="256" y="294" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="800" fill="#16211f">K</text>
+</svg>

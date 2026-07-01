@@ -87,6 +87,7 @@ Implemented locally:
 - Rules fallback improved for cash/exchange questions, so even without local OpenAI configuration Kodi gives cautious travel-agent guidance instead of a generic response.
 - Here-and-now mode added on 2026-07-01: when the user asks about here, near me, current location, or a live trip outside the planned itinerary, Kodi uses the requesting device's live location as the active anchor and keeps the saved trip only as background context.
 - Chat navigation links fixed on 2026-07-01: Waze and Google Maps URLs inside Kodi/group chat messages now render as tappable links instead of plain text, with QA coverage and a focused browser smoke for the Waze path.
+- PWA home-screen shortcut foundation added on 2026-07-01: the web app now includes a manifest, standalone display mode, Kodi app icons, Apple touch icon metadata, and a production service worker so users can add Kodi to the phone home screen like an app.
 - Public mobile smoke on 2026-06-30 passed after entry cleanup: a clean browser lands on onboarding, does not render the main app shell, and does not show seeded demo members or map/card layers before setup.
 - Public smoke on 2026-06-30 passed after manager-location map focus deploy: `/api/health`, `/api/trips/demo/storage`, and the public app shell returned successfully.
 - Public smoke on 2026-06-30 passed after mobile cleanup deploy: `/api/health`, `/api/trips/demo/storage`, and `/api/trips/demo/messages` returned successfully, with retired seeded family-dialogue messages hidden from the public API.
