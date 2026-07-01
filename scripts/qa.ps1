@@ -28,6 +28,7 @@ $requiredFiles = @(
   "apps/api/src/server.ts",
   "apps/api/src/agent/kodi.ts",
   "apps/api/src/agent/openaiAgent.ts",
+  "apps/api/src/agent/openaiSpeech.ts",
   "apps/api/src/agent/tripContextResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
   "apps/api/src/billing/tripUsagePool.ts",
@@ -210,6 +211,17 @@ if (
   throw "OpenAI agent bridge must be backend-only, elite-agent grounded in Google/trip context, web-search capable for live questions, JSON validated, and guarded by a fallback."
 }
 
+$openAiSpeechSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiSpeech.ts") -Raw
+if (
+  -not $openAiSpeechSource.Contains("client.audio.speech.create") -or
+  -not $openAiSpeechSource.Contains("gpt-4o-mini-tts") -or
+  -not $openAiSpeechSource.Contains("OPENAI_TTS_VOICE") -or
+  -not $openAiSpeechSource.Contains("warm male travel companion") -or
+  -not $openAiSpeechSource.Contains("response_format: `"mp3`"")
+) {
+  throw "OpenAI speech bridge must create natural GPT-style Kodi audio server-side with configurable model and voice."
+}
+
 $serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
 if (
   -not $serverSource.Contains("shouldUseHereAndNowContext") -or
@@ -289,6 +301,9 @@ if (
   -not $webAppSource.Contains("getKodiHebrewVoice") -or
   -not $webAppSource.Contains("maleVoiceHints") -or
   -not $webAppSource.Contains("speechOutputState") -or
+  -not $webAppSource.Contains("/api/agent/speech") -or
+  -not $webAppSource.Contains("new Audio(audioUrl)") -or
+  -not $webAppSource.Contains("speakKodiMessageWithBrowserVoice") -or
   -not $webAppSource.Contains("speak-message-button") -or
   -not $webAppSource.Contains('utterance.lang = "he-IL"') -or
   -not $webAppSource.Contains("utterance.pitch = 0.82") -or
@@ -296,7 +311,7 @@ if (
   -not $webAppSource.Contains("Volume2") -or
   -not $webAppSource.Contains("VolumeX")
 ) {
-  throw "Web chat must support warm Hebrew Kodi voice output with a male Hebrew voice preference."
+  throw "Web chat must use server-side natural Kodi speech first, with warm Hebrew browser speech only as fallback."
 }
 
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw

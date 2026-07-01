@@ -38,12 +38,13 @@ Kodi's voice is part of the product personality. When Kodi reads guidance aloud,
 Voice behavior:
 
 - The target experience is a natural GPT-style voice: friendly, present, warm, and fluent in Hebrew.
-- Do not fake personality by robotic browser settings alone. Browser speech synthesis is only a fallback.
+- Use server-side natural OpenAI/GPT speech for Kodi audio when `OPENAI_API_KEY` is configured.
+- Do not fake personality by robotic browser settings alone. Browser speech synthesis is only a fallback when server speech is unavailable.
 - Prefer Hebrew voices.
 - Prefer a male Hebrew voice when the browser or device provides one.
 - Use a slightly slower, lower, calmer delivery for friendliness and clarity.
 - If the device does not provide a male Hebrew voice, fall back to the best available Hebrew voice and keep the warm pacing.
-- The production-quality path should use a natural neural voice provider, such as OpenAI/GPT voice output, once the server audio endpoint and cost controls are added.
+- The server voice model and voice should be configurable through environment variables so the product can tune Kodi's voice without exposing secrets to participants.
 
 ## Here-And-Now Mode
 

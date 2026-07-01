@@ -126,6 +126,23 @@ try {
     usagePayload.usagePool?.capabilities?.every((item) => item.chargedTo === "trip_usage_pool")
   );
 
+  const speechResponse = await fetch("http://localhost:3001/api/agent/speech", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: "שלום, אני קודי. אני כאן כדי לעזור לכם בטיול.",
+      memberId: "manager",
+      memberName: "מנהל הטיול",
+      memberRole: "owner"
+    })
+  });
+  const speechContentType = speechResponse.headers.get("content-type") ?? "";
+  assertCheck(
+    "agent speech endpoint safe",
+    (speechResponse.ok && speechContentType.includes("audio/")) ||
+      ([502, 503].includes(speechResponse.status) && speechContentType.includes("application/json"))
+  );
+
   const timelineResponse = await fetch("http://localhost:3001/api/trips/demo/timeline");
   const timelinePayload = await timelineResponse.json();
   assertCheck("trip timeline endpoint", timelineResponse.ok);

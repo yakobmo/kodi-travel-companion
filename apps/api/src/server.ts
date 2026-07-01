@@ -55,6 +55,7 @@ import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripSta
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext } from "./agent/kodi.js";
 import { tryBuildKodiReplyWithOpenAi } from "./agent/openaiAgent.js";
+import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
 import { reverseGeocodeLocation } from "./google/reverseGeocode.js";
 import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
 import {
@@ -1696,6 +1697,70 @@ app.post("/api/agent/message", async (req, res) => {
       permissionPolicy
     })
   });
+});
+
+app.post("/api/agent/speech", async (req, res) => {
+  const { text } = req.body ?? {};
+
+  if (typeof text !== "string" || text.trim().length === 0) {
+    res.status(400).json({ error: "text is required" });
+    return;
+  }
+
+  const usagePool = buildDemoTripUsagePool({
+    tripGroupId: "group_family_greece_demo",
+    members: await loadDemoTripMembersAsync()
+  });
+  const speechUsageGate = authorizeTripUsageCapability({
+    usagePool,
+    capability: "openai_agent",
+    triggeringMember: {
+      id: typeof req.body?.memberId === "string" ? req.body.memberId : "manager",
+      role: typeof req.body?.memberRole === "string" ? req.body.memberRole : "owner"
+    }
+  });
+
+  if (!speechUsageGate.allowed) {
+    res.status(403).json({
+      error: "speech usage is not allowed",
+      usageGate: speechUsageGate
+    });
+    return;
+  }
+
+  if (!speechUsageGate.providerConfigured) {
+    res.status(503).json({
+      error: "openai speech is not configured",
+      usageGate: speechUsageGate
+    });
+    return;
+  }
+
+  const speech = await createKodiSpeechAudio(text);
+
+  if (speech.status !== "ready" || !speech.audio) {
+    res.status(502).json({
+      error: "openai speech failed",
+      speechRuntime: {
+        status: speech.status,
+        model: speech.model,
+        voice: speech.voice
+      }
+    });
+    return;
+  }
+
+  await safeRecordUsageGateEvent({
+    usageGate: speechUsageGate,
+    actorName: typeof req.body?.memberName === "string" ? req.body.memberName : "Kodi voice",
+    source: "kodi_agent"
+  });
+
+  res.setHeader("Content-Type", speech.contentType ?? "audio/mpeg");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Kodi-Voice-Model", speech.model ?? "");
+  res.setHeader("X-Kodi-Voice", speech.voice ?? "");
+  res.send(speech.audio);
 });
 
 app.use(express.static(webDistDir));
