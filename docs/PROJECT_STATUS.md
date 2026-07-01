@@ -295,6 +295,7 @@ Current Supabase state:
 ## Next Continuation Checkpoint
 
 - Kodi agent-first runtime correction added on `2026-07-02`: rules and fast-lane replies are now fallback/opt-in safeguards instead of the default brain. Current-location questions reach the OpenAI agent after reverse geocoding, the fast trip answer is disabled unless `KODI_FAST_TRIP_ANSWER_ENABLED=true`, Kodi receives a larger recent-chat window, and the prompt now explicitly prevents status-panel/API-wrapper replies. This restores Kodi's intended role as the intelligent travel companion over Google Maps and trip context.
+- Public smoke passed on `2026-07-02` for the agent-first runtime correction: current-location requests now return `source=openai`, `openAiStatus=ready`, `fallbackUsed=false`, and no fast lane; a Rio-Antirrio bridge guide question returned an OpenAI/web-search grounded answer tied to the Athens -> Northern Greece route context.
 
 Resume from the Kodi build protocol with no new product discovery.
 
