@@ -1,15 +1,15 @@
 {
-  "name": "קודי - מלווה טיול",
+  "name": "Kodi AI Smart Guide",
   "short_name": "קודי",
-  "description": "מלווה טיול משפחתי עם קודי, מפה חיה, נקודות טיול וניווט.",
+  "description": "מלווה טיול חכם עם מפה חיה, נקודות טיול, שיחה קבוצתית וניווט.",
   "lang": "he",
   "dir": "rtl",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f6faf8",
-  "theme_color": "#0f6f5f",
+  "background_color": "#f8fbff",
+  "theme_color": "#075985",
   "categories": ["travel", "navigation", "productivity"],
   "icons": [
     {
