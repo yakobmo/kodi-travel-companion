@@ -700,6 +700,25 @@ function buildSpeechText(text: string) {
   return text.replace(messageUrlPattern, "").replace(/\s+/g, " ").trim();
 }
 
+function getKodiHebrewVoice() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    return undefined;
+  }
+
+  const voices = window.speechSynthesis.getVoices();
+  const hebrewVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith("he"));
+  const maleVoiceHints = ["asaf", "david", "daniel", "yoav", "hebrew male", "male"];
+  const friendlyVoiceHints = ["google", "microsoft", "natural", "online"];
+
+  return (
+    hebrewVoices.find((voice) => maleVoiceHints.some((hint) => voice.name.toLowerCase().includes(hint))) ??
+    hebrewVoices.find((voice) => friendlyVoiceHints.some((hint) => voice.name.toLowerCase().includes(hint))) ??
+    hebrewVoices[0] ??
+    voices.find((voice) => voice.lang.toLowerCase().startsWith("en") && maleVoiceHints.some((hint) => voice.name.toLowerCase().includes(hint))) ??
+    voices[0]
+  );
+}
+
 function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPlace) {
   const recentText = messages
     .slice(-4)
@@ -2281,9 +2300,15 @@ export function App() {
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(speechText);
+    const kodiVoice = getKodiHebrewVoice();
     utterance.lang = "he-IL";
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
+    if (kodiVoice) {
+      utterance.voice = kodiVoice;
+      utterance.lang = kodiVoice.lang || "he-IL";
+    }
+    utterance.rate = 0.88;
+    utterance.pitch = 0.82;
+    utterance.volume = 1;
     setSpeechOutputState("speaking");
     setSpeakingMessageId(messageId ?? null);
     utterance.onstart = () => {

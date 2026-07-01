@@ -286,13 +286,17 @@ if (
   -not $webAppSource.Contains("speakKodiMessage") -or
   -not $webAppSource.Contains("shouldSpeakKodiReply") -or
   -not $webAppSource.Contains("buildSpeechText") -or
+  -not $webAppSource.Contains("getKodiHebrewVoice") -or
+  -not $webAppSource.Contains("maleVoiceHints") -or
   -not $webAppSource.Contains("speechOutputState") -or
   -not $webAppSource.Contains("speak-message-button") -or
   -not $webAppSource.Contains('utterance.lang = "he-IL"') -or
+  -not $webAppSource.Contains("utterance.pitch = 0.82") -or
+  -not $webAppSource.Contains("utterance.rate = 0.88") -or
   -not $webAppSource.Contains("Volume2") -or
   -not $webAppSource.Contains("VolumeX")
 ) {
-  throw "Web chat must support Hebrew Kodi voice output from agent messages."
+  throw "Web chat must support warm Hebrew Kodi voice output with a male Hebrew voice preference."
 }
 
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw

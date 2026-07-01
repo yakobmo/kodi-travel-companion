@@ -31,6 +31,20 @@ Live location is conceptually part of the Google Maps experience. In the web app
 
 UX wording should avoid suggesting that Kodi has a separate GPS system. Prefer language such as "Google Maps location is active" or "live location on the map" over infrastructure wording.
 
+## Kodi Voice Personality
+
+Kodi's voice is part of the product personality. When Kodi reads guidance aloud, the experience should feel like a warm, capable travel partner, not a technical robot.
+
+Voice behavior:
+
+- The target experience is a natural GPT-style voice: friendly, present, warm, and fluent in Hebrew.
+- Do not fake personality by robotic browser settings alone. Browser speech synthesis is only a fallback.
+- Prefer Hebrew voices.
+- Prefer a male Hebrew voice when the browser or device provides one.
+- Use a slightly slower, lower, calmer delivery for friendliness and clarity.
+- If the device does not provide a male Hebrew voice, fall back to the best available Hebrew voice and keep the warm pacing.
+- The production-quality path should use a natural neural voice provider, such as OpenAI/GPT voice output, once the server audio endpoint and cost controls are added.
+
 ## Here-And-Now Mode
 
 Kodi must also support a live "here and now" mode outside the planned itinerary.
