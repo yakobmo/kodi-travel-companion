@@ -1341,6 +1341,40 @@ input {
   padding-top: 12px;
 }
 
+.install-menu,
+.location-menu,
+.invite-menu {
+  border-color: #c7edf5;
+}
+
+.advanced-menu {
+  border-top: 1px solid #e1e6e3;
+  padding-top: 10px;
+}
+
+.advanced-menu summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #eef8fb;
+  color: #07536b;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.advanced-menu summary::marker {
+  color: #087f9d;
+}
+
+.advanced-menu[open] {
+  display: grid;
+  gap: 10px;
+}
+
 .selected-place-menu span,
 .selected-place-menu small {
   color: #53615e;

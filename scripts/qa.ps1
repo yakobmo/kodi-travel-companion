@@ -113,6 +113,17 @@ if (
   throw "Web app must expose a production PWA install path with manifest, icons, and service worker."
 }
 
+$webAppEarlySource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
+if (
+  -not $webAppEarlySource.Contains("beforeinstallprompt") -or
+  -not $webAppEarlySource.Contains("installKodiShortcut") -or
+  -not $webAppEarlySource.Contains("install-menu") -or
+  -not $webAppEarlySource.Contains("Download size={18}") -or
+  -not $webAppEarlySource.Contains('installState === "installed"')
+) {
+  throw "Web app must expose a clear in-app install shortcut for adding Kodi to the phone home screen."
+}
+
 $ownershipModelSource = Get-Content (Join-Path $root "docs\TRIP_OWNERSHIP_AND_USAGE_MODEL.md") -Raw
 if (
   -not $ownershipModelSource.Contains("shared trip-space agent") -or
@@ -810,9 +821,11 @@ if (
 if (
   -not $appSource.Contains("trip-places-menu") -or
   -not $appSource.Contains("trip-place-list") -or
-  -not $appSource.Contains("menuPlaces.map")
+  -not $appSource.Contains("menuPlaces.map") -or
+  -not $appSource.Contains("advanced-menu") -or
+  -not $appSource.Contains("<summary>")
 ) {
-  throw "The hamburger menu must expose the full trip place list, not only the first or nearby place."
+  throw "The hamburger menu must expose the full trip place list behind a collapsed advanced section."
 }
 
 if (
@@ -823,9 +836,10 @@ if (
   -not $appSource.Contains("join-shell") -or
   -not $appSource.Contains("invite-menu") -or
   -not $appSource.Contains("per-device-location-consent") -or
+  -not $appSource.Contains("location-menu") -or
   -not $appSource.Contains("group_family_greece_demo")
 ) {
-  throw "Web app must support manager invite links and participant join flow with per-device location consent."
+  throw "Web app must support a simple invite flow: name, per-device location consent, and shared Kodi chat."
 }
 
 if ($appSource.Contains("agent-button")) {

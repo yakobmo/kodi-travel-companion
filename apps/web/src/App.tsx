@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  Download,
   ExternalLink,
   MapPin,
   Menu,
@@ -31,6 +32,11 @@ type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
 
 type BrowserSpeechRecognitionEvent = {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
@@ -868,6 +874,8 @@ export function App() {
   );
   const [activeRouteStopIndex, setActiveRouteStopIndex] = useState(0);
   const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installState, setInstallState] = useState<"idle" | "ready" | "installed" | "unavailable">("idle");
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState(buildTimeGoogleMapsApiKey);
   const [mapsConfigLoaded, setMapsConfigLoaded] = useState(Boolean(buildTimeGoogleMapsApiKey));
   const googleMapElementRef = useRef<HTMLDivElement | null>(null);
@@ -878,6 +886,36 @@ export function App() {
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const standalone =
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+    if (standalone) {
+      setInstallState("installed");
+      return;
+    }
+
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+      setInstallState("ready");
+    };
+    const handleInstalled = () => {
+      setInstallPrompt(null);
+      setInstallState("installed");
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleInstalled);
+    setInstallState((current) => (current === "idle" ? "unavailable" : current));
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
+  }, []);
   const lastMessageCountRef = useRef(0);
   const shouldStickToLatestMessageRef = useRef(true);
 
@@ -2375,6 +2413,18 @@ export function App() {
     }
   }
 
+  async function installKodiShortcut() {
+    if (!installPrompt) {
+      setInstallState((current) => (current === "installed" ? "installed" : "unavailable"));
+      return;
+    }
+
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    setInstallPrompt(null);
+    setInstallState(choice.outcome === "accepted" ? "installed" : "unavailable");
+  }
+
   function joinTripFromInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -2551,12 +2601,12 @@ export function App() {
               />
             </label>
             <label>
-              גיל
+              גיל (לא חובה)
               <input
                 aria-label="גיל משתתף להצטרפות"
                 inputMode="numeric"
                 onChange={(event) => setJoinDraft((draft) => ({ ...draft, age: event.target.value }))}
-                placeholder="גיל"
+                placeholder="לא חובה"
                 value={joinDraft.age}
               />
             </label>
@@ -2903,6 +2953,20 @@ export function App() {
             סגור
           </button>
         </div>
+        <section className="menu-block install-menu" aria-label="התקנת קודי במסך הבית">
+          <strong>קודי במסך הבית</strong>
+          <p>
+            {installState === "installed"
+              ? "קודי כבר פעיל כקיצור אפליקציה."
+              : installPrompt
+                ? "הוסף את קודי כאייקון כמו אפליקציה בטלפון."
+                : "אם הדפדפן לא מציג התקנה, פתח את תפריט הדפדפן ובחר הוסף למסך הבית."}
+          </p>
+          <button disabled={installState === "installed"} onClick={installKodiShortcut} type="button">
+            <Download size={18} aria-hidden="true" />
+            {installState === "installed" ? "כבר מותקן" : "התקן את קודי"}
+          </button>
+        </section>
         {selectedPlace ? (
           <section className="menu-block selected-place-menu" aria-label="פעולות לנקודה נבחרת">
             <span>{getPlaceTypeLabel(selectedPlace.type)}</span>
@@ -3013,7 +3077,26 @@ export function App() {
             {navigationState === "error" ? <small>לא הצלחתי ליצור קישור ניווט כרגע.</small> : null}
           </section>
         ) : null}
-        <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
+        <section className="menu-block invite-menu" data-consent-model="per-device-location-consent">
+          <strong>הזמנת משתתפים</strong>
+          <p>מי שמקבל את הקישור נכנס, כותב שם, מאשר מיקום מהמכשיר שלו ונכנס לשיחה עם קודי.</p>
+          <input aria-label="קישור הזמנה בתפריט ניהול" dir="ltr" readOnly value={tripInviteUrl} />
+          <button onClick={copyTripInviteLink} type="button">
+            העתק קישור
+          </button>
+          {inviteCopyState === "copied" ? <small>הקישור הועתק</small> : null}
+          {inviteCopyState === "error" ? <small>לא הצלחתי להעתיק. אפשר לסמן ולהעתיק ידנית.</small> : null}
+        </section>
+        <section className="menu-block location-menu">
+          <strong>מיקום בטלפון</strong>
+          <p>{currentLocation ? `פעיל על Google Maps · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "כדי שקודי ידע איפה אתם, צריך לאשר מיקום במכשיר הזה."}</p>
+          <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
+            {locationState === "requesting" ? "מבקש הרשאה..." : currentLocation ? "רענן מיקום" : "אשר מיקום"}
+          </button>
+        </section>
+        <details className="advanced-menu">
+          <summary>אפשרויות נוספות</summary>
+          <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
           <strong>כל נקודות הטיול</strong>
           <p>
             {places.length} נקודות זמינות · {mapPlaces.length} מוצגות על מפת Google לפי קואורדינטות
@@ -3036,23 +3119,7 @@ export function App() {
               );
             })}
           </div>
-        </section>
-        <section className="menu-block">
-          <strong>מיקום מנהל</strong>
-          <p>{currentLocation ? `מיקום חי על Google Maps · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "מיקום כבוי"}</p>
-          <small>מיקום חברי קבוצה מוצג רק למי שאישר שיתוף.</small>
-          <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
-            {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל מיקום במפה"}
-          </button>
-        </section>
-        <section className="menu-block invite-menu" data-consent-model="per-device-location-consent">
-          <strong>הזמנת משתתפים</strong>
-          <p>שליחת קישור הצטרפות לקבוצת הטיול. כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו.</p>
-          <input aria-label="קישור הזמנה בתפריט ניהול" dir="ltr" readOnly value={tripInviteUrl} />
-          <button onClick={copyTripInviteLink} type="button">
-            העתק קישור
-          </button>
-        </section>
+          </section>
         <section className="menu-block">
           <strong>קישורים חיצוניים</strong>
           <div className="external-shortcuts menu-shortcuts" aria-label="קיצורי אפליקציות חיצוניות בתפריט">
@@ -3086,7 +3153,7 @@ export function App() {
             <button type="submit">הוסף</button>
           </form>
         </section>
-        <section className="menu-block event-menu event-activity" aria-label="פעילות חיה בקבוצה">
+          <section className="menu-block event-menu event-activity" aria-label="פעילות חיה בקבוצה">
           <strong>פעילות חיה</strong>
           <p>
             {eventRealtimeState === "live"
@@ -3112,8 +3179,8 @@ export function App() {
               </article>
             )}
           </div>
-        </section>
-        <section className="menu-block">
+          </section>
+          <section className="menu-block">
           <strong>בקרת קודי</strong>
           <p>{usageAuditOverview.totalAuthorizedCalls} פעולות נרשמו בטיול הזה.</p>
           <div className="usage-overview-grid">
@@ -3134,7 +3201,8 @@ export function App() {
               API ישיר
             </span>
           </div>
-        </section>
+          </section>
+        </details>
       </aside>
 
       <aside className="chat-sheet" aria-label="שיחת המשפחה">

@@ -275,6 +275,7 @@ Current Supabase state:
 - Mobile chat visual cleanup added on `2026-07-01`; the group header is now a compact one-line bar to preserve chat space, the palette moved toward blue/turquoise, and public Render smoke confirmed the deployed CSS asset `assets/index-CCnJ65eT.css` contains the compact mobile header and updated palette.
 - Current-location answer hardening added on `2026-07-01`; Kodi now prefers Google-readable place names from reverse geocoding or nearby Places search, attaches browser-provided live location to the manager even when the incoming member id is not an exact stored id, prefers fresh GPS context over stale trip member locations, refreshes device GPS before current-location questions from the web client, and no longer exposes raw coordinates in the fallback answer.
 - Public smoke passed on `2026-07-01` for current-location hardening: Render served the fresh-GPS web asset `assets/index-lUIkzl8I.js`, and the public API no longer exposed raw coordinates or stale Greece context for the tested current-location request.
+- Install and menu simplification added on `2026-07-01`; the hamburger now exposes a clear in-app home-screen install action, a simple invite link, and a direct per-device location action, while heavy management surfaces such as full trip places, shortcuts, activity, and usage are collapsed under advanced options. Participant join remains name-first, with age optional and location granted separately on the participant device.
 
 ## Next Continuation Checkpoint
 
