@@ -65,6 +65,19 @@ function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+function getDistanceKm(first: { lat: number; lng: number }, second: { lat: number; lng: number }) {
+  const earthRadiusKm = 6371;
+  const latDelta = ((second.lat - first.lat) * Math.PI) / 180;
+  const lngDelta = ((second.lng - first.lng) * Math.PI) / 180;
+  const firstLat = (first.lat * Math.PI) / 180;
+  const secondLat = (second.lat * Math.PI) / 180;
+  const a =
+    Math.sin(latDelta / 2) * Math.sin(latDelta / 2) +
+    Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(lngDelta / 2) * Math.sin(lngDelta / 2);
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function summarizeRecentConversation(
   messages: ConversationMessage[] = [],
   currentMessage: string,
@@ -315,9 +328,20 @@ function buildCurrentLocationAnswer(
       ? ` דיוק GPS משוער: ${Math.round(visibleMember.liveLocation.accuracyMeters)} מטר.`
       : "";
   const timeText = updatedAt ? ` עדכון אחרון: ${updatedAt}.` : "";
+  const liveLocation = visibleMember?.liveLocation;
   const nearestPlace =
-    externalPlacesSearch?.status === "ready"
-      ? externalPlacesSearch.places.find((place) => place.displayName || place.formattedAddress)
+    externalPlacesSearch?.status === "ready" && liveLocation
+      ? externalPlacesSearch.places.find((place) => {
+          if (!place.displayName && !place.formattedAddress) {
+            return false;
+          }
+
+          if (typeof place.lat !== "number" || typeof place.lng !== "number") {
+            return false;
+          }
+
+          return getDistanceKm(liveLocation, { lat: place.lat, lng: place.lng }) <= 1;
+        })
       : undefined;
   const nearestPlaceText = nearestPlace
     ? [nearestPlace.displayName, nearestPlace.formattedAddress].filter(Boolean).join(" - ")

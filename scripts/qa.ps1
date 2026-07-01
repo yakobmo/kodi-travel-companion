@@ -222,6 +222,8 @@ if (
   -not $kodiSourceEarly.Contains("buildCurrentLocationAnswer") -or
   -not $kodiSourceEarly.Contains("item.member.id === memberId") -or
   -not $kodiSourceEarly.Contains("externalPlacesSearch?.status === `"ready`"") -or
+  -not $kodiSourceEarly.Contains("getDistanceKm(liveLocation") -or
+  -not $kodiSourceEarly.Contains("<= 1") -or
   -not $kodiSourceEarly.Contains("reverseGeocodedLocation")
 ) {
   throw "Kodi must answer current-location questions from Google reverse geocoding before falling back to raw coordinates."
