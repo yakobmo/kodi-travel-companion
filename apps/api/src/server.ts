@@ -69,6 +69,28 @@ import type { TripEventType } from "./domain/types.js";
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
 const webDistDir = process.env.WEB_DIST_DIR ?? fileURLToPath(new URL("../../web/dist", import.meta.url));
+const agentTripStateCacheMs = Math.min(Math.max(Number(process.env.AGENT_TRIP_STATE_CACHE_MS ?? 5000), 0), 30000);
+let agentTripStateCache:
+  | {
+      loadedAt: number;
+      state: ReturnType<typeof buildDemoTripState>;
+    }
+  | undefined;
+
+async function buildAgentTripStateSnapshot() {
+  const now = Date.now();
+  if (agentTripStateCache && agentTripStateCacheMs > 0 && now - agentTripStateCache.loadedAt <= agentTripStateCacheMs) {
+    return agentTripStateCache.state;
+  }
+
+  const state = await buildDemoTripStateAsync();
+  agentTripStateCache = {
+    loadedAt: now,
+    state
+  };
+
+  return state;
+}
 
 function isConversationMessage(value: unknown) {
   if (!value || typeof value !== "object") {
@@ -1711,7 +1733,7 @@ app.post("/api/agent/message", async (req, res) => {
   const requestCurrentLocation = getRequestCurrentLocation(context);
   const hereAndNowContext = shouldUseHereAndNowContext(message);
   const tripState = withRequestCurrentLocation(
-    req.body?.tripState ?? (await buildDemoTripStateAsync()),
+    req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
     normalizedMember,
     requestCurrentLocation
   );

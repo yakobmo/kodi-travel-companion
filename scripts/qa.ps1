@@ -931,7 +931,8 @@ if (
 if (
   -not $serverSource.Contains("buildFastTripAnswer") -or
   -not $serverSource.Contains("skipped_fast_lane") -or
-  -not $serverSource.Contains("latencyMs")
+  -not $serverSource.Contains("latencyMs") -or
+  -not $serverSource.Contains("buildAgentTripStateSnapshot")
 ) {
   throw "Kodi agent endpoint must keep a fast lane for simple trip-context answers before invoking the full AI agent."
 }

@@ -75,6 +75,7 @@ For simple trip-context questions such as "where do we sleep tonight and what ta
 - prefer nearby food/attraction points already saved in the Google trip map
 - use Google Places only when the user really needs a live external lookup
 - skip the full OpenAI agent when the answer is already clear
+- reuse a very short server-side trip-state snapshot during active chat bursts
 - return latency metadata so QA can catch slow regressions
 
 The full AI agent remains the right path for open-ended reasoning, research, explanations, ambiguity, planning, and questions that require synthesizing many sources.
