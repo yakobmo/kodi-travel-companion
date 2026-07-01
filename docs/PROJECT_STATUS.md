@@ -278,6 +278,7 @@ Current Supabase state:
 - Install and menu simplification added on `2026-07-01`; the hamburger now exposes a clear in-app home-screen install action, a simple invite link, and a direct per-device location action, while heavy management surfaces such as full trip places, shortcuts, activity, and usage are collapsed under advanced options. Participant join remains name-first, with age optional and location granted separately on the participant device.
 - WhatsApp-style invitation decision and implementation added on `2026-07-01`; WhatsApp is now defined as the UX model and sharing channel, not the product source of truth. The manager can share the trip invite through the phone's native share sheet, with copy-link fallback. Participants still join through Kodi, enter their own name, and approve location on their own device.
 - Public smoke passed on `2026-07-01` for install/menu simplification: Render served `assets/index-DvgYdZio.js` and `assets/index-CCIm6WMe.css`, including the install prompt path and collapsed advanced menu styles.
+- Public smoke passed on `2026-07-01` for WhatsApp-style invite sharing: Render served `assets/index-J6xKOAk0.js` and `assets/index-C-AMusoS.css`, including `navigator.share` and the `whatsapp-style-share-link` invite model.
 
 ## Next Continuation Checkpoint
 
