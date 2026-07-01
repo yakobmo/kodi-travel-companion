@@ -1506,6 +1506,30 @@ input {
   border-top: 1px solid #e1e6e3;
 }
 
+.voice-recording-indicator {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 1px solid #b7ded2;
+  border-radius: 8px;
+  background: #eef8f5;
+  color: #0f483e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.recording-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #d93232;
+  box-shadow: 0 0 0 0 rgba(217, 50, 50, 0.45);
+  animation: recording-pulse 1.1s ease-out infinite;
+}
+
 .composer input {
   min-width: 0;
   min-height: 44px;
@@ -1536,6 +1560,36 @@ input {
 .composer .voice-button.listening {
   background: #0f6f5f;
   color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(15, 111, 95, 0.18);
+  animation: microphone-listening 1.1s ease-in-out infinite;
+}
+
+@keyframes recording-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 50, 50, 0.45);
+    transform: scale(1);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(217, 50, 50, 0);
+    transform: scale(1.08);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 50, 50, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes microphone-listening {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
 }
 
 @media (max-width: 860px) {

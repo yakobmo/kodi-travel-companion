@@ -217,6 +217,9 @@ if (
   -not $webAppSource.Contains("SpeechRecognition") -or
   -not $webAppSource.Contains("startVoiceInput") -or
   -not $webAppSource.Contains("voice-button") -or
+  -not $webAppSource.Contains("voice-recording-indicator") -or
+  -not $webAppSource.Contains("recording-dot") -or
+  -not $webAppSource.Contains('role="status"') -or
   -not $webAppSource.Contains('speechState === "listening"') -or
   -not $webAppSource.Contains('speechState === "unsupported"') -or
   -not $webAppSource.Contains("recognition.lang = `"he-IL`"")
@@ -241,9 +244,13 @@ if (
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $webStylesSource.Contains(".composer .voice-button") -or
-  -not $webStylesSource.Contains("grid-template-columns: minmax(0, 1fr) 44px auto")
+  -not $webStylesSource.Contains("grid-template-columns: minmax(0, 1fr) 44px auto") -or
+  -not $webStylesSource.Contains(".voice-recording-indicator") -or
+  -not $webStylesSource.Contains(".recording-dot") -or
+  -not $webStylesSource.Contains("@keyframes recording-pulse") -or
+  -not $webStylesSource.Contains("@keyframes microphone-listening")
 ) {
-  throw "Web composer styles must reserve a stable voice button next to the message input and send button."
+  throw "Web composer styles must reserve a stable voice button and a clear recording indicator."
 }
 
 if (-not $webStylesSource.Contains(".speak-message-button") -or -not $webStylesSource.Contains(".message-header")) {

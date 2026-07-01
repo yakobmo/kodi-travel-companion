@@ -3064,7 +3064,13 @@ export function App() {
           ))}
         </div>
 
-        <form className="composer" onSubmit={sendMessageWithPersistence}>
+        <form className={speechState === "listening" ? "composer voice-listening" : "composer"} onSubmit={sendMessageWithPersistence}>
+          {speechState === "listening" ? (
+            <div className="voice-recording-indicator" aria-live="assertive" role="status">
+              <span className="recording-dot" aria-hidden="true" />
+              <span>קודי מקשיב עכשיו...</span>
+            </div>
+          ) : null}
           <input
             aria-label="כתיבת הודעה לקבוצה"
             onChange={(event) => setDraft(event.target.value)}
