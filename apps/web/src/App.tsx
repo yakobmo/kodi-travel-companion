@@ -1,6 +1,24 @@
-import { CheckCircle2, ExternalLink, MapPin, Menu, Navigation, Radio, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { CheckCircle2, ExternalLink, MapPin, Menu, Mic, Navigation, Radio, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { demoMembers, demoMessages, demoPlaces, demoTripSummary } from "./demoTrip.js";
+
+type BrowserSpeechRecognition = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onstart: (() => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  abort: () => void;
+  start: () => void;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+type BrowserSpeechRecognitionEvent = {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
 
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
 type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
@@ -17,6 +35,8 @@ declare global {
       maps: any;
     };
     __kodiGoogleMapsPromise?: Promise<void>;
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
   }
 }
 
@@ -605,20 +625,27 @@ function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
     return false;
   }
 
-  return (
-    text.includes("?") ||
-    text.includes("אחרי") ||
-    text.includes("לפני") ||
-    text.includes("נחיתה") ||
-    text.includes("יעד") ||
-    text.includes("מסלול") ||
-    text.includes("מלון") ||
-    text.includes("אתונה") ||
-    text.includes("צפון יוון") ||
-    text.includes("פיליון") ||
-    text.includes("זגוריה") ||
-    text.includes("צומרקה")
-  );
+  return [
+    "?",
+    "מה",
+    "כמה",
+    "איפה",
+    "איך",
+    "מתי",
+    "לאן",
+    "האם",
+    "יש",
+    "אפשר",
+    "תבדוק",
+    "תחפש",
+    "תמצא",
+    "תמליץ",
+    "תסביר",
+    "ספר",
+    "שים",
+    "פתח",
+    "קח אותנו"
+  ].some((term) => text.includes(term));
 }
 
 function getMapPosition(index: number, total: number) {
@@ -712,6 +739,7 @@ export function App() {
   const [members, setMembers] = useState<DemoMember[]>(normalizeTripMembers(demoMembers as DemoMember[]));
   const [activeMemberId, setActiveMemberId] = useState("mom");
   const [draft, setDraft] = useState("");
+  const [speechState, setSpeechState] = useState<"idle" | "listening" | "unsupported" | "error">("idle");
   const [userShortcuts, setUserShortcuts] = useState<UserShortcut[]>([]);
   const [shortcutLabelDraft, setShortcutLabelDraft] = useState("");
   const [shortcutUrlDraft, setShortcutUrlDraft] = useState("");
@@ -738,6 +766,7 @@ export function App() {
   const googleMapInstanceRef = useRef<any | null>(null);
   const googleMapMarkersRef = useRef<any[]>([]);
   const locationWatchIdRef = useRef<number | null>(null);
+  const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
   function applyTripEvents(data: TripEventsResponse) {
     setTripEvents(data.events);
@@ -1566,6 +1595,7 @@ export function App() {
       if (locationWatchIdRef.current !== null && "geolocation" in navigator) {
         navigator.geolocation.clearWatch(locationWatchIdRef.current);
       }
+      speechRecognitionRef.current?.abort();
     },
     []
   );
@@ -1934,6 +1964,42 @@ export function App() {
     } catch {
       return message;
     }
+  }
+
+  function startVoiceInput() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const SpeechRecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setSpeechState("unsupported");
+      return;
+    }
+
+    speechRecognitionRef.current?.abort();
+    const recognition = new SpeechRecognitionCtor();
+    speechRecognitionRef.current = recognition;
+    recognition.lang = "he-IL";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setSpeechState("listening");
+    recognition.onerror = () => setSpeechState("error");
+    recognition.onend = () => {
+      setSpeechState((currentState) => (currentState === "listening" ? "idle" : currentState));
+      speechRecognitionRef.current = null;
+    };
+    recognition.onresult = (event) => {
+      const spokenText = Array.from(event.results)
+        .map((result) => result[0]?.transcript ?? "")
+        .join(" ")
+        .trim();
+
+      if (spokenText) {
+        setDraft((currentDraft) => [currentDraft, spokenText].filter(Boolean).join(" ").trim());
+      }
+    };
+    recognition.start();
   }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -2832,6 +2898,21 @@ export function App() {
             placeholder=""
             value={draft}
           />
+          <button
+            aria-label={speechState === "listening" ? "קודי מקשיב" : "דבר אל קודי"}
+            className={speechState === "listening" ? "voice-button listening" : "voice-button"}
+            onClick={startVoiceInput}
+            title={
+              speechState === "unsupported"
+                ? "הדפדפן הזה לא תומך בדיבור"
+                : speechState === "error"
+                  ? "לא הצלחתי להפעיל דיבור"
+                  : "דבר אל קודי"
+            }
+            type="button"
+          >
+            <Mic size={18} aria-hidden="true" />
+          </button>
           <button type="submit">שלח</button>
         </form>
       </aside>

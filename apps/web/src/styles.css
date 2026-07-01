@@ -1449,7 +1449,7 @@ input {
 
 .composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 44px auto;
   gap: 8px;
   padding: 14px;
   border-top: 1px solid #e1e6e3;
@@ -1469,6 +1469,21 @@ input {
   border-radius: 8px;
   padding: 0 16px;
   background: #16211f;
+  color: #ffffff;
+}
+
+.composer .voice-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: #edf7f3;
+  color: #0f6f5f;
+  border: 1px solid #b7ded2;
+}
+
+.composer .voice-button.listening {
+  background: #0f6f5f;
   color: #ffffff;
 }
 

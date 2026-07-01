@@ -136,15 +136,43 @@ if (
   -not $openAiAgentSource.Contains("OPENAI_AGENT_MODEL") -or
   -not $openAiAgentSource.Contains("fallbackRulesReply") -or
   -not $openAiAgentSource.Contains("Google Maps is the map engine") -or
+  -not $openAiAgentSource.Contains("elite Hebrew AI travel companion") -or
+  -not $openAiAgentSource.Contains("web_search") -or
+  -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
+  -not $openAiAgentSource.Contains("web_search_retry_without_tool") -or
+  -not $openAiAgentSource.Contains("lodgingTimeline") -or
+  -not $openAiAgentSource.Contains("tripArcHint") -or
+  -not $openAiAgentSource.Contains("cash planning") -or
+  -not $openAiAgentSource.Contains("road accessibility") -or
   -not $openAiAgentSource.Contains("Do not claim live Google account sync") -or
   -not $openAiAgentSource.Contains("Return JSON only") -or
   -not $openAiAgentSource.Contains('source: "openai"')
 ) {
-  throw "OpenAI agent bridge must be backend-only, grounded in Google/trip context, JSON validated, and guarded by a fallback."
+  throw "OpenAI agent bridge must be backend-only, elite-agent grounded in Google/trip context, web-search capable for live questions, JSON validated, and guarded by a fallback."
 }
 
 if ($openAiAgentSource.Contains("dangerouslyAllowBrowser")) {
   throw "OpenAI agent bridge must never allow browser-side OpenAI credentials."
+}
+
+$webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
+if (
+  -not $webAppSource.Contains("SpeechRecognition") -or
+  -not $webAppSource.Contains("startVoiceInput") -or
+  -not $webAppSource.Contains("voice-button") -or
+  -not $webAppSource.Contains('speechState === "listening"') -or
+  -not $webAppSource.Contains('speechState === "unsupported"') -or
+  -not $webAppSource.Contains("recognition.lang = `"he-IL`"")
+) {
+  throw "Web chat composer must keep Hebrew voice input available as a clean Kodi interaction path."
+}
+
+$webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
+if (
+  -not $webStylesSource.Contains(".composer .voice-button") -or
+  -not $webStylesSource.Contains("grid-template-columns: minmax(0, 1fr) 44px auto")
+) {
+  throw "Web composer styles must reserve a stable voice button next to the message input and send button."
 }
 
 $sourcePlacesPath = Join-Path (Split-Path -Parent $root) "work\spikes\google-place-list\out\places.json"
@@ -1026,6 +1054,10 @@ foreach ($requiredGoogleEnvName in @("GOOGLE_MAPS_API_KEY=", "GOOGLE_OAUTH_CLIEN
   if (-not $envExampleSource.Contains($requiredGoogleEnvName)) {
     throw ".env.example is missing Google integration environment contract: $requiredGoogleEnvName"
   }
+}
+
+if (-not $envExampleSource.Contains("OPENAI_WEB_SEARCH_ENABLED=true")) {
+  throw ".env.example must expose OPENAI_WEB_SEARCH_ENABLED for Kodi's agentic web-search capability."
 }
 
 if (-not $envExampleSource.Contains("MIGRATION_ADMIN_TOKEN=")) {

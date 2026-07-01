@@ -553,7 +553,7 @@ try {
 
   const messagesBeforeFamilyOnly = await page.locator(".message").count();
   await input.fill("בא לי גלידה ליד המלון");
-  await page.locator(".composer button").click();
+  await page.locator(".composer button[type='submit']").click();
   await page.getByText("בא לי גלידה ליד המלון").waitFor();
   assertCheck(
     "message activity visible",
@@ -563,26 +563,26 @@ try {
   assertCheck("kodi stays asleep without call", messagesAfterFamilyOnly === messagesBeforeFamilyOnly + 1);
 
   await input.fill("קודי, מה מתאים לקבוצה עכשיו ליד המלון?");
-  await page.locator(".composer button").click();
+  await page.locator(".composer button[type='submit']").click();
   await page.getByText("מהשיחה אני מזהה").waitFor();
   assertCheck("kodi replies in chat", (await page.locator(".message.kodi").count()) >= 1);
 
   assertCheck("retired demo member pill removed", (await page.locator(".member-pills").getByRole("button", { name: "נועה" }).count()) === 0);
 
   await input.fill("קודי, צור לנו מסלול חדש. יש לנו שעה פנויה ורוצים מזרקות קרובות.");
-  await page.locator(".composer button").click();
+  await page.locator(".composer button[type='submit']").click();
   await page.getByText("אני יכול לבנות מסלול חדש").waitFor();
 
   await input.fill("קודי, ספר לנו קצת על המזרקה שאנחנו רואים.");
-  await page.locator(".composer button").click();
+  await page.locator(".composer button[type='submit']").click();
   await page.getByText("אני יכול להיות רגע מדריך מקומי").waitFor();
 
   await input.fill("קודי, איפה כולם עכשיו?");
-  await page.locator(".composer button").click();
+  await page.locator(".composer button[type='submit']").click();
   await page.getByText("אני מסתכל על מצב הטיול").waitFor();
 
   await input.fill("קודי, מה כדאי לעשות עכשיו? תמליץ על משהו עם מים.");
-  await page.locator(".composer button").click();
+  await page.locator(".composer button[type='submit']").click();
   await page.getByText("ההמלצה שלי כרגע היא").waitFor();
 
   console.log(

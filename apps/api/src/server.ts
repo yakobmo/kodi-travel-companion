@@ -140,7 +140,17 @@ function shouldUseExternalPlacesSearch(message: string) {
       "toilets",
       "pharmacy",
       "fuel",
-      "restaurant"
+      "restaurant",
+      "accessible",
+      "parking",
+      "road",
+      "weather",
+      "sunset",
+      "cash",
+      "budget",
+      "exchange",
+      "currency",
+      "atm"
     ])
   ) {
     return true;
@@ -163,7 +173,20 @@ function shouldUseExternalPlacesSearch(message: string) {
       "תמצא",
       "תציע",
       "המלצה",
-      "משהו"
+      "משהו",
+      "נגיש",
+      "רכב",
+      "חניה",
+      "כביש",
+      "שקיעה",
+      "מזג",
+      "מזומן",
+      "תקציב",
+      "צ'יינג",
+      "צ׳יינג",
+      "המרת כספים",
+      "יורו",
+      "כספומט"
     ])
   ) {
     return true;
@@ -185,7 +208,7 @@ function shouldUseExternalPlacesSearch(message: string) {
 }
 
 function shouldUseRouteEstimate(message: string) {
-  if (includesAnyTerm(message, ["כמה זמן", "זמן נסיעה", "נסיעה עד", "ETA", "מרחק", "כמה רחוק"])) {
+  if (includesAnyTerm(message, ["כמה זמן", "זמן נסיעה", "נסיעה עד", "ETA", "מרחק", "כמה רחוק", "נגיע", "נצא", "לפני השקיעה"])) {
     return true;
   }
 
@@ -195,9 +218,12 @@ function shouldUseRouteEstimate(message: string) {
     "נסיעה עד",
     "ETA",
     "מרחק",
-    "כמה רחוק"
+    "כמה רחוק",
+    "נגיע",
+    "נצא",
+    "לפני השקיעה"
   ]);
-  const hasDestinationHint = includesAnyTerm(message, ["מלון", "בית מלון", "לינה", "יעד", "תחנה", "אטרקציה"]);
+  const hasDestinationHint = includesAnyTerm(message, ["מלון", "בית מלון", "לינה", "יעד", "תחנה", "אטרקציה", "פיליון", "אתונה", "צפון יוון", "זגוריה", "צומרקה"]);
 
   return asksForTimeOrDistance && hasDestinationHint;
 }
