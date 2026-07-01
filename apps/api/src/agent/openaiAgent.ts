@@ -36,6 +36,35 @@ function getOpenAiClient() {
   return new OpenAI({ apiKey });
 }
 
+function getAgentTimeoutMs() {
+  const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return 12_000;
+  }
+
+  return Math.min(Math.max(Math.round(value), 3_000), 20_000);
+}
+
+function isOpenAiTimeout(error: unknown) {
+  return error instanceof Error && error.message === "openai_agent_timeout";
+}
+
+async function withAgentTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error("openai_agent_timeout")), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 function extractJsonObject(text: string) {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -197,6 +226,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   const client = getOpenAiClient();
   const model = process.env.OPENAI_AGENT_MODEL?.trim() || "gpt-5.5";
   const enableWebSearch = shouldEnableWebSearch(input);
+  const timeoutMs = getAgentTimeoutMs();
 
   if (!client) {
     return { status: "not_configured", model };
@@ -205,25 +235,28 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   const openAiClient = client;
 
   async function createKodiResponse(webSearchEnabled: boolean) {
-    return openAiClient.responses.create({
-      model,
-      instructions: buildInstructions(),
-      tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
-      input: JSON.stringify({
-        member: input.member,
-        message: input.message,
-        recentMessages: input.recentMessages?.slice(-12),
-        selectedPlace: input.selectedPlace,
-        tripState: compactTripState(input.tripState),
-        externalPlacesSearch: input.externalPlacesSearch,
-        reverseGeocodedLocation: input.reverseGeocodedLocation,
-        routeEstimate: input.routeEstimate,
-        tripContextClarification: input.tripContextClarification,
-        permissionPolicy: input.permissionPolicy,
-        webSearchAvailableForThisQuestion: webSearchEnabled,
-        fallbackRulesReply: input.rulesReply
-      })
-    });
+    return withAgentTimeout(
+      openAiClient.responses.create({
+        model,
+        instructions: buildInstructions(),
+        tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
+        input: JSON.stringify({
+          member: input.member,
+          message: input.message,
+          recentMessages: input.recentMessages?.slice(-12),
+          selectedPlace: input.selectedPlace,
+          tripState: compactTripState(input.tripState),
+          externalPlacesSearch: input.externalPlacesSearch,
+          reverseGeocodedLocation: input.reverseGeocodedLocation,
+          routeEstimate: input.routeEstimate,
+          tripContextClarification: input.tripContextClarification,
+          permissionPolicy: input.permissionPolicy,
+          webSearchAvailableForThisQuestion: webSearchEnabled,
+          fallbackRulesReply: input.rulesReply
+        })
+      }),
+      timeoutMs
+    );
   }
 
   try {
@@ -235,7 +268,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       reply: toValidReply(extractJsonObject(response.output_text ?? ""))
     };
   } catch (error) {
-    if (enableWebSearch) {
+    if (enableWebSearch && !isOpenAiTimeout(error)) {
       try {
         const response = await createKodiResponse(false);
 

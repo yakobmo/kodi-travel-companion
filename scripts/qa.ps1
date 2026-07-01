@@ -192,6 +192,9 @@ if (
   -not $openAiAgentSource.Contains("OpenAI") -or
   -not $openAiAgentSource.Contains("OPENAI_API_KEY") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_MODEL") -or
+  -not $openAiAgentSource.Contains("OPENAI_AGENT_TIMEOUT_MS") -or
+  -not $openAiAgentSource.Contains("openai_agent_timeout") -or
+  -not $openAiAgentSource.Contains("withAgentTimeout") -or
   -not $openAiAgentSource.Contains("fallbackRulesReply") -or
   -not $openAiAgentSource.Contains("Google Maps is the map engine") -or
   -not $openAiAgentSource.Contains("elite Hebrew AI travel companion") -or
@@ -208,7 +211,7 @@ if (
   -not $openAiAgentSource.Contains("Return JSON only") -or
   -not $openAiAgentSource.Contains('source: "openai"')
 ) {
-  throw "OpenAI agent bridge must be backend-only, elite-agent grounded in Google/trip context, web-search capable for live questions, JSON validated, and guarded by a fallback."
+  throw "OpenAI agent bridge must be backend-only, elite-agent grounded in Google/trip context, web-search capable for live questions, JSON validated, time-budgeted, and guarded by a fallback."
 }
 
 $openAiSpeechSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiSpeech.ts") -Raw
