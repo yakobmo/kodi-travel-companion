@@ -90,6 +90,7 @@ Implemented locally:
 - Public mobile smoke on 2026-06-30 passed after entry cleanup: a clean browser lands on onboarding, does not render the main app shell, and does not show seeded demo members or map/card layers before setup.
 - Public smoke on 2026-06-30 passed after manager-location map focus deploy: `/api/health`, `/api/trips/demo/storage`, and the public app shell returned successfully.
 - Public smoke on 2026-06-30 passed after mobile cleanup deploy: `/api/health`, `/api/trips/demo/storage`, and `/api/trips/demo/messages` returned successfully, with retired seeded family-dialogue messages hidden from the public API.
+- Public smoke on 2026-07-01 passed after chat navigation deploy: `/api/health`, public bundle inspection, and public browser smoke confirmed Waze URLs inside chat render as tappable links.
 
 ## Current Storage
 
