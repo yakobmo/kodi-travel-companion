@@ -802,9 +802,11 @@ if (-not $localMessagesSource.Contains("initialDemoMessages") -or -not $localMes
 
 if (
   -not $localMessagesSource.Contains('message.author === "QA"') -or
+  -not $localMessagesSource.Contains("includes(message.author)") -or
+  -not $localMessagesSource.Contains("message.text.trim") -or
   -not $localMessagesSource.Contains("retiredSeedMessageTextFragments.some")
 ) {
-  throw "Demo messages must filter QA/system smoke messages out of the user-facing chat."
+  throw "Demo messages must filter QA/system, invented-family, and corrupted legacy messages out of the user-facing chat."
 }
 
 if (-not $localMessagesSource.Contains("group_messages") -or -not $localMessagesSource.Contains("DEMO_TRIP_GROUP_UUID")) {

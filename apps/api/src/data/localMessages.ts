@@ -25,12 +25,16 @@ const retiredSeedMessageTextFragments = [
   "אבא רוצה גלידה",
   "נועה עייפה",
   "בדיקת שמירת שיחה",
-  "הודעה שנכנסה מבחוץ"
+  "הודעה שנכנסה מבחוץ",
+  "בדיקת פעילות מיידית"
 ];
 
 function isRetiredSeedMessage(message: StoredDemoMessage) {
   return (
     message.author === "QA" ||
+    retiredSeedMessageTextFragments.some((fragment) => message.author.includes(fragment)) ||
+    ["אבא", "אמא", "נועה", "סבתא"].includes(message.author) ||
+    /^\?[\s?]*$/.test(message.text.trim()) ||
     retiredSeedMessageIds.has(message.id) ||
     retiredSeedMessageTextFragments.some((fragment) => message.text.includes(fragment))
   );

@@ -2793,19 +2793,12 @@ export function App() {
         </header>
 
         <div className="messages">
-          {messages.length === 0 ? (
-            <div className="empty-chat-state">
-              <strong>השיחה מוכנה</strong>
-              <p>כתבו בקבוצה. כשצריך את קודי, פונים אליו בשם.</p>
-            </div>
-          ) : (
-            messages.map((message, index) => (
-              <article className={message.author === "קודי" ? "message kodi" : "message"} key={`${message.author}-${index}-${message.text}`}>
-                <strong>{message.author}</strong>
-                <p>{message.text}</p>
-              </article>
-            ))
-          )}
+          {messages.map((message, index) => (
+            <article className={message.author === "קודי" ? "message kodi" : "message"} key={`${message.author}-${index}-${message.text}`}>
+              <strong>{message.author}</strong>
+              <p>{message.text}</p>
+            </article>
+          ))}
         </div>
 
         <form className="composer" onSubmit={sendMessageWithPersistence}>
