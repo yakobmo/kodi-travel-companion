@@ -276,6 +276,7 @@ Current Supabase state:
 - Current-location answer hardening added on `2026-07-01`; Kodi now prefers Google-readable place names from reverse geocoding or nearby Places search, attaches browser-provided live location to the manager even when the incoming member id is not an exact stored id, prefers fresh GPS context over stale trip member locations, refreshes device GPS before current-location questions from the web client, and no longer exposes raw coordinates in the fallback answer.
 - Public smoke passed on `2026-07-01` for current-location hardening: Render served the fresh-GPS web asset `assets/index-lUIkzl8I.js`, and the public API no longer exposed raw coordinates or stale Greece context for the tested current-location request.
 - Install and menu simplification added on `2026-07-01`; the hamburger now exposes a clear in-app home-screen install action, a simple invite link, and a direct per-device location action, while heavy management surfaces such as full trip places, shortcuts, activity, and usage are collapsed under advanced options. Participant join remains name-first, with age optional and location granted separately on the participant device.
+- Public smoke passed on `2026-07-01` for install/menu simplification: Render served `assets/index-DvgYdZio.js` and `assets/index-CCIm6WMe.css`, including the install prompt path and collapsed advanced menu styles.
 
 ## Next Continuation Checkpoint
 
