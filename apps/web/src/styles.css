@@ -414,15 +414,18 @@ input {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;
+  overflow: hidden;
   background: #edf1ec;
 }
 
 .map-surface {
   position: relative;
-  min-height: 100vh;
+  min-height: 0;
+  height: 100%;
   padding: 18px;
   overflow: hidden;
 }
@@ -1031,18 +1034,22 @@ input {
 }
 
 .chat-sheet {
-  min-height: 100vh;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #d8dedb;
   background: #ffffff;
+  overflow: hidden;
 }
 
 .chat-sheet header {
+  flex: 0 0 auto;
   display: grid;
   gap: 12px;
   padding: 18px;
   border-bottom: 1px solid #e1e6e3;
+  background: #ffffff;
 }
 
 .chat-sheet h2 {
@@ -1421,24 +1428,35 @@ input {
 }
 
 .messages {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 18px;
   overflow: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  background: #f7faf8;
 }
 
 .message {
   max-width: 90%;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 8px 8px 8px 2px;
   background: #f2f4f3;
+  box-shadow: 0 1px 0 rgba(22, 33, 31, 0.05);
 }
 
 .message.kodi {
   border: 1px solid #cce1dc;
   background: #eef8f5;
+}
+
+.message.current-user {
+  align-self: flex-start;
+  border-radius: 8px 8px 2px 8px;
+  background: #dff4ec;
 }
 
 .message strong {
@@ -1529,11 +1547,14 @@ input {
 }
 
 .composer {
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px auto;
   gap: 8px;
   padding: 14px;
   border-top: 1px solid #e1e6e3;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  background: #ffffff;
 }
 
 .voice-recording-indicator {
@@ -1647,6 +1668,7 @@ input {
 
   .app-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(260px, 48dvh) minmax(0, 1fr);
   }
 
   .secondary-menu {
@@ -1671,7 +1693,9 @@ input {
   }
 
   .map-surface {
-    min-height: 58vh;
+    min-height: 0;
+    height: 100%;
+    padding: 10px;
   }
 
   .top-bar {
@@ -1712,9 +1736,19 @@ input {
   }
 
   .chat-sheet {
-    min-height: 42vh;
+    min-height: 0;
+    height: 100%;
     border-right: 0;
     border-top: 1px solid #d8dedb;
+  }
+
+  .chat-sheet header {
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .chat-sheet h2 {
+    font-size: 18px;
   }
 
   .places-strip,
@@ -1739,12 +1773,35 @@ input {
   }
 
   .member-pills {
-    padding-top: 8px;
+    gap: 6px;
+    padding-top: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .member-pills::-webkit-scrollbar {
+    display: none;
   }
 
   .messages {
-    min-height: 22vh;
-    padding: 14px;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .message {
+    max-width: 86%;
+    padding: 10px 11px;
+  }
+
+  .composer {
+    grid-template-columns: minmax(0, 1fr) 44px 54px;
+    padding: 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .composer button {
+    padding: 0 10px;
   }
 
   .kodi-presence {

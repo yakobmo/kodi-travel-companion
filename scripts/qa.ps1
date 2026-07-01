@@ -581,6 +581,17 @@ if (-not $styleSource.Contains(".message-link") -or -not $styleSource.Contains("
   throw "Chat navigation links must have visible tappable styling."
 }
 
+if (
+  -not $appSource.Contains("messagesEndRef") -or
+  -not $appSource.Contains("scrollIntoView") -or
+  -not $styleSource.Contains(".app-shell") -or
+  -not $styleSource.Contains("overflow: hidden") -or
+  -not $styleSource.Contains("overscroll-behavior: contain") -or
+  -not $styleSource.Contains("env(safe-area-inset-bottom)")
+) {
+  throw "Group chat must behave like a fixed-height WhatsApp-style conversation with internal message scrolling and a persistent composer."
+}
+
 if (-not $appSource.Contains("/api/trips/demo/agent-actions/authorize") -or -not $appSource.Contains("requestGroupDestinationApproval")) {
   throw "Web app must request server authorization before operational group actions."
 }

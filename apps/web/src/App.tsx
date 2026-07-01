@@ -864,12 +864,17 @@ export function App() {
   const googleMapMarkersRef = useRef<any[]>([]);
   const locationWatchIdRef = useRef<number | null>(null);
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
       window.speechSynthesis?.cancel();
     };
   }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [messages]);
 
   function applyTripEvents(data: TripEventsResponse) {
     setTripEvents(data.events);
@@ -3081,9 +3086,14 @@ export function App() {
           <div className="active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
         </header>
 
-        <div className="messages">
+        <div className="messages" aria-live="polite">
           {messages.map((message, index) => (
-            <article className={message.author === "קודי" ? "message kodi" : "message"} key={`${message.author}-${index}-${message.text}`}>
+            <article
+              className={`message${message.author === "קודי" ? " kodi" : ""}${
+                message.author === activeMember.name ? " current-user" : ""
+              }`}
+              key={`${message.author}-${index}-${message.text}`}
+            >
               <div className="message-header">
                 <strong>{message.author}</strong>
                 {message.author === "קודי" ? (
@@ -3115,6 +3125,7 @@ export function App() {
               <p>{renderMessageText(message.text)}</p>
             </article>
           ))}
+          <div ref={messagesEndRef} aria-hidden="true" />
         </div>
 
         <form className={speechState === "listening" ? "composer voice-listening" : "composer"} onSubmit={sendMessageWithPersistence}>
