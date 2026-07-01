@@ -289,6 +289,7 @@ Current Supabase state:
 - Public smoke passed on `2026-07-01` for WhatsApp-style invite sharing: Render served `assets/index-J6xKOAk0.js` and `assets/index-C-AMusoS.css`, including `navigator.share` and the `whatsapp-style-share-link` invite model.
 - Public smoke passed on `2026-07-01` for Kodi browser-voice fallback tuning: Render served `assets/index-CwyqiGym.js`, including browser voice enumeration, Hebrew `he-IL`, male Hebrew voice hints, and fallback speech output. This remains a fallback, not the final GPT-style neural voice target.
 - Public smoke passed on `2026-07-01` for natural Kodi speech: Render served `assets/index-DmO31BYO.js` with `/api/agent/speech` client playback, and the public `/api/agent/speech` endpoint returned `200 OK`, `audio/mpeg`, `X-Kodi-Voice-Model: gpt-4o-mini-tts`, and `X-Kodi-Voice: echo` for a short Hebrew Kodi voice sample.
+- Public smoke passed on `2026-07-01` for the Kodi agent-first context correction: a follow-up answer of "מאריתה" after an Athens airport / first-hotel question resolved the named first-night lodging instead of stale `Averof 12`, Google Routes returned `ready`, OpenAI returned `source=openai` with `openAiModel=gpt-5.4-mini`, `fallbackUsed=false`, and observed latency was about 6.9 seconds.
 
 ## Next Continuation Checkpoint
 
