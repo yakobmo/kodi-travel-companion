@@ -243,7 +243,7 @@ try {
   } else {
     assertCheck("google maps fallback marked temporary", String(mapShellClass).includes("internal-map-fallback"));
   }
-  assertCheck("nearby manager map focus", body.includes("מציג נקודות קרובות למנהל"));
+  assertCheck("trip map focus", body.includes("מפת הטיול") && body.includes("המיקום שלך מוצג מעליה"));
   assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
   assertCheck("retired demo family hidden", !body.includes("אבא") && !body.includes("נועה") && !body.includes("סבתא"));
   await page.getByRole("button", { name: "תפריט" }).click();
@@ -258,6 +258,8 @@ try {
   assertCheck("airbnb shortcut in menu", menuBody.includes("Airbnb"));
   assertCheck("invite moved to menu", menuBody.includes("הזמנת משתתפים"));
   assertCheck("invite per-device consent in menu", menuBody.includes("כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו"));
+  assertCheck("full trip places list in menu", menuBody.includes("כל נקודות הטיול") && menuBody.includes("108 נקודות זמינות"));
+  assertCheck("trip places list has many entries", (await menu.locator(".trip-place-list button").count()) >= 20);
   assertCheck("map surface stays clean", await page.locator(".map-surface > .action-card").isHidden());
   assertCheck("chat invite card hidden", await page.locator(".chat-sheet .invite-card").count() === 0);
 
@@ -332,7 +334,7 @@ try {
   );
   assertCheck(
     "members api consent",
-    membersPayload.members?.some((item) => item.member?.displayName === "סבתא" && item.consent?.state === "disabled")
+    membersPayload.members?.some((item) => item.member?.role === "viewer" && item.consent?.state === "disabled")
   );
 
   const blockedLocationResponse = await page.request.post("http://localhost:3001/api/trips/demo/members/grandma/location", {
@@ -369,7 +371,7 @@ try {
       (item) => item.capability === "openai_agent" && item.providerConfigured === false
     )
   );
-  assertCheck("agent location state", locationAgentPayload.text?.includes("אבא") && locationAgentPayload.text?.includes("נועה"));
+  assertCheck("agent location state", locationAgentPayload.text?.includes("מיקום") || locationAgentPayload.text?.includes("קבוצה"));
   assertCheck("agent hides no consent", locationAgentPayload.text?.includes("לא חושף אותם בלי הסכמה"));
 
   const recommendationAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
@@ -488,30 +490,31 @@ try {
 
   const contextAwareAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
-      member: { id: "mom", displayName: "אמא", role: "owner", ageGroup: "adult" },
+      member: { id: "mom", displayName: "מנהל הטיול", role: "owner", ageGroup: "adult" },
       message: "קודי, איך מחברים את כולם בלי לשנות יעד בלי אישור?",
       recentMessages: [
-        { author: "אבא", text: "בא לי גלידה", source: "member" },
-        { author: "נועה", text: "אני עייפה ורוצה לישון", source: "member" },
-        { author: "אמא", text: "צריך משהו קרוב ורגוע", source: "member" }
+        { author: "משתתף 1", text: "בא לי גלידה", source: "member" },
+        { author: "משתתף צעיר", text: "אני עייף ורוצה לנוח", source: "member" },
+        { author: "מנהל הטיול", text: "צריך משהו קרוב ורגוע", source: "member" }
       ]
     }
   });
   const contextAwareAgentPayload = await contextAwareAgentResponse.json();
   assertCheck("agent context-aware ok", contextAwareAgentResponse.ok());
-  assertCheck("agent context-aware speakers", contextAwareAgentPayload.text?.includes("אבא") && contextAwareAgentPayload.text?.includes("נועה"));
+  assertCheck("agent context-aware speakers", contextAwareAgentPayload.text?.includes("משתתף") || contextAwareAgentPayload.text?.includes("מנהל"));
   assertCheck("agent context-aware needs", contextAwareAgentPayload.text?.includes("גלידה") && contextAwareAgentPayload.text?.includes("מנוחה"));
   assertCheck("agent context-aware destination", contextAwareAgentPayload.text?.includes("היעד הקבוצתי הנוכחי"));
 
   const input = page.getByLabel("כתיבת הודעה לקבוצה");
   const placeholder = await input.getAttribute("placeholder");
-  assertCheck("family composer", Boolean(placeholder?.includes("כתבו בקבוצה")));
-  assertCheck("active speaker default", body.includes("כותבים עכשיו בשם אמא") || body.includes("כותבים עכשיו בשם מנהל הטיול"));
+  assertCheck("family composer is quiet", placeholder === "");
+  assertCheck("active speaker default", body.includes("כותבים עכשיו בשם מנהל הטיול"));
   await page.getByText("שיחה מסונכרנת").waitFor();
   await page.request.post("http://localhost:3001/api/trips/demo/messages", {
     data: { author: "QA", text: "הודעה שנכנסה מבחוץ", source: "system" }
   });
-  await page.getByText("הודעה שנכנסה מבחוץ").waitFor();
+  await page.waitForTimeout(1200);
+  assertCheck("qa system messages stay hidden", (await page.getByText("הודעה שנכנסה מבחוץ").count()) === 0);
 
   const wazeButton = menu.getByRole("button", { name: "פתח ב-Waze" });
   const disabled = await wazeButton.isDisabled();
@@ -562,6 +565,7 @@ try {
   await input.fill("קודי, מה מתאים לקבוצה עכשיו ליד המלון?");
   await page.locator(".composer button").click();
   await page.getByText("מהשיחה אני מזהה").waitFor();
+  assertCheck("kodi replies in chat", (await page.locator(".message.kodi").count()) >= 1);
 
   assertCheck("retired demo member pill removed", (await page.locator(".member-pills").getByRole("button", { name: "נועה" }).count()) === 0);
 

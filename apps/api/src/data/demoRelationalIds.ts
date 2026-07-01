@@ -12,7 +12,7 @@ export const demoRelationalMembers = [
   {
     id: "dad",
     uuid: demoMemberUuidById.dad,
-    displayName: "אבא",
+    displayName: "מנהל נוסף",
     ageGroup: "adult",
     role: "admin",
     canChatWithAgent: true,
@@ -32,7 +32,7 @@ export const demoRelationalMembers = [
   {
     id: "mom",
     uuid: demoMemberUuidById.mom,
-    displayName: "אמא",
+    displayName: "מנהל הטיול",
     ageGroup: "adult",
     role: "owner",
     canChatWithAgent: true,
@@ -52,7 +52,7 @@ export const demoRelationalMembers = [
   {
     id: "noa",
     uuid: demoMemberUuidById.noa,
-    displayName: "נועה",
+    displayName: "משתתף צעיר",
     ageGroup: "child",
     role: "member",
     canChatWithAgent: true,
@@ -72,7 +72,7 @@ export const demoRelationalMembers = [
   {
     id: "grandma",
     uuid: demoMemberUuidById.grandma,
-    displayName: "סבתא",
+    displayName: "משתתף",
     ageGroup: "senior",
     role: "viewer",
     canChatWithAgent: true,

@@ -9,6 +9,7 @@ const DEFAULT_VISIBLE_PLACE_LIMIT = 5;
 const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
 const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
 const retiredDemoMemberIds = new Set(["dad", "noa", "grandma"]);
+const retiredDemoNames = new Set(["אבא", "אמא", "נועה", "סבתא", "QA"]);
 
 declare global {
   interface Window {
@@ -170,16 +171,22 @@ function rememberLocalSetupCompleted() {
   window.localStorage.setItem(LOCAL_SETUP_COMPLETE_KEY, "true");
 }
 
+function getSafeManagerName(managerName = "מנהל הטיול") {
+  const trimmedName = managerName.trim();
+  return trimmedName.length > 1 && !retiredDemoNames.has(trimmedName) ? trimmedName : "מנהל הטיול";
+}
+
 function normalizeTripMembers(members: DemoMember[], managerName = "מנהל הטיול"): DemoMember[] {
   const visibleMembers = members.filter((member) => !retiredDemoMemberIds.has(member.id));
   const ownerIndex = visibleMembers.findIndex((member) => member.role === "owner" || member.id === "mom");
+  const safeManagerName = getSafeManagerName(managerName);
 
   if (ownerIndex >= 0) {
     return visibleMembers.map((member, index) =>
       index === ownerIndex
         ? {
             ...member,
-            name: managerName.trim().length > 1 ? managerName.trim() : "מנהל הטיול",
+            name: safeManagerName,
             role: "owner"
           }
         : member
@@ -188,7 +195,7 @@ function normalizeTripMembers(members: DemoMember[], managerName = "מנהל ה�
 
   const fallbackManager: DemoMember = {
     id: "mom",
-    name: managerName.trim().length > 1 ? managerName.trim() : "מנהל הטיול",
+    name: safeManagerName,
     role: "owner",
     ageGroup: "adult",
     locationSharing: "disabled",
@@ -704,6 +711,8 @@ export function App() {
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState(buildTimeGoogleMapsApiKey);
   const [mapsConfigLoaded, setMapsConfigLoaded] = useState(Boolean(buildTimeGoogleMapsApiKey));
   const googleMapElementRef = useRef<HTMLDivElement | null>(null);
+  const googleMapInstanceRef = useRef<any | null>(null);
+  const googleMapMarkersRef = useRef<any[]>([]);
   const locationWatchIdRef = useRef<number | null>(null);
 
   function applyTripEvents(data: TripEventsResponse) {
@@ -1374,20 +1383,38 @@ export function App() {
       .sort((first, second) => priority[first.type] - priority[second.type])
       .slice(0, DEFAULT_VISIBLE_PLACE_LIMIT);
   }, [mapAnchorLocation, places]);
+  const mapPlaces = useMemo(
+    () => places.filter((place) => typeof place.lat === "number" && typeof place.lng === "number"),
+    [places]
+  );
+  const menuPlaces = useMemo(
+    () =>
+      [...places].sort((first, second) => {
+        const firstHasCoordinates = typeof first.lat === "number" && typeof first.lng === "number";
+        const secondHasCoordinates = typeof second.lat === "number" && typeof second.lng === "number";
+        if (firstHasCoordinates !== secondHasCoordinates) {
+          return firstHasCoordinates ? -1 : 1;
+        }
+
+        return first.name.localeCompare(second.name, "he");
+      }),
+    [places]
+  );
 
   useEffect(() => {
-    if (visiblePlaces.length > 0 && !visiblePlaces.some((place) => place.id === selectedPlaceId)) {
-      setSelectedPlaceId(visiblePlaces[0].id);
+    if (places.length > 0 && !places.some((place) => place.id === selectedPlaceId)) {
+      setSelectedPlaceId(places[0].id);
     }
-  }, [selectedPlaceId, visiblePlaces]);
+  }, [places, selectedPlaceId]);
 
-  const selectedPlace = visiblePlaces.find((place) => place.id === selectedPlaceId) ?? visiblePlaces[0];
+  const selectedPlace = places.find((place) => place.id === selectedPlaceId) ?? visiblePlaces[0] ?? places[0];
   const canNavigate = typeof selectedPlace?.lat === "number" && typeof selectedPlace?.lng === "number";
   const externalShortcuts = buildExternalAppShortcuts(selectedPlace);
   const mapProviderStatus = getMapProviderStatus(googleMapsApiKey, mapsConfigLoaded);
-  const mapFocusSummary = mapAnchorLocation
-    ? `מציג נקודות קרובות למנהל · עד ${DEFAULT_NEARBY_MAP_RADIUS_KM} ק״מ כשיש כאלה`
-    : "מציג נקודות מרכזיות עד להפעלת מיקום מנהל במפה";
+  const mapFocusSummary =
+    mapPlaces.length > 0
+      ? `מפת הטיול · ${mapPlaces.length} נקודות עם מיקום · המיקום שלך מוצג מעליה`
+      : "מפת הטיול נטענת · נקודות בלי קואורדינטות זמינות ברשימה";
   const tripInviteUrl =
     typeof window === "undefined"
       ? "https://kodi-travel-companion.onrender.com?join=group_family_greece_demo"
@@ -1405,7 +1432,7 @@ export function App() {
       mapAnchorLocation ??
       (typeof selectedPlace?.lat === "number" && typeof selectedPlace.lng === "number"
         ? { lat: selectedPlace.lat, lng: selectedPlace.lng }
-        : visiblePlaces.find((place) => typeof place.lat === "number" && typeof place.lng === "number"));
+        : mapPlaces[0]);
 
     if (!fallbackCenter) {
       return;
@@ -1414,7 +1441,7 @@ export function App() {
     const center = { lat: Number(fallbackCenter.lat), lng: Number(fallbackCenter.lng) };
     let cancelled = false;
     const mapElement = googleMapElementRef.current;
-    const markers: any[] = [];
+    const nextMarkers: any[] = [];
 
     async function renderGoogleMap() {
       try {
@@ -1424,37 +1451,57 @@ export function App() {
         }
 
         const google = window.google;
-        const map = new google.maps.Map(mapElement, {
-          center,
-          zoom: mapAnchorLocation ? 13 : 9,
-          clickableIcons: true,
-          fullscreenControl: true,
-          mapTypeControl: false,
-          streetViewControl: true
-        });
+        const existingMap = googleMapInstanceRef.current;
+        const map =
+          existingMap ??
+          new google.maps.Map(mapElement, {
+            center,
+            zoom: mapAnchorLocation ? 13 : 9,
+            clickableIcons: true,
+            fullscreenControl: true,
+            mapTypeControl: false,
+            streetViewControl: true
+          });
+        googleMapInstanceRef.current = map;
+        if (existingMap) {
+          map.setCenter(center);
+          map.setZoom(mapAnchorLocation ? 13 : 9);
+        }
 
-        visiblePlaces.forEach((place) => {
+        googleMapMarkersRef.current.forEach((marker) => marker.setMap?.(null));
+        googleMapMarkersRef.current = [];
+
+        const bounds = new google.maps.LatLngBounds();
+        let hasBounds = false;
+
+        mapPlaces.forEach((place) => {
           if (typeof place.lat !== "number" || typeof place.lng !== "number") {
             return;
           }
 
+          const position = { lat: place.lat, lng: place.lng };
           const marker = new google.maps.Marker({
             map,
-            position: { lat: place.lat, lng: place.lng },
+            position,
             title: place.name
           });
           marker.addListener("click", () => setSelectedPlaceId(place.id));
-          markers.push(marker);
+          nextMarkers.push(marker);
+          bounds.extend(position);
+          hasBounds = true;
         });
 
         if (currentLocation) {
-          markers.push(
+          const position = { lat: currentLocation.lat, lng: currentLocation.lng };
+          nextMarkers.push(
             new google.maps.Marker({
               map,
-              position: { lat: currentLocation.lat, lng: currentLocation.lng },
+              position,
               title: "אני כאן"
             })
           );
+          bounds.extend(position);
+          hasBounds = true;
         }
 
         visibleMembers.forEach((member) => {
@@ -1462,7 +1509,7 @@ export function App() {
             return;
           }
 
-          markers.push(
+          nextMarkers.push(
             new google.maps.Marker({
               map,
               position: { lat: member.liveLocation.lat, lng: member.liveLocation.lng },
@@ -1470,6 +1517,10 @@ export function App() {
             })
           );
         });
+        if (hasBounds) {
+          map.fitBounds(bounds, 44);
+        }
+        googleMapMarkersRef.current = nextMarkers;
       } catch {
         // The fallback layer remains visible if Google Maps JS fails to load.
       }
@@ -1479,9 +1530,12 @@ export function App() {
 
     return () => {
       cancelled = true;
-      markers.forEach((marker) => marker.setMap?.(null));
+      nextMarkers.forEach((marker) => marker.setMap?.(null));
+      if (googleMapMarkersRef.current === nextMarkers) {
+        googleMapMarkersRef.current = [];
+      }
     };
-  }, [currentLocation, googleMapsApiKey, mapAnchorLocation, selectedPlace, visibleMembers, visiblePlaces]);
+  }, [currentLocation, googleMapsApiKey, mapAnchorLocation, mapPlaces, selectedPlace, visibleMembers]);
 
   useEffect(
     () => () => {
@@ -1900,10 +1954,7 @@ export function App() {
     setDraft("");
     setMessages(nextMessages);
 
-    const savedUserMessage = await persistChatMessage(localUserMessage);
-    setMessages((currentMessages) =>
-      currentMessages.map((message) => (message.id === localUserMessage.id ? savedUserMessage : message))
-    );
+    const savedUserMessagePromise = persistChatMessage(localUserMessage);
 
     if (shouldAskKodi) {
       const reply = await requestKodiReply(text, nextMessages);
@@ -1922,6 +1973,11 @@ export function App() {
         currentMessages.map((message) => (message.id === localKodiMessage.id ? savedKodiMessage : message))
       );
     }
+
+    const savedUserMessage = await savedUserMessagePromise;
+    setMessages((currentMessages) =>
+      currentMessages.map((message) => (message.id === localUserMessage.id ? savedUserMessage : message))
+    );
   }
 
   function addUserShortcut(event: FormEvent<HTMLFormElement>) {
@@ -2580,6 +2636,30 @@ export function App() {
             {navigationState === "error" ? <small>לא הצלחתי ליצור קישור ניווט כרגע.</small> : null}
           </section>
         ) : null}
+        <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
+          <strong>כל נקודות הטיול</strong>
+          <p>
+            {places.length} נקודות זמינות · {mapPlaces.length} מוצגות על מפת Google לפי קואורדינטות
+          </p>
+          <div className="trip-place-list">
+            {menuPlaces.map((place) => {
+              const hasCoordinates = typeof place.lat === "number" && typeof place.lng === "number";
+              return (
+                <button
+                  className={place.id === selectedPlace?.id ? "selected-trip-place" : ""}
+                  key={place.id}
+                  onClick={() => setSelectedPlaceId(place.id)}
+                  type="button"
+                >
+                  <span>{place.name}</span>
+                  <small>
+                    {getPlaceTypeLabel(place.type)} · {hasCoordinates ? "במפה" : "ברשימה"}
+                  </small>
+                </button>
+              );
+            })}
+          </div>
+        </section>
         <section className="menu-block">
           <strong>מיקום מנהל</strong>
           <p>{currentLocation ? `מיקום חי על Google Maps · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "מיקום כבוי"}</p>
@@ -2732,7 +2812,7 @@ export function App() {
           <input
             aria-label="כתיבת הודעה לקבוצה"
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="כתבו בקבוצה... קראו לקודי כשהוא צריך להתערב"
+            placeholder=""
             value={draft}
           />
           <button type="submit">שלח</button>

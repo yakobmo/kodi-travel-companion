@@ -300,6 +300,10 @@ if (-not $demoTripSource.Contains("demoMembers")) {
   throw "Web demo trip is missing demo group members."
 }
 
+if ($demoTripSource.Contains("משפחת כהן")) {
+  throw "Web app must not show invented family names in the trip shell."
+}
+
 if (-not $demoTripSource.Contains("locationSharing")) {
   throw "Web demo trip is missing location sharing consent state."
 }
@@ -565,9 +569,21 @@ if (
   -not $appSource.Contains("GOOGLE_MAPS_BROWSER_API_KEY") -or
   -not $appSource.Contains("VITE_GOOGLE_MAPS_API_KEY") -or
   -not $appSource.Contains("getMapProviderStatus") -or
+  -not $appSource.Contains("googleMapInstanceRef") -or
+  -not $appSource.Contains("googleMapMarkersRef") -or
+  -not $appSource.Contains("mapPlaces.forEach") -or
+  -not $appSource.Contains("map.fitBounds") -or
   -not $serverSourceForContext.Contains("/api/config/maps")
 ) {
-  throw "Web app is missing map provider configuration for Google/fallback switching."
+  throw "Web app is missing map provider configuration or stable Google Maps instance handling."
+}
+
+if (
+  -not $appSource.Contains("trip-places-menu") -or
+  -not $appSource.Contains("trip-place-list") -or
+  -not $appSource.Contains("menuPlaces.map")
+) {
+  throw "The hamburger menu must expose the full trip place list, not only the first or nearby place."
 }
 
 if (
@@ -784,8 +800,23 @@ if (-not $localMessagesSource.Contains("initialDemoMessages") -or -not $localMes
   throw "Demo messages data layer must provide initial messages and append persisted messages."
 }
 
+if (
+  -not $localMessagesSource.Contains('message.author === "QA"') -or
+  -not $localMessagesSource.Contains("retiredSeedMessageTextFragments.some")
+) {
+  throw "Demo messages must filter QA/system smoke messages out of the user-facing chat."
+}
+
 if (-not $localMessagesSource.Contains("group_messages") -or -not $localMessagesSource.Contains("DEMO_TRIP_GROUP_UUID")) {
   throw "Demo messages must use the relational Supabase group_messages table when Supabase storage is active."
+}
+
+$localMembersSource = Get-Content (Join-Path $root "apps\api\src\data\localMembers.ts") -Raw
+$demoRelationalIdsSource = Get-Content (Join-Path $root "apps\api\src\data\demoRelationalIds.ts") -Raw
+foreach ($inventedMemberName in @("אמא", "אבא", "נועה", "סבתא")) {
+  if ($localMembersSource.Contains("displayName: `"$inventedMemberName`"") -or $demoRelationalIdsSource.Contains("displayName: `"$inventedMemberName`"")) {
+    throw "Default members must use neutral role labels, not invented family names: $inventedMemberName"
+  }
 }
 
 $localDestinationSource = Get-Content (Join-Path $root "apps\api\src\data\localGroupDestination.ts") -Raw

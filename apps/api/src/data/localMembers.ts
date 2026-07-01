@@ -16,7 +16,7 @@ const initialDemoMembers: TripMemberLocationView[] = [
     member: {
       id: "dad",
       tripGroupId: DEMO_GROUP_ID,
-      displayName: "אבא",
+      displayName: "מנהל נוסף",
       ageGroup: "adult",
       role: "admin",
       canChatWithAgent: true,
@@ -46,7 +46,7 @@ const initialDemoMembers: TripMemberLocationView[] = [
     member: {
       id: "mom",
       tripGroupId: DEMO_GROUP_ID,
-      displayName: "אמא",
+      displayName: "מנהל הטיול",
       ageGroup: "adult",
       role: "owner",
       canChatWithAgent: true,
@@ -76,7 +76,7 @@ const initialDemoMembers: TripMemberLocationView[] = [
     member: {
       id: "noa",
       tripGroupId: DEMO_GROUP_ID,
-      displayName: "נועה",
+      displayName: "משתתף צעיר",
       ageGroup: "child",
       role: "member",
       canChatWithAgent: true,
@@ -106,7 +106,7 @@ const initialDemoMembers: TripMemberLocationView[] = [
     member: {
       id: "grandma",
       tripGroupId: DEMO_GROUP_ID,
-      displayName: "סבתא",
+      displayName: "משתתף",
       ageGroup: "senior",
       role: "viewer",
       canChatWithAgent: true,
@@ -240,7 +240,7 @@ function mapSupabaseMembers(input: {
       member: {
         id: demoMemberId,
         tripGroupId: DEMO_GROUP_ID,
-        displayName: member.display_name,
+        displayName: seed?.displayName ?? member.display_name,
         ageGroup: seed?.ageGroup as AgeGroup | undefined,
         role: member.role,
         canChatWithAgent: member.can_chat_with_agent,

@@ -3,7 +3,7 @@ export const demoTripSummary = {
   totalPlaces: 108,
   lodgingCount: 10,
   waterCount: 23,
-  groupName: "משפחת כהן"
+  groupName: "קבוצת הטיול"
 };
 
 export const demoPlaces = [

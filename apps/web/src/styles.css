@@ -1319,6 +1319,42 @@ input {
   gap: 6px;
 }
 
+.trip-place-list {
+  display: grid;
+  gap: 6px;
+  max-height: 260px;
+  overflow: auto;
+  padding-left: 2px;
+}
+
+.trip-place-list button {
+  justify-content: space-between;
+  min-width: 0;
+  border: 1px solid #d7e3df;
+  background: #f8faf9;
+  color: #16211f;
+  text-align: right;
+}
+
+.trip-place-list button.selected-trip-place {
+  border-color: #096b5c;
+  background: #e8f5f1;
+}
+
+.trip-place-list span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-place-list small {
+  flex: 0 0 auto;
+  color: #53615e;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .map-surface > .map-placeholder > .map-provider-note,
 .map-surface > .map-placeholder > .privacy-note,
 .map-surface > .map-placeholder > .personal-location-card {

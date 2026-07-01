@@ -23,11 +23,14 @@ const retiredSeedMessageTextFragments = [
   "בא לי לישון.",
   "אפשר לאכול שם גלידה",
   "אבא רוצה גלידה",
-  "נועה עייפה"
+  "נועה עייפה",
+  "בדיקת שמירת שיחה",
+  "הודעה שנכנסה מבחוץ"
 ];
 
 function isRetiredSeedMessage(message: StoredDemoMessage) {
   return (
+    message.author === "QA" ||
     retiredSeedMessageIds.has(message.id) ||
     retiredSeedMessageTextFragments.some((fragment) => message.text.includes(fragment))
   );
