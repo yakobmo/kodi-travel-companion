@@ -112,6 +112,7 @@ Implemented locally:
 - Public smoke on 2026-07-01 passed after voice-output deploy: `/api/health`, public app shell, and public bundle inspection confirmed `SpeechSynthesisUtterance`, Hebrew `he-IL`, and the Kodi speaker control are deployed.
 - Public smoke on 2026-07-01 passed after voice-recording feedback deploy: public bundle inspection confirmed the recording status indicator, red pulse dot, and microphone listening animation are deployed.
 - Public smoke on 2026-07-01 passed after current-location action deploy: public bundle inspection confirmed the top-bar `current-location-button` and active styling are deployed.
+- Public smoke on 2026-07-01 passed after the mobile map/chat and Kodi response-time deploy: public bundle includes the direct Google Maps handoff and mobile chat-priority layout; `/api/navigation/links` returned 200; `/api/agent/message` returned within the enforced timeout ceiling with observed runtime latency of about 8 seconds.
 
 ## Current Storage
 
