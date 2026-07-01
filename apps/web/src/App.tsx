@@ -42,8 +42,8 @@ type BeforeInstallPromptEvent = Event & {
 
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
 type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
-const DEFAULT_NEARBY_MAP_RADIUS_KM = 10;
-const DEFAULT_VISIBLE_PLACE_LIMIT = 5;
+const DEFAULT_NEARBY_MAP_RADIUS_KM = 40;
+const DEFAULT_VISIBLE_PLACE_LIMIT = 40;
 const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
 const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
 const retiredDemoMemberIds = new Set(["dad", "noa", "grandma"]);
@@ -801,6 +801,17 @@ function getDistanceKm(first: { lat: number; lng: number }, second: { lat: numbe
     Math.sin(latDelta / 2) ** 2 + Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(lngDelta / 2) ** 2;
 
   return 2 * earthRadiusKm * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function getApproximateRadiusCorners(center: { lat: number; lng: number }, radiusKm: number) {
+  const latDelta = radiusKm / 111;
+  const lngScale = Math.max(Math.cos((center.lat * Math.PI) / 180), 0.2);
+  const lngDelta = radiusKm / (111 * lngScale);
+
+  return {
+    southWest: { lat: center.lat - latDelta, lng: center.lng - lngDelta },
+    northEast: { lat: center.lat + latDelta, lng: center.lng + lngDelta }
+  };
 }
 
 function getInitialJoinToken() {
@@ -1646,8 +1657,8 @@ export function App() {
       .slice(0, DEFAULT_VISIBLE_PLACE_LIMIT);
   }, [mapAnchorLocation, places]);
   const mapPlaces = useMemo(
-    () => places.filter((place) => typeof place.lat === "number" && typeof place.lng === "number"),
-    [places]
+    () => visiblePlaces.filter((place) => typeof place.lat === "number" && typeof place.lng === "number"),
+    [visiblePlaces]
   );
   const menuPlaces = useMemo(
     () =>
@@ -1689,9 +1700,10 @@ export function App() {
     () =>
       [
         currentLocation ? "current-location-on" : "current-location-off",
+        mapAnchorLocation ? `${mapAnchorLocation.lat}:${mapAnchorLocation.lng}:${DEFAULT_NEARBY_MAP_RADIUS_KM}` : "no-anchor",
         mapPlaces.map((place) => `${place.id}:${place.lat}:${place.lng}`).join("|")
       ].join("::"),
-    [currentLocation, mapPlaces]
+    [currentLocation, mapAnchorLocation, mapPlaces]
   );
   const recentTripEvents = tripEvents.slice(0, 3);
   const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
@@ -1729,7 +1741,7 @@ export function App() {
           existingMap ??
           new google.maps.Map(mapElement, {
             center,
-            zoom: mapAnchorLocation ? 13 : 9,
+            zoom: mapAnchorLocation ? 10 : 9,
             clickableIcons: true,
             fullscreenControl: true,
             mapTypeControl: false,
@@ -1787,7 +1799,15 @@ export function App() {
           );
         });
         if (hasBounds && (!existingMap || googleMapFitSignatureRef.current !== mapFitSignature)) {
-          map.fitBounds(bounds, 44);
+          if (mapAnchorLocation) {
+            const radiusCorners = getApproximateRadiusCorners(center, DEFAULT_NEARBY_MAP_RADIUS_KM);
+            const radiusBounds = new google.maps.LatLngBounds();
+            radiusBounds.extend(radiusCorners.southWest);
+            radiusBounds.extend(radiusCorners.northEast);
+            map.fitBounds(radiusBounds, 28);
+          } else {
+            map.fitBounds(bounds, 44);
+          }
           googleMapFitSignatureRef.current = mapFitSignature;
         }
         googleMapMarkersRef.current = nextMarkers;
@@ -1913,6 +1933,20 @@ export function App() {
     } catch {
       setNavigationState("error");
     }
+  }
+
+  function openCurrentMapInGoogleMaps() {
+    const focusedLocation =
+      mapAnchorLocation ??
+      (typeof selectedPlace?.lat === "number" && typeof selectedPlace.lng === "number"
+        ? { lat: selectedPlace.lat, lng: selectedPlace.lng }
+        : mapPlaces[0]);
+
+    const url = focusedLocation
+      ? `https://www.google.com/maps/@${Number(focusedLocation.lat)},${Number(focusedLocation.lng)},10z`
+      : "https://www.google.com/maps";
+
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   async function requestGroupDestinationApproval() {
@@ -3001,6 +3035,10 @@ export function App() {
 
         <div className={`map-placeholder ${googleMapsApiKey ? "google-map-active" : "internal-map-fallback"}`}>
           <div className="google-map-canvas" ref={googleMapElementRef} aria-label="Google Maps" />
+          <button className="open-google-maps-button" onClick={openCurrentMapInGoogleMaps} type="button">
+            <ExternalLink size={16} aria-hidden="true" />
+            <span>פתח Google Maps</span>
+          </button>
           <Radio size={34} aria-hidden="true" />
           <span>מפה חיה</span>
           <small>

@@ -255,6 +255,7 @@ try {
   assertCheck("group chat", body.includes("קבוצת הטיול"));
   assertCheck("kodi background", body.includes("קודי ברקע"));
   assertCheck("google maps is target provider", body.includes("Google Maps"));
+  assertCheck("direct google maps handoff visible", await page.getByRole("button", { name: "פתח Google Maps" }).isVisible());
   if (googleMapsActive) {
     assertCheck("google maps active", googleMapsActive);
   } else {
@@ -290,6 +291,13 @@ try {
   await mobilePage.locator(".map-surface").waitFor();
   assertCheck("mobile map visible", await mobilePage.locator(".map-surface").isVisible());
   assertCheck("mobile chat visible", await mobilePage.locator(".chat-sheet").isVisible());
+  assertCheck("mobile google maps handoff visible", await mobilePage.getByRole("button", { name: "פתח Google Maps" }).isVisible());
+  const mobileCoreHeights = await mobilePage.evaluate(() => {
+    const map = document.querySelector(".map-surface")?.getBoundingClientRect();
+    const chat = document.querySelector(".chat-sheet")?.getBoundingClientRect();
+    return { mapHeight: map?.height ?? 0, chatHeight: chat?.height ?? 0 };
+  });
+  assertCheck("mobile chat prioritized over map", mobileCoreHeights.chatHeight > mobileCoreHeights.mapHeight);
   assertCheck(
     "mobile menu closed by default",
     !(await mobilePage.locator(".app-shell").evaluate((element) => element.classList.contains("secondary-menu-visible")))

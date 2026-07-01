@@ -180,7 +180,9 @@ The main screen should prioritize:
 - Kodi available in the same family conversation
 - one obvious next action
 
-Default map focus after manager GPS is active: Google Maps should be centered around the manager and show nearby trip points, targeting a 10 km context radius. If there are no trip points inside that radius, Kodi can prioritize the nearest trip points, but the map interaction itself remains Google Maps.
+Default mobile map focus after manager GPS is active: Google Maps should be centered around the manager and show nearby trip points, targeting a 40 km context radius. If there are no trip points inside that radius, Kodi can prioritize the nearest trip points, but the map interaction itself remains Google Maps. The chat is the main working surface on mobile, so the map should be a compact live context panel rather than taking half the screen.
+
+When the user needs the full native Google Maps experience, the main map surface must expose a clear "Open Google Maps" handoff instead of hiding that action in the hamburger menu.
 
 The main screen should not preload invented family dialogue, sample questions, or dense explanatory copy. If no one has written yet, the chat starts clean with a short empty state.
 

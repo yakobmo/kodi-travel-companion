@@ -79,7 +79,8 @@ Implemented locally:
 - Guided first-run activation added: Kodi leads one step at a time through activation, trip source, manager GPS, and then entry into the map/chat core.
 - Participant invite link flow added: after the manager enters the map/chat core, the app exposes a group invite link; participants opening `?join=<tripInviteToken>` see a join screen, enter name and age, join the family conversation, and approve GPS separately from their own device.
 - Mobile main-screen cleanup added: the app no longer seeds invented family chat examples, filters retired seeded chat rows from storage, and keeps participant invite, usage, shortcuts, and GPS management behind the hamburger menu on mobile.
-- Default map focus now uses the manager's live GPS location: the map prioritizes trip points within a 10 km radius and falls back to the nearest points if none are inside that radius.
+- Default map focus now uses the manager's live GPS location: the map prioritizes trip points within a 40 km radius and falls back to the nearest points if none are inside that radius.
+- Mobile core UX correction added on 2026-07-01: the chat is now prioritized over the map on phones, Google Maps defaults to a local 40 km context instead of fitting the whole trip, and the main map surface exposes a clear Google Maps handoff button for the full native map experience.
 - Current-location access improved on 2026-07-01: the map top bar now exposes a visible "מיקום נוכחי" action, so live location is not hidden inside the hamburger or secondary map layer.
 - Google Maps walking shortcut added on 2026-07-01: selected trip points can now open Google Maps in walking mode, keeping compass and turn-by-turn walking guidance inside Google Maps instead of recreating it in Kodi.
 - Public smoke passed on 2026-07-01 after the Google Maps walking shortcut deploy: `/api/health` and `/api/navigation/links` confirmed `googleMapsWalking` with `travelmode=walking` on Render.

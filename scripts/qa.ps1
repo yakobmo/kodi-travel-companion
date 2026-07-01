@@ -840,6 +840,19 @@ if (
 }
 
 if (
+  -not $appSource.Contains("DEFAULT_NEARBY_MAP_RADIUS_KM = 40") -or
+  -not $appSource.Contains("DEFAULT_VISIBLE_PLACE_LIMIT = 40") -or
+  -not $appSource.Contains("getApproximateRadiusCorners") -or
+  -not $appSource.Contains("visiblePlaces.filter((place) => typeof place.lat === `"number`"") -or
+  -not $appSource.Contains("openCurrentMapInGoogleMaps") -or
+  -not $appSource.Contains("open-google-maps-button") -or
+  -not $styleSource.Contains("grid-template-rows: clamp(170px, 32dvh, 260px) minmax(0, 1fr)") -or
+  -not $styleSource.Contains(".open-google-maps-button")
+) {
+  throw "Mobile core UX must prioritize chat, default the map to a 40 km local context, and expose a direct Google Maps handoff."
+}
+
+if (
   -not $appSource.Contains("trip-places-menu") -or
   -not $appSource.Contains("trip-place-list") -or
   -not $appSource.Contains("menuPlaces.map") -or
