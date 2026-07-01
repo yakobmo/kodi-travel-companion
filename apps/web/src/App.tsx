@@ -586,6 +586,10 @@ function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPla
   return "אני כאן בשיחה. קראתי את ההודעות האחרונות, ואם תרצו אעזור למצוא מכנה משותף ולהפוך את זה להחלטה פשוטה: המלצה, הסבר וניווט.";
 }
 
+function shouldWakeKodi(text: string) {
+  return /\b(kodi|codex)\b/i.test(text) || text.includes("קודי") || text.includes("קודקס");
+}
+
 function getMapPosition(index: number, total: number) {
   const angle = total > 0 ? (index / total) * Math.PI * 2 : 0;
   const radius = 20 + (index % 3) * 7;
@@ -1863,12 +1867,12 @@ export function App() {
     }
 
     const nextMessages = [...messages, { author: activeMember.name, text }];
-    const shouldWakeKodi = text.includes("קודי");
+    const shouldAskKodi = shouldWakeKodi(text);
 
     setDraft("");
     setMessages(nextMessages);
 
-    if (shouldWakeKodi) {
+    if (shouldAskKodi) {
       const reply = await requestKodiReply(text, nextMessages);
       setMessages((currentMessages) => [...currentMessages, { author: "קודי", text: reply }]);
     }
@@ -1891,7 +1895,7 @@ export function App() {
       createdAt: new Date().toISOString()
     };
     const nextMessages = [...messages, localUserMessage];
-    const shouldWakeKodi = text.includes("קודי") || text.includes("׳§׳•׳“׳™");
+    const shouldAskKodi = shouldWakeKodi(text);
 
     setDraft("");
     setMessages(nextMessages);
@@ -1901,7 +1905,7 @@ export function App() {
       currentMessages.map((message) => (message.id === localUserMessage.id ? savedUserMessage : message))
     );
 
-    if (shouldWakeKodi) {
+    if (shouldAskKodi) {
       const reply = await requestKodiReply(text, nextMessages);
       const localKodiMessage: ChatMessage = {
         id: `local-kodi-${Date.now()}`,

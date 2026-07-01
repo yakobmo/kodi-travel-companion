@@ -502,6 +502,15 @@ if (-not $appSource.Contains("kodi-presence")) {
   throw "Web app must show Kodi as a background presence, not a separate CTA."
 }
 
+if (
+  -not $appSource.Contains("function shouldWakeKodi") -or
+  -not $appSource.Contains("shouldAskKodi = shouldWakeKodi(text)") -or
+  -not $appSource.Contains("text.includes") -or
+  -not $appSource.Contains("kodi|codex")
+) {
+  throw "Web group chat must wake Kodi only when the family explicitly addresses Kodi."
+}
+
 if (-not $appSource.Contains("visibleMembers")) {
   throw "Web app must filter visible member locations by sharing consent."
 }
