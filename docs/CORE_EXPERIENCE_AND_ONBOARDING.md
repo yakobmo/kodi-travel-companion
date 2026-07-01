@@ -65,6 +65,19 @@ When the user's wording points to here/near me/current location/here-and-now, th
 
 Kodi should be able to switch back naturally when the user refers again to the planned trip, for example "tomorrow in Pelion" or "the hotel in Zagori".
 
+## Response Speed Principle
+
+Kodi should feel conversational and quick. Not every message should wait for the full AI reasoning path.
+
+For simple trip-context questions such as "where do we sleep tonight and what taverna is near the hotel?", the backend should answer through a fast lane:
+
+- resolve the current/future lodging from the trip timeline, active route, or group destination
+- use Google Places only for the nearby external lookup
+- skip the full OpenAI agent when the answer is already clear
+- return latency metadata so QA can catch slow regressions
+
+The full AI agent remains the right path for open-ended reasoning, research, explanations, ambiguity, planning, and questions that require synthesizing many sources.
+
 ## UX Principle
 
 The user should see one clear next action at a time.

@@ -66,6 +66,7 @@ const GOOGLE_PLACES_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:s
 const GOOGLE_PLACES_FIELD_MASK =
   "places.id,places.displayName,places.formattedAddress,places.googleMapsUri,places.location,places.types";
 const DEFAULT_RADIUS_METERS = 5000;
+const DEFAULT_TIMEOUT_MS = 2500;
 
 function getGoogleMapsApiKey() {
   return process.env.GOOGLE_MAPS_API_KEY?.trim() ?? "";
@@ -77,6 +78,16 @@ function normalizeRadiusMeters(value: number | undefined) {
   }
 
   return Math.min(Math.max(Math.round(value), 100), 50000);
+}
+
+function normalizeTimeoutMs(value: string | undefined) {
+  const timeoutMs = Number(value);
+
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return DEFAULT_TIMEOUT_MS;
+  }
+
+  return Math.min(Math.max(Math.round(timeoutMs), 800), 8000);
 }
 
 function buildTextSearchBody(input: GooglePlacesTextSearchInput, radiusMeters: number) {
@@ -149,15 +160,38 @@ export async function searchGooglePlacesText(
     };
   }
 
-  const response = await fetch(GOOGLE_PLACES_TEXT_SEARCH_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": GOOGLE_PLACES_FIELD_MASK
-    },
-    body: JSON.stringify(buildTextSearchBody(input, radiusMeters))
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), normalizeTimeoutMs(process.env.GOOGLE_PLACES_TIMEOUT_MS));
+  let response: Response;
+
+  try {
+    response = await fetch(GOOGLE_PLACES_TEXT_SEARCH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": GOOGLE_PLACES_FIELD_MASK
+      },
+      body: JSON.stringify(buildTextSearchBody(input, radiusMeters)),
+      signal: controller.signal
+    });
+  } catch (error) {
+    return {
+      ...base,
+      status: "google_error",
+      configured: true,
+      error: {
+        code: error instanceof Error && error.name === "AbortError" ? "google_places_timeout" : "google_places_fetch_error",
+        message:
+          error instanceof Error && error.name === "AbortError"
+            ? "Google Places Text Search timed out before Kodi could use it."
+            : "Google Places Text Search request failed before a response was returned."
+      }
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+
   const payload = (await response.json()) as GooglePlacesApiResponse;
 
   if (!response.ok) {

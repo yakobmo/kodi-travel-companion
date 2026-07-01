@@ -8,7 +8,7 @@ import {
   type TripUsageGateDecision
 } from "./billing/tripUsagePool.js";
 import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
-import { searchGooglePlacesText } from "./google/placesSearch.js";
+import { searchGooglePlacesText, type GooglePlacesTextSearchResult } from "./google/placesSearch.js";
 import { estimateGoogleRoute, type GoogleRouteTravelMode } from "./google/routes.js";
 import { buildDemoGoogleSourcePreview, getGoogleSourceReadiness } from "./google/sourceAdapter.js";
 import {
@@ -240,6 +240,24 @@ function buildExternalPlacesQuery(message: string) {
     return "school nearby";
   }
 
+  if (
+    includesAnyTerm(message.toLowerCase(), [
+      "restaurant",
+      "taverna",
+      "food",
+      "dinner",
+      "מסעדה",
+      "טברנה",
+      "טברנות",
+      "אוכל",
+      "לאכול",
+      "ארוחה",
+      "קפה"
+    ])
+  ) {
+    return "taverna restaurant near hotel";
+  }
+
   if (normalizedMessage.length >= 3) {
     return `${normalizedMessage} nearby`;
   }
@@ -261,6 +279,99 @@ function buildExternalPlacesQuery(message: string) {
   }
 
   return message;
+}
+
+function shouldUseFastTripAnswer(message: string) {
+  const normalizedMessage = message.toLowerCase();
+  const asksLodging = includesAnyTerm(normalizedMessage, [
+    "hotel",
+    "lodging",
+    "tonight",
+    "מלון",
+    "בית מלון",
+    "לינה",
+    "לישון",
+    "ישנים",
+    "הלילה"
+  ]);
+  const asksFood = includesAnyTerm(normalizedMessage, [
+    "restaurant",
+    "taverna",
+    "food",
+    "dinner",
+    "מסעדה",
+    "טברנה",
+    "טברנות",
+    "אוכל",
+    "לאכול",
+    "ארוחה"
+  ]);
+
+  return asksLodging && asksFood;
+}
+
+function getFastTripLodging(
+  tripState: ReturnType<typeof buildDemoTripState>,
+  timelineReference: TripTimelineResolution
+) {
+  if (timelineReference.confidence !== "low" && timelineReference.segment?.lodging) {
+    return timelineReference.segment.lodging;
+  }
+
+  const activeStop = tripState.groupRoute?.stops[tripState.groupRoute.activeStopIndex];
+  if (activeStop) {
+    const activeStopPlace = tripState.places.find((place) => place.id === activeStop.placeId);
+    if (activeStopPlace?.type === "lodging") {
+      return activeStopPlace;
+    }
+  }
+
+  const destinationPlace = tripState.groupDestination?.placeId
+    ? tripState.places.find((place) => place.id === tripState.groupDestination?.placeId)
+    : undefined;
+  if (destinationPlace?.type === "lodging") {
+    return destinationPlace;
+  }
+
+  return buildTripTimelineFromGoogleMapOrder(tripState)[0]?.lodging ?? tripState.places.find((place) => place.type === "lodging");
+}
+
+function formatFastPlaceLine(place: GooglePlacesTextSearchResult["places"][number]) {
+  const title = place.displayName ?? place.formattedAddress ?? "מקום קרוב";
+  const address = place.formattedAddress ? `, ${place.formattedAddress}` : "";
+  const mapsLink = place.googleMapsUri ? `\nפתיחה בגוגל מפות: ${place.googleMapsUri}` : "";
+
+  return `${title}${address}${mapsLink}`;
+}
+
+function buildFastTripAnswer(input: {
+  message: string;
+  tripState: ReturnType<typeof buildDemoTripState>;
+  timelineReference: TripTimelineResolution;
+  externalPlacesSearch?: GooglePlacesTextSearchResult;
+}) {
+  if (!shouldUseFastTripAnswer(input.message)) {
+    return undefined;
+  }
+
+  const lodging = getFastTripLodging(input.tripState, input.timelineReference);
+  if (!lodging) {
+    return undefined;
+  }
+
+  const nearbyFood = input.externalPlacesSearch?.places.find((place) => place.displayName || place.formattedAddress);
+  const lodgingAddress = lodging.address ? `\nכתובת: ${lodging.address}` : "";
+  const foodText =
+    input.externalPlacesSearch?.status === "ready" && nearbyFood
+      ? `\nטברנה/מסעדה קרובה להתחיל ממנה: ${formatFastPlaceLine(nearbyFood)}`
+      : "\nחיפוש טברנה חיה דרך Google Places לא החזיר תוצאה מהירה כרגע, אבל המלון הוא העוגן הנכון לחיפוש סביבו.";
+
+  return {
+    text: `הלינה הלילה לפי ציר הטיול היא ${lodging.name}.${lodgingAddress}${foodText}\nאם תרצה, כתוב "שים בוויז" ואפתח ניווט למלון או למקום שבחרת.`,
+    intent: "trip_fast_answer",
+    recommendedPlaceId: lodging.id,
+    source: "rules" as const
+  };
 }
 
 function shouldReverseGeocodeCurrentLocation(message: string) {
@@ -1520,6 +1631,7 @@ app.post("/api/trips/demo/agent-actions/authorize", (req, res) => {
 });
 
 app.post("/api/agent/message", async (req, res) => {
+  const agentStartedAt = Date.now();
   const { message, member, recentMessages, context, tripGroupId } = req.body ?? {};
 
   if (typeof message !== "string" || message.trim().length === 0) {
@@ -1583,6 +1695,49 @@ app.post("/api/agent/message", async (req, res) => {
       actorName: String(normalizedMember.displayName),
       source: "kodi_agent"
     });
+  }
+  const fastTripAnswer = buildFastTripAnswer({
+    message,
+    tripState,
+    timelineReference,
+    externalPlacesSearch
+  });
+  if (fastTripAnswer) {
+    const permissionPolicy =
+      context && typeof context === "object"
+        ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
+            .permissionPolicy
+        : undefined;
+
+    res.json({
+      ...fastTripAnswer,
+      agentRuntime: {
+        openAiStatus: "skipped_fast_lane",
+        openAiModel: undefined,
+        fallbackUsed: false,
+        fastLane: true,
+        latencyMs: Date.now() - agentStartedAt
+      },
+      contextSummary: buildAgentContextSummary({
+        tripGroupId,
+        member: {
+          id: normalizedMember.id,
+          displayName: normalizedMember.displayName,
+          role: normalizedMember.role
+        },
+        recentMessages,
+        tripState,
+        externalPlacesSearchStatus: externalPlacesSearch?.status,
+        timelineReferenceConfidence: hereAndNowContext ? "live_location" : timelineReference.confidence,
+        timelineReferenceReason: hereAndNowContext
+          ? "Here-and-now request: live/current location takes precedence over planned trip timeline."
+          : timelineReference.reason,
+        timelineSegmentTitle: hereAndNowContext ? undefined : timelineReference.segment?.title,
+        usageGateResults: [placesUsageGate].filter((item): item is TripUsageGateDecision => Boolean(item)),
+        permissionPolicy
+      })
+    });
+    return;
   }
   const reverseGeocodedLocation =
     requestCurrentLocation && shouldReverseGeocodeCurrentLocation(message)
@@ -1671,7 +1826,9 @@ app.post("/api/agent/message", async (req, res) => {
     agentRuntime: {
       openAiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
       openAiModel: openAiReply?.model,
-      fallbackUsed: reply.source === "rules"
+      fallbackUsed: reply.source === "rules",
+      fastLane: false,
+      latencyMs: Date.now() - agentStartedAt
     },
     contextSummary: buildAgentContextSummary({
       tripGroupId,

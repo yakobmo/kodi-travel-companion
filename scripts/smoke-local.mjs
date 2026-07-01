@@ -435,6 +435,20 @@ try {
     )
   );
 
+  const fastTripAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
+    data: {
+      member: { id: "mom", displayName: "מנהל הטיול", role: "owner", ageGroup: "adult" },
+      message: "קודי, איפה ישנים הלילה ואיזה טברנה קרובה יש לבית מלון?",
+      recentMessages: []
+    }
+  });
+  const fastTripAgentPayload = await fastTripAgentResponse.json();
+  assertCheck("agent fast trip answer ok", fastTripAgentResponse.ok());
+  assertCheck("agent fast trip answer lane", fastTripAgentPayload.agentRuntime?.fastLane === true);
+  assertCheck("agent fast trip answer skips openai", fastTripAgentPayload.agentRuntime?.openAiStatus === "skipped_fast_lane");
+  assertCheck("agent fast trip answer timed", typeof fastTripAgentPayload.agentRuntime?.latencyMs === "number");
+  assertCheck("agent fast trip answer text", fastTripAgentPayload.text?.includes("הלינה הלילה"));
+
   const futurePelionAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
       member: { id: "dad", displayName: "Dad", role: "owner", ageGroup: "adult" },

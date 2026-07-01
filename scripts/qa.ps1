@@ -928,6 +928,14 @@ if (
   throw "Kodi agent endpoint must connect eligible nearby-needs questions to the guarded Google Places read path."
 }
 
+if (
+  -not $serverSource.Contains("buildFastTripAnswer") -or
+  -not $serverSource.Contains("skipped_fast_lane") -or
+  -not $serverSource.Contains("latencyMs")
+) {
+  throw "Kodi agent endpoint must keep a fast lane for simple trip-context answers before invoking the full AI agent."
+}
+
 if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {
   throw "API server is missing demo members endpoints."
 }
