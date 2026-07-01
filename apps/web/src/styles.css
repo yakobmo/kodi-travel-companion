@@ -477,6 +477,36 @@ input {
   color: #16211f;
 }
 
+.current-location-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border: 1px solid #b7ded2;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #edf7f3;
+  color: #0f6f5f;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.current-location-button.active {
+  background: #0f6f5f;
+  color: #ffffff;
+}
+
+.current-location-button:disabled {
+  opacity: 0.72;
+}
+
+.current-location-button:focus-visible {
+  outline: 2px solid #16211f;
+  outline-offset: 2px;
+}
+
 .map-placeholder {
   position: absolute;
   inset: 0;
@@ -1642,6 +1672,24 @@ input {
 
   .map-surface {
     min-height: 58vh;
+  }
+
+  .top-bar {
+    width: 100%;
+  }
+
+  .top-bar > div {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .current-location-button {
+    width: 40px;
+    padding: 0;
+  }
+
+  .current-location-button span {
+    display: none;
   }
 
   .place-marker,

@@ -2688,6 +2688,17 @@ export function App() {
               {summary.total} נקודות · {demoTripSummary.groupName}
             </p>
           </div>
+          <button
+            aria-label="מיקום נוכחי"
+            className={locationState === "enabled" || currentLocation ? "current-location-button active" : "current-location-button"}
+            disabled={locationState === "requesting"}
+            onClick={enablePersonalGps}
+            title={currentLocation ? "עדכן מיקום נוכחי" : "הפעל מיקום נוכחי"}
+            type="button"
+          >
+            <Navigation size={17} aria-hidden="true" />
+            <span>{locationState === "requesting" ? "מאתר..." : "מיקום נוכחי"}</span>
+          </button>
         </div>
 
         <div className={`map-placeholder ${googleMapsApiKey ? "google-map-active" : "internal-map-fallback"}`}>

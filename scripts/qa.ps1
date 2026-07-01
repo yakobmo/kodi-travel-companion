@@ -669,12 +669,18 @@ if (-not $appSource.Contains("visibleMembers")) {
 
 if (
   -not $appSource.Contains("enablePersonalGps") -or
+  -not $appSource.Contains("current-location-button") -or
+  -not $appSource.Contains("Navigation size={17}") -or
   -not $appSource.Contains("navigator.geolocation") -or
   -not $appSource.Contains("watchPosition") -or
   -not $appSource.Contains("clearWatch") -or
   -not $appSource.Contains("locationWatchIdRef")
 ) {
-  throw "Web app is missing explicit live location tracking with cleanup."
+  throw "Web app is missing a visible current-location action with explicit live location tracking and cleanup."
+}
+
+if (-not $styleSource.Contains(".current-location-button") -or -not $styleSource.Contains(".current-location-button.active")) {
+  throw "Web app must style the visible current-location action in the map top bar."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/members/") -or -not $appSource.Contains("locationSyncState")) {
