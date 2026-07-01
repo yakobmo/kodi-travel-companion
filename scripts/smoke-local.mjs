@@ -210,9 +210,9 @@ try {
   await page.getByText("הלב מוכן").waitFor();
   await page.getByRole("button", { name: "כניסה למפה ולשיחה" }).click();
 
-  await page.getByText("מפה חיה").waitFor();
+  await page.locator(".map-surface").waitFor();
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.getByText("מפה חיה").waitFor();
+  await page.locator(".map-surface").waitFor();
   const returningUserBody = await page.locator("body").innerText();
   assertCheck("returning user skips completed onboarding", !returningUserBody.includes("שלום, אני קודי"));
 
@@ -517,6 +517,13 @@ try {
   assertCheck("qa system messages stay hidden", (await page.getByText("הודעה שנכנסה מבחוץ").count()) === 0);
 
   const wazeButton = menu.getByRole("button", { name: "פתח ב-Waze" });
+  await input.fill("https://waze.com/ul?ll=31.25297,34.79146&navigate=yes");
+  await page.locator(".composer button[type='submit']").click();
+  const chatWazeLink = page.getByRole("link", { name: "פתח ב-Waze" }).last();
+  await chatWazeLink.waitFor();
+  const chatWazeHref = await chatWazeLink.getAttribute("href");
+  assertCheck("chat waze URL becomes tappable", chatWazeHref?.includes("waze.com/ul?ll=31.25297,34.79146"));
+
   const disabled = await wazeButton.isDisabled();
   await menu.getByRole("button", { name: "בקש להפוך ליעד קבוצתי" }).click();
   await menu.getByText("אושר על ידי מנהל/ת").waitFor();

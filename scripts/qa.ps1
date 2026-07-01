@@ -500,6 +500,24 @@ if (-not $appSource.Contains("openSelectedPlaceInWaze")) {
   throw "Web app is missing the Waze action."
 }
 
+if (
+  -not $appSource.Contains("renderMessageText") -or
+  -not $appSource.Contains("messageUrlPattern") -or
+  -not $appSource.Contains("waze.com/ul") -or
+  -not $appSource.Contains("google.com/maps") -or
+  -not $appSource.Contains('target="_blank"')
+) {
+  throw "Chat messages must render Waze and Google Maps URLs as tappable links."
+}
+
+if ($appSource.Contains("dangerouslySetInnerHTML")) {
+  throw "Chat link rendering must not use dangerouslySetInnerHTML."
+}
+
+if (-not $styleSource.Contains(".message-link") -or -not $styleSource.Contains(".message-link.waze-link")) {
+  throw "Chat navigation links must have visible tappable styling."
+}
+
 if (-not $appSource.Contains("/api/trips/demo/agent-actions/authorize") -or -not $appSource.Contains("requestGroupDestinationApproval")) {
   throw "Web app must request server authorization before operational group actions."
 }

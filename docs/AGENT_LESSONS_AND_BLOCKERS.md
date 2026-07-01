@@ -279,6 +279,29 @@ Decision:
 - If Google returns `PERMISSION_DENIED`, ask the user for one manual action: enable the named API in Google Cloud.
 - Keep endpoint responses credential-safe and report Google status without exposing the key.
 
+### 13. Chat Navigation Must Be Tappable, Not Plain Text
+
+What happened:
+
+Kodi returned a valid Waze URL in the chat, but the mobile UI rendered it as plain text. The user could see the URL but could not tap it.
+
+Why it happened:
+
+The chat component rendered `message.text` directly. Navigation links created inside agent text were not converted into anchors or buttons.
+
+Decision:
+
+- Chat rendering must identify Waze and Google Maps URLs and render them as safe tappable links.
+- Use React nodes, not `dangerouslySetInnerHTML`.
+- Repository QA must check the link renderer and visible `.message-link` styling.
+- Browser smoke for this path should assert `a.message-link.waze-link` with a real Waze `href`.
+
+Current blocker note:
+
+- Full `scripts/smoke-local.mjs` still currently fails before the Waze assertion on the onboarding-to-map transition in local preview.
+- The Waze chat fix was verified with a focused browser smoke that sends a Waze URL and confirms the generated anchor.
+- Next QA cleanup should make the full smoke independent of fragile Hebrew text and onboarding copy.
+
 ## Current Operating Checklist
 
 Before coding:

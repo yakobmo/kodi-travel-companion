@@ -1,5 +1,5 @@
 import { CheckCircle2, ExternalLink, MapPin, Menu, Mic, Navigation, Radio, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { demoMembers, demoMessages, demoPlaces, demoTripSummary } from "./demoTrip.js";
 
 type BrowserSpeechRecognition = {
@@ -585,6 +585,77 @@ function buildExternalAppShortcuts(place?: TripPlace) {
       href: `https://www.airbnb.com/s/${query}/homes`
     }
   ];
+}
+
+const messageUrlPattern = /(https?:\/\/[^\s<>"']+|waze:\/\/[^\s<>"']+)/g;
+
+function splitTrailingUrlPunctuation(value: string) {
+  let url = value;
+  let suffix = "";
+
+  while (/[.,;:!?)\]]$/.test(url)) {
+    suffix = `${url.slice(-1)}${suffix}`;
+    url = url.slice(0, -1);
+  }
+
+  return { suffix, url };
+}
+
+function getMessageLinkLabel(url: string) {
+  if (url.includes("waze.com/ul") || url.startsWith("waze://")) {
+    return "פתח ב-Waze";
+  }
+
+  if (url.includes("google.com/maps") || url.includes("maps.app.goo.gl")) {
+    return "פתח ב-Google Maps";
+  }
+
+  return "פתח קישור";
+}
+
+function getMessageLinkClass(url: string) {
+  if (url.includes("waze.com/ul") || url.startsWith("waze://")) {
+    return "message-link waze-link";
+  }
+
+  if (url.includes("google.com/maps") || url.includes("maps.app.goo.gl")) {
+    return "message-link maps-link";
+  }
+
+  return "message-link";
+}
+
+function renderMessageText(text: string) {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(messageUrlPattern)) {
+    const rawMatch = match[0];
+    const matchIndex = match.index ?? 0;
+    const { suffix, url } = splitTrailingUrlPunctuation(rawMatch);
+
+    if (matchIndex > lastIndex) {
+      parts.push(text.slice(lastIndex, matchIndex));
+    }
+
+    parts.push(
+      <a className={getMessageLinkClass(url)} href={url} key={`${url}-${matchIndex}`} rel="noopener noreferrer" target="_blank">
+        {getMessageLinkLabel(url)}
+      </a>
+    );
+
+    if (suffix) {
+      parts.push(suffix);
+    }
+
+    lastIndex = matchIndex + rawMatch.length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
 }
 
 function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPlace) {
@@ -2886,7 +2957,7 @@ export function App() {
           {messages.map((message, index) => (
             <article className={message.author === "קודי" ? "message kodi" : "message"} key={`${message.author}-${index}-${message.text}`}>
               <strong>{message.author}</strong>
-              <p>{message.text}</p>
+              <p>{renderMessageText(message.text)}</p>
             </article>
           ))}
         </div>

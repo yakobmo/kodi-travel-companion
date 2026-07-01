@@ -1422,6 +1422,33 @@ input {
   line-height: 1.45;
 }
 
+.message-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin: 4px 2px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #0f6f5f;
+  color: #ffffff;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.message-link.waze-link {
+  background: #1f7fbf;
+}
+
+.message-link.maps-link {
+  background: #0f6f5f;
+}
+
+.message-link:focus-visible {
+  outline: 2px solid #16211f;
+  outline-offset: 2px;
+}
+
 .empty-chat-state {
   display: grid;
   gap: 6px;
