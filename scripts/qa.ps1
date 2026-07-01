@@ -310,6 +310,14 @@ if (-not $demoTripSource.Contains("locationSharing")) {
 
 $appSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
+if (
+  -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
+  -not $appSource.Contains("kodiWasRecentlyActive") -or
+  -not $appSource.Contains("shouldWakeKodi(text, messages)")
+) {
+  throw "Web app must keep Kodi awake for natural follow-up questions after Kodi has already joined the conversation."
+}
+
 if (-not $appSource.Contains("/api/trips/demo/state")) {
   throw "Web app is not connected to the unified trip state API."
 }
@@ -519,11 +527,12 @@ if (
 
 if (
   -not $appSource.Contains("function shouldWakeKodi") -or
-  -not $appSource.Contains("shouldAskKodi = shouldWakeKodi(text)") -or
+  -not $appSource.Contains("shouldAskKodi = shouldWakeKodi(text, messages)") -or
   -not $appSource.Contains("text.includes") -or
-  -not $appSource.Contains("kodi|codex")
+  -not $appSource.Contains("kodi|codex") -or
+  -not $appSource.Contains("kodiWasRecentlyActive")
 ) {
-  throw "Web group chat must wake Kodi only when the family explicitly addresses Kodi."
+  throw "Web group chat must wake Kodi when explicitly addressed or when a recent Kodi exchange has an obvious follow-up question."
 }
 
 if (-not $appSource.Contains("visibleMembers")) {

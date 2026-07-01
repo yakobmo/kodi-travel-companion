@@ -593,8 +593,32 @@ function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPla
   return "אני כאן בשיחה. קראתי את ההודעות האחרונות, ואם תרצו אעזור למצוא מכנה משותף ולהפוך את זה להחלטה פשוטה: המלצה, הסבר וניווט.";
 }
 
-function shouldWakeKodi(text: string) {
-  return /\b(kodi|codex)\b/i.test(text) || text.includes("קודי") || text.includes("קודקס");
+function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
+  const explicitCall = /\b(kodi|codex)\b/i.test(text) || text.includes("קודי") || text.includes("קודקס");
+  if (explicitCall) {
+    return true;
+  }
+
+  const recentMessages = currentMessages.slice(-4);
+  const kodiWasRecentlyActive = recentMessages.some((message) => message.author === "קודי" || message.source === "agent");
+  if (!kodiWasRecentlyActive) {
+    return false;
+  }
+
+  return (
+    text.includes("?") ||
+    text.includes("אחרי") ||
+    text.includes("לפני") ||
+    text.includes("נחיתה") ||
+    text.includes("יעד") ||
+    text.includes("מסלול") ||
+    text.includes("מלון") ||
+    text.includes("אתונה") ||
+    text.includes("צפון יוון") ||
+    text.includes("פיליון") ||
+    text.includes("זגוריה") ||
+    text.includes("צומרקה")
+  );
 }
 
 function getMapPosition(index: number, total: number) {
@@ -1921,7 +1945,7 @@ export function App() {
     }
 
     const nextMessages = [...messages, { author: activeMember.name, text }];
-    const shouldAskKodi = shouldWakeKodi(text);
+    const shouldAskKodi = shouldWakeKodi(text, messages);
 
     setDraft("");
     setMessages(nextMessages);
@@ -1949,7 +1973,7 @@ export function App() {
       createdAt: new Date().toISOString()
     };
     const nextMessages = [...messages, localUserMessage];
-    const shouldAskKodi = shouldWakeKodi(text);
+    const shouldAskKodi = shouldWakeKodi(text, messages);
 
     setDraft("");
     setMessages(nextMessages);
