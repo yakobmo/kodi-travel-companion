@@ -1319,13 +1319,9 @@ input {
   gap: 6px;
 }
 
-.map-surface > .places-strip,
-.map-surface > .action-card,
 .map-surface > .map-placeholder > .map-provider-note,
 .map-surface > .map-placeholder > .privacy-note,
-.map-surface > .map-placeholder > .personal-location-card,
-.chat-sheet > .event-activity,
-.chat-sheet > .usage-overview {
+.map-surface > .map-placeholder > .personal-location-card {
   display: none;
 }
 

@@ -305,6 +305,7 @@ if (-not $demoTripSource.Contains("locationSharing")) {
 }
 
 $appSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
+$styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (-not $appSource.Contains("/api/trips/demo/state")) {
   throw "Web app is not connected to the unified trip state API."
 }
@@ -500,6 +501,16 @@ if (-not $appSource.Contains("buildKodiFallbackReply")) {
 
 if (-not $appSource.Contains("kodi-presence")) {
   throw "Web app must show Kodi as a background presence, not a separate CTA."
+}
+
+if (
+  $appSource.Contains('className="action-card"') -or
+  $appSource.Contains('className="places-strip"') -or
+  $styleSource.Contains(".map-surface > .action-card") -or
+  $styleSource.Contains(".chat-sheet > .event-activity") -or
+  $styleSource.Contains(".chat-sheet > .usage-overview")
+) {
+  throw "The primary app surface must stay clean: Google Maps area plus family/Kodi chat only; secondary controls belong in the hamburger menu."
 }
 
 if (

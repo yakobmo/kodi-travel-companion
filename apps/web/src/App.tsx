@@ -2467,27 +2467,23 @@ export function App() {
           </div>
         </div>
 
-        <section className="places-strip" aria-label="נקודות מהטיול">
-          {visiblePlaces.map((place) => (
-            <article
-              className={place.id === selectedPlace?.id ? "selected" : ""}
-              key={place.id}
-              onClick={() => setSelectedPlaceId(place.id)}
-            >
-              <strong>{place.name}</strong>
-              <span>{getPlaceTypeLabel(place.type)}</span>
-              <p>{place.note ?? place.address ?? "נקודה מיובאת ממפת הטיול"}</p>
-            </article>
-          ))}
-        </section>
+        <div className="kodi-presence" aria-label="נוכחות קודי">
+          קודי ברקע · מתעורר כשקוראים לו
+        </div>
+      </section>
 
+      <aside className="secondary-menu" aria-label="ניהול הטיול">
+        <div className="secondary-menu-header">
+          <strong>ניהול</strong>
+          <button onClick={() => setSecondaryMenuOpen(false)} type="button">
+            סגור
+          </button>
+        </div>
         {selectedPlace ? (
-          <section className="action-card" aria-label="פעולה לנקודה נבחרת">
-            <div>
-              <span>{getPlaceTypeLabel(selectedPlace.type)}</span>
-              <strong>{selectedPlace.name}</strong>
-              <p>{canNavigate ? "אפשר לפתוח ניווט ישיר לנקודה." : "לנקודה הזו חסרות קואורדינטות."}</p>
-            </div>
+          <section className="menu-block selected-place-menu" aria-label="פעולות לנקודה נבחרת">
+            <span>{getPlaceTypeLabel(selectedPlace.type)}</span>
+            <strong>{selectedPlace.name}</strong>
+            <p>{canNavigate ? "ניווט וקבוצת יעד דרך הנקודה שנבחרה במפה." : "לנקודה הזו חסרות קואורדינטות."}</p>
             <button disabled={!canNavigate || navigationState === "opening"} onClick={openSelectedPlaceInWaze} type="button">
               <Navigation size={18} aria-hidden="true" />
               פתח ב-Waze
@@ -2516,13 +2512,6 @@ export function App() {
               <div className="group-destination-card" aria-label="יעד קבוצתי נוכחי">
                 <span>יעד קבוצתי נוכחי</span>
                 <strong>{groupDestination.placeName}</strong>
-                <small className="destination-sync-status">
-                  {destinationRealtimeState === "live"
-                    ? "יעד מסונכרן"
-                    : destinationRealtimeState === "error"
-                      ? "סנכרון יעד ממתין לחיבור"
-                      : "מכין סנכרון יעד"}
-                </small>
                 <small>נקבע על ידי {groupDestination.setByName}</small>
               </div>
             ) : null}
@@ -2532,147 +2521,6 @@ export function App() {
               onClick={requestGroupRouteApproval}
               type="button"
             >
-              <CheckCircle2 size={18} aria-hidden="true" />
-              בנה מסלול קבוצתי קצר
-            </button>
-            <small className="action-approval-status">
-              {routeApprovalState === "approved"
-                ? "מסלול קבוצתי אושר ונשמר."
-                : routeApprovalState === "blocked"
-                  ? "נדרש מנהל/ת כדי ליצור מסלול קבוצתי."
-                  : routeApprovalState === "error"
-                    ? "לא הצלחתי ליצור מסלול כרגע."
-                    : routeApprovalState === "checking"
-                      ? "בודק הרשאה ובונה מסלול..."
-                      : "מסלול קבוצתי דורש אישור מנהל/ת."}
-            </small>
-            {groupRoute ? (
-              <div className="group-route-card" aria-label="מסלול קבוצתי פעיל">
-                <span>מסלול קבוצתי פעיל</span>
-                <strong>{groupRoute.title}</strong>
-                <small className="route-sync-status">
-                  {routeRealtimeState === "live"
-                    ? "מסלול מסונכרן"
-                    : routeRealtimeState === "error"
-                      ? "סנכרון מסלול ממתין לחיבור"
-                      : "מכין סנכרון מסלול"}
-                </small>
-                {groupRoute.status === "completed" ? <p className="route-completed-note">המסלול הושלם. אפשר ליצור מסלול חדש כשצריך.</p> : null}
-                <p>הסדר מתחיל בנקודה שנבחרה וממשיך לנקודות הקרובות ברשימת הטיול. ETA מדויק יגיע דרך Google Routes.</p>
-                <ol>
-                  {groupRoute.stops.map((stop, index) => (
-                    <li
-                      className={`${index === activeRouteStopIndex ? "active-route-stop" : ""} ${
-                        groupRoute.completedStopIds.includes(stop.placeId) ? "completed-route-stop" : ""
-                      }`}
-                      key={stop.placeId}
-                    >
-                      <button onClick={() => setActiveRouteStopIndex(index)} type="button">
-                        {groupRoute.completedStopIds.includes(stop.placeId) ? "הושלם · " : index === activeRouteStopIndex ? "עכשיו · " : ""}
-                        {stop.placeName}
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-                <button
-                  className="secondary-action route-navigation-action"
-                  disabled={navigationState === "opening" || groupRoute.status === "completed"}
-                  onClick={openActiveRouteStopInWaze}
-                  type="button"
-                >
-                  <Navigation size={18} aria-hidden="true" />
-                  פתח תחנה פעילה ב-Waze
-                </button>
-                <button
-                  className="secondary-action route-navigation-action"
-                  disabled={routeApprovalState === "checking" || groupRoute.status === "completed"}
-                  onClick={completeActiveRouteStop}
-                  type="button"
-                >
-                  <CheckCircle2 size={18} aria-hidden="true" />
-                  סמן תחנה כהושלמה
-                </button>
-                <small>נוצר על ידי {groupRoute.createdByName}</small>
-              </div>
-            ) : null}
-            <div className="external-shortcuts" aria-label="קיצורי אפליקציות חיצוניות">
-              {externalShortcuts.map((shortcut) => (
-                <a href={shortcut.href} key={shortcut.label} rel="noreferrer" target="_blank">
-                  <ExternalLink size={14} aria-hidden="true" />
-                  {shortcut.label}
-                </a>
-              ))}
-              {userShortcuts.map((shortcut) => (
-                <a href={shortcut.url} key={shortcut.id} rel="noreferrer" target="_blank">
-                  <ExternalLink size={14} aria-hidden="true" />
-                  {shortcut.label}
-                </a>
-              ))}
-            </div>
-            <form className="shortcut-form" onSubmit={addUserShortcut}>
-              <input
-                aria-label="שם קיצור אישי"
-                onChange={(event) => setShortcutLabelDraft(event.target.value)}
-                placeholder="שם קיצור"
-                value={shortcutLabelDraft}
-              />
-              <input
-                aria-label="כתובת קיצור אישי"
-                dir="ltr"
-                onChange={(event) => setShortcutUrlDraft(event.target.value)}
-                placeholder="https://..."
-                value={shortcutUrlDraft}
-              />
-              <button type="submit">הוסף</button>
-            </form>
-            {navigationState === "error" ? <small>לא הצלחתי ליצור קישור ניווט כרגע.</small> : null}
-          </section>
-        ) : null}
-
-        <div className="kodi-presence" aria-label="נוכחות קודי">
-          קודי ברקע · מתעורר כשקוראים לו
-        </div>
-      </section>
-
-      <aside className="secondary-menu" aria-label="ניהול הטיול">
-        <div className="secondary-menu-header">
-          <strong>ניהול</strong>
-          <button onClick={() => setSecondaryMenuOpen(false)} type="button">
-            סגור
-          </button>
-        </div>
-        {selectedPlace ? (
-          <section className="menu-block selected-place-menu" aria-label="פעולות לנקודה נבחרת">
-            <span>{getPlaceTypeLabel(selectedPlace.type)}</span>
-            <strong>{selectedPlace.name}</strong>
-            <p>{canNavigate ? "ניווט וקבוצת יעד דרך הנקודה שנבחרה במפה." : "לנקודה הזו חסרות קואורדינטות."}</p>
-            <button disabled={!canNavigate || navigationState === "opening"} onClick={openSelectedPlaceInWaze} type="button">
-              <Navigation size={18} aria-hidden="true" />
-              פתח ב-Waze
-            </button>
-            <button disabled={actionApprovalState === "checking"} onClick={requestGroupDestinationApproval} type="button">
-              <CheckCircle2 size={18} aria-hidden="true" />
-              בקש להפוך ליעד קבוצתי
-            </button>
-            <small className="action-approval-status">
-              {actionApprovalState === "approved"
-                ? "אושר על ידי מנהל/ת ונשמר בשיחה."
-                : actionApprovalState === "blocked"
-                  ? "נדרש מנהל/ת כדי לשנות יעד קבוצתי."
-                  : actionApprovalState === "error"
-                    ? "לא הצלחתי לבדוק הרשאה כרגע."
-                    : actionApprovalState === "checking"
-                      ? "בודק הרשאות מול השרת..."
-                      : "פעולה קבוצתית תיבדק מול הרשאות השרת."}
-            </small>
-            {groupDestination ? (
-              <div className="group-destination-card" aria-label="יעד קבוצתי נוכחי">
-                <span>יעד קבוצתי נוכחי</span>
-                <strong>{groupDestination.placeName}</strong>
-                <small>נקבע על ידי {groupDestination.setByName}</small>
-              </div>
-            ) : null}
-            <button disabled={routeApprovalState === "checking"} onClick={requestGroupRouteApproval} type="button">
               <CheckCircle2 size={18} aria-hidden="true" />
               בנה מסלול קבוצתי קצר
             </button>
@@ -2781,7 +2629,7 @@ export function App() {
             <button type="submit">הוסף</button>
           </form>
         </section>
-        <section className="menu-block event-menu" aria-label="פעילות חיה בקבוצה">
+        <section className="menu-block event-menu event-activity" aria-label="פעילות חיה בקבוצה">
           <strong>פעילות חיה</strong>
           <p>
             {eventRealtimeState === "live"
@@ -2863,71 +2711,6 @@ export function App() {
           </div>
           <div className="active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
         </header>
-
-        <section className="event-activity" aria-label="פעילות חיה בקבוצה">
-          <div className="event-activity-heading">
-            <strong>פעילות חיה</strong>
-            <span>
-              {eventRealtimeState === "live"
-                ? eventLogDriver === "supabase"
-                  ? "Supabase realtime-ready"
-                  : "סנכרון מקומי"
-                : eventRealtimeState === "error"
-                  ? "ממתין לחיבור"
-                  : "מכין סנכרון"}
-            </span>
-          </div>
-          <div className="event-items">
-            {recentTripEvents.length > 0 ? (
-              recentTripEvents.map((event) => (
-                <article key={event.id}>
-                  <span>{getTripEventLabel(event.eventType)}</span>
-                  <p>{getTripEventText(event)}</p>
-                </article>
-              ))
-            ) : (
-              <article>
-                <span>מערכת</span>
-                <p>קודי מחכה לפעילות ראשונה בקבוצה</p>
-              </article>
-            )}
-          </div>
-        </section>
-
-        <section className="usage-overview" aria-label="בקרת שימושי קודי">
-          <div className="usage-overview-heading">
-            <span>
-              <ShieldCheck size={14} aria-hidden="true" />
-              בקרת שימושי קודי
-            </span>
-            <strong>{usageAuditOverview.totalAuthorizedCalls}</strong>
-          </div>
-          <div className="usage-overview-grid">
-            <span>
-              <strong>{usageAuditOverview.googlePlacesCalls}</strong>
-              Google Places
-            </span>
-            <span>
-              <strong>{usageAuditOverview.googleRoutesCalls}</strong>
-              Google Routes
-            </span>
-            <span>
-              <strong>{usageAuditOverview.kodiAgentCalls}</strong>
-              דרך קודי
-            </span>
-            <span>
-              <strong>{usageAuditOverview.directApiCalls}</strong>
-              API ישיר
-            </span>
-          </div>
-          <p>
-            {usageAuditOverview.totalAuthorizedCalls > 0
-              ? `שימוש אחרון: ${getUsageSourceLabel(usageAuditOverview.lastSource)} / ${
-                  usageAuditOverview.lastCapability ?? "לא ידוע"
-                }`
-              : "עדיין לא נרשמה קריאת Google או AI יקרה בטיול הזה."}
-          </p>
-        </section>
 
         <div className="messages">
           {messages.length === 0 ? (
