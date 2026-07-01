@@ -43,7 +43,7 @@ function getAgentTimeoutMs() {
     return 8_000;
   }
 
-  return Math.min(Math.max(Math.round(value), 3_000), 20_000);
+  return Math.min(Math.max(Math.round(value), 3_000), 8_000);
 }
 
 function isOpenAiTimeout(error: unknown) {
