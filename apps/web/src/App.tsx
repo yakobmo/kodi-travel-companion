@@ -678,6 +678,17 @@ function shouldSpeakKodiReply(text: string) {
   );
 }
 
+function isCurrentLocationQuestion(text: string) {
+  const normalizedText = text.toLowerCase();
+  return (
+    normalizedText.includes("where am i") ||
+    normalizedText.includes("current location") ||
+    ["איפה אני", "איפה אני עכשיו", "מיקום נוכחי", "אתה רואה אותי", "איפה אנחנו"].some((fragment) =>
+      text.includes(fragment)
+    )
+  );
+}
+
 function buildSpeechText(text: string) {
   return text.replace(messageUrlPattern, "").replace(/\s+/g, " ").trim();
 }
@@ -2077,8 +2088,38 @@ export function App() {
     }
   }
 
+  async function getFreshCurrentLocationForAgent(text: string) {
+    if (!isCurrentLocationQuestion(text) || !("geolocation" in navigator)) {
+      return currentLocation;
+    }
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 8000
+        });
+      });
+      const nextLocation: CurrentLocationState = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracyMeters: position.coords.accuracy,
+        updatedAt: new Date().toISOString()
+      };
+
+      setCurrentLocation(nextLocation);
+      setLocationState("enabled");
+      setSetupDraft((draft) => ({ ...draft, locationConsentExplained: true }));
+      return nextLocation;
+    } catch {
+      return currentLocation;
+    }
+  }
+
   async function requestKodiReply(text: string, nextMessages: ChatMessage[]) {
     try {
+      const agentCurrentLocation = await getFreshCurrentLocationForAgent(text);
       const response = await fetch(`${apiBaseUrl}/api/agent/message`, {
         method: "POST",
         headers: {
@@ -2099,7 +2140,9 @@ export function App() {
               operationalChangesRequireAdmin: true,
               canShareLiveLocation: false
             },
-            currentLocation: currentLocation ? { lat: currentLocation.lat, lng: currentLocation.lng } : undefined
+            currentLocation: agentCurrentLocation
+              ? { lat: agentCurrentLocation.lat, lng: agentCurrentLocation.lng }
+              : undefined
           },
           selectedPlace
         })

@@ -261,6 +261,16 @@ if (
 }
 
 if (
+  -not $webAppSource.Contains("isCurrentLocationQuestion") -or
+  -not $webAppSource.Contains("getFreshCurrentLocationForAgent") -or
+  -not $webAppSource.Contains("navigator.geolocation.getCurrentPosition") -or
+  -not $webAppSource.Contains("maximumAge: 0") -or
+  -not $webAppSource.Contains("agentCurrentLocation")
+) {
+  throw "Web app must refresh device GPS before asking Kodi current-location questions."
+}
+
+if (
   -not $webAppSource.Contains("SpeechSynthesisUtterance") -or
   -not $webAppSource.Contains("speakKodiMessage") -or
   -not $webAppSource.Contains("shouldSpeakKodiReply") -or
