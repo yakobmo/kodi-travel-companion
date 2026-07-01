@@ -1617,7 +1617,7 @@ app.post("/api/agent/message", async (req, res) => {
     }
   });
   const openAiReply =
-    openAiUsageGate.allowed && openAiUsageGate.providerConfigured
+    !shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed && openAiUsageGate.providerConfigured
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
           tripState,

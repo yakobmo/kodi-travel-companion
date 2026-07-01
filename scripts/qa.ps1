@@ -205,6 +205,7 @@ if (
   -not $serverSource.Contains("getRequestCurrentLocation") -or
   -not $serverSource.Contains("withRequestCurrentLocation") -or
   -not $serverSource.Contains("shouldReverseGeocodeCurrentLocation") -or
+  -not $serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message)") -or
   -not $serverSource.Contains("reverseGeocodeLocation") -or
   -not $serverSource.Contains("forceLiveLocation") -or
   -not $serverSource.Contains("Here-and-now request: live/current location takes precedence")
