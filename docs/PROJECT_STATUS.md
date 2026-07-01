@@ -98,6 +98,7 @@ Implemented locally:
 - Public smoke on 2026-07-01 passed after PWA shortcut deploy: `/manifest.webmanifest`, `/sw.js`, `/icons/kodi-192.png`, and `/icons/kodi-512.png` returned successfully; manifest reports `display=standalone` and three install icons.
 - Public smoke on 2026-07-01 passed after voice-output deploy: `/api/health`, public app shell, and public bundle inspection confirmed `SpeechSynthesisUtterance`, Hebrew `he-IL`, and the Kodi speaker control are deployed.
 - Public smoke on 2026-07-01 passed after voice-recording feedback deploy: public bundle inspection confirmed the recording status indicator, red pulse dot, and microphone listening animation are deployed.
+- Public smoke on 2026-07-01 passed after current-location action deploy: public bundle inspection confirmed the top-bar `current-location-button` and active styling are deployed.
 
 ## Current Storage
 
