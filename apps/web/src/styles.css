@@ -1413,9 +1413,33 @@ input {
 
 .message strong {
   display: block;
-  margin-bottom: 6px;
   color: #0f483e;
   font-size: 13px;
+}
+
+.message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.speak-message-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #b7ded2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f6f5f;
+}
+
+.speak-message-button:focus-visible {
+  outline: 2px solid #16211f;
+  outline-offset: 2px;
 }
 
 .message p {

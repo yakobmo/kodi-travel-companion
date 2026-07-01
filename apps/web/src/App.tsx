@@ -1,4 +1,17 @@
-import { CheckCircle2, ExternalLink, MapPin, Menu, Mic, Navigation, Radio, ShieldCheck, Sparkles, Users } from "lucide-react";
+import {
+  CheckCircle2,
+  ExternalLink,
+  MapPin,
+  Menu,
+  Mic,
+  Navigation,
+  Radio,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Volume2,
+  VolumeX
+} from "lucide-react";
 import { FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { demoMembers, demoMessages, demoPlaces, demoTripSummary } from "./demoTrip.js";
 
@@ -658,6 +671,16 @@ function renderMessageText(text: string) {
   return parts.length > 0 ? parts : text;
 }
 
+function shouldSpeakKodiReply(text: string) {
+  return ["בקול", "תקריא", "תקריאי", "דבר", "דברי", "תספר בקול", "להקריא"].some((fragment) =>
+    text.includes(fragment)
+  );
+}
+
+function buildSpeechText(text: string) {
+  return text.replace(messageUrlPattern, "").replace(/\s+/g, " ").trim();
+}
+
 function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPlace) {
   const recentText = messages
     .slice(-4)
@@ -811,6 +834,8 @@ export function App() {
   const [activeMemberId, setActiveMemberId] = useState("mom");
   const [draft, setDraft] = useState("");
   const [speechState, setSpeechState] = useState<"idle" | "listening" | "unsupported" | "error">("idle");
+  const [speechOutputState, setSpeechOutputState] = useState<"idle" | "speaking" | "unsupported" | "error">("idle");
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [userShortcuts, setUserShortcuts] = useState<UserShortcut[]>([]);
   const [shortcutLabelDraft, setShortcutLabelDraft] = useState("");
   const [shortcutUrlDraft, setShortcutUrlDraft] = useState("");
@@ -838,6 +863,12 @@ export function App() {
   const googleMapMarkersRef = useRef<any[]>([]);
   const locationWatchIdRef = useRef<number | null>(null);
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
 
   function applyTripEvents(data: TripEventsResponse) {
     setTripEvents(data.events);
@@ -2073,6 +2104,43 @@ export function App() {
     recognition.start();
   }
 
+  function stopKodiSpeech() {
+    window.speechSynthesis?.cancel();
+    setSpeechOutputState("idle");
+    setSpeakingMessageId(null);
+  }
+
+  function speakKodiMessage(text: string, messageId?: string) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+      setSpeechOutputState("unsupported");
+      return;
+    }
+
+    const speechText = buildSpeechText(text);
+    if (!speechText) {
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(speechText);
+    utterance.lang = "he-IL";
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.onstart = () => {
+      setSpeechOutputState("speaking");
+      setSpeakingMessageId(messageId ?? null);
+    };
+    utterance.onend = () => {
+      setSpeechOutputState("idle");
+      setSpeakingMessageId(null);
+    };
+    utterance.onerror = () => {
+      setSpeechOutputState("error");
+      setSpeakingMessageId(null);
+    };
+    window.speechSynthesis.speak(utterance);
+  }
+
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -2089,7 +2157,11 @@ export function App() {
 
     if (shouldAskKodi) {
       const reply = await requestKodiReply(text, nextMessages);
-      setMessages((currentMessages) => [...currentMessages, { author: "קודי", text: reply }]);
+      const localKodiMessage = { id: `local-kodi-${Date.now()}`, author: "קודי" as const, text: reply };
+      setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
+      if (shouldSpeakKodiReply(text)) {
+        speakKodiMessage(reply, localKodiMessage.id);
+      }
     }
   }
 
@@ -2128,6 +2200,9 @@ export function App() {
       };
 
       setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
+      if (shouldSpeakKodiReply(text)) {
+        speakKodiMessage(reply, localKodiMessage.id);
+      }
 
       const savedKodiMessage = await persistChatMessage(localKodiMessage);
       setMessages((currentMessages) =>
@@ -2956,7 +3031,34 @@ export function App() {
         <div className="messages">
           {messages.map((message, index) => (
             <article className={message.author === "קודי" ? "message kodi" : "message"} key={`${message.author}-${index}-${message.text}`}>
-              <strong>{message.author}</strong>
+              <div className="message-header">
+                <strong>{message.author}</strong>
+                {message.author === "קודי" ? (
+                  <button
+                    aria-label={speakingMessageId === (message.id ?? `${message.author}-${index}`) ? "עצור הקראה" : "קודי הקריא בקול"}
+                    className="speak-message-button"
+                    onClick={() =>
+                      speakingMessageId === (message.id ?? `${message.author}-${index}`)
+                        ? stopKodiSpeech()
+                        : speakKodiMessage(message.text, message.id ?? `${message.author}-${index}`)
+                    }
+                    title={
+                      speechOutputState === "unsupported"
+                        ? "הדפדפן לא תומך בהקראה"
+                        : speechOutputState === "error"
+                          ? "לא הצלחתי להקריא כרגע"
+                          : "קודי הקריא בקול"
+                    }
+                    type="button"
+                  >
+                    {speakingMessageId === (message.id ?? `${message.author}-${index}`) ? (
+                      <VolumeX size={16} aria-hidden="true" />
+                    ) : (
+                      <Volume2 size={16} aria-hidden="true" />
+                    )}
+                  </button>
+                ) : null}
+              </div>
               <p>{renderMessageText(message.text)}</p>
             </article>
           ))}

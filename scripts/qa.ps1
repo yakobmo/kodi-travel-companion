@@ -224,12 +224,30 @@ if (
   throw "Web chat composer must keep Hebrew voice input available as a clean Kodi interaction path."
 }
 
+if (
+  -not $webAppSource.Contains("SpeechSynthesisUtterance") -or
+  -not $webAppSource.Contains("speakKodiMessage") -or
+  -not $webAppSource.Contains("shouldSpeakKodiReply") -or
+  -not $webAppSource.Contains("buildSpeechText") -or
+  -not $webAppSource.Contains("speechOutputState") -or
+  -not $webAppSource.Contains("speak-message-button") -or
+  -not $webAppSource.Contains('utterance.lang = "he-IL"') -or
+  -not $webAppSource.Contains("Volume2") -or
+  -not $webAppSource.Contains("VolumeX")
+) {
+  throw "Web chat must support Hebrew Kodi voice output from agent messages."
+}
+
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $webStylesSource.Contains(".composer .voice-button") -or
   -not $webStylesSource.Contains("grid-template-columns: minmax(0, 1fr) 44px auto")
 ) {
   throw "Web composer styles must reserve a stable voice button next to the message input and send button."
+}
+
+if (-not $webStylesSource.Contains(".speak-message-button") -or -not $webStylesSource.Contains(".message-header")) {
+  throw "Web chat styles must keep Kodi voice output controls compact inside agent messages."
 }
 
 $sourcePlacesPath = Join-Path (Split-Path -Parent $root) "work\spikes\google-place-list\out\places.json"

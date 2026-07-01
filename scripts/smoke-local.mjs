@@ -573,6 +573,7 @@ try {
   await page.locator(".composer button[type='submit']").click();
   await page.getByText("מהשיחה אני מזהה").waitFor();
   assertCheck("kodi replies in chat", (await page.locator(".message.kodi").count()) >= 1);
+  assertCheck("kodi voice output control", (await page.locator(".message.kodi .speak-message-button").count()) >= 1);
 
   assertCheck("retired demo member pill removed", (await page.locator(".member-pills").getByRole("button", { name: "נועה" }).count()) === 0);
 
