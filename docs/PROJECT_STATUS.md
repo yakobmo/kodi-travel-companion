@@ -280,6 +280,7 @@ Current Supabase state:
 - Kodi voice personality decision added on `2026-07-01`; the target is a natural GPT-style Hebrew voice that feels like a friendly travel partner. Browser speech synthesis now prefers Hebrew male voices with calmer pacing as a fallback only; production-quality voice should later use a natural neural voice endpoint with cost controls.
 - Public smoke passed on `2026-07-01` for install/menu simplification: Render served `assets/index-DvgYdZio.js` and `assets/index-CCIm6WMe.css`, including the install prompt path and collapsed advanced menu styles.
 - Public smoke passed on `2026-07-01` for WhatsApp-style invite sharing: Render served `assets/index-J6xKOAk0.js` and `assets/index-C-AMusoS.css`, including `navigator.share` and the `whatsapp-style-share-link` invite model.
+- Public smoke passed on `2026-07-01` for Kodi browser-voice fallback tuning: Render served `assets/index-CwyqiGym.js`, including browser voice enumeration, Hebrew `he-IL`, male Hebrew voice hints, and calmer speech rate/pitch values. This remains a fallback, not the final GPT-style neural voice target.
 
 ## Next Continuation Checkpoint
 
