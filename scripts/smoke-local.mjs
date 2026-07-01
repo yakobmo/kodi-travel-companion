@@ -533,7 +533,10 @@ try {
   assertCheck("agent context-aware ok", contextAwareAgentResponse.ok());
   assertCheck("agent context-aware speakers", contextAwareAgentPayload.text?.includes("משתתף") || contextAwareAgentPayload.text?.includes("מנהל"));
   assertCheck("agent context-aware needs", contextAwareAgentPayload.text?.includes("גלידה") && contextAwareAgentPayload.text?.includes("מנוחה"));
-  assertCheck("agent context-aware destination", contextAwareAgentPayload.text?.includes("היעד הקבוצתי הנוכחי"));
+  assertCheck(
+    "agent context-aware destination",
+    contextAwareAgentPayload.text?.includes("יעד") && contextAwareAgentPayload.text?.includes("אישור מנהל")
+  );
 
   const input = page.getByLabel("כתיבת הודעה לקבוצה");
   const placeholder = await input.getAttribute("placeholder");
