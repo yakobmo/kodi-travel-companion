@@ -216,10 +216,12 @@ if (
   -not $openAiSpeechSource.Contains("client.audio.speech.create") -or
   -not $openAiSpeechSource.Contains("gpt-4o-mini-tts") -or
   -not $openAiSpeechSource.Contains("OPENAI_TTS_VOICE") -or
-  -not $openAiSpeechSource.Contains("warm male travel companion") -or
+  -not $openAiSpeechSource.Contains('"alloy"') -or
+  -not $openAiSpeechSource.Contains("OPENAI_TTS_INSTRUCTIONS") -or
+  -not $openAiSpeechSource.Contains("speed: 1.0") -or
   -not $openAiSpeechSource.Contains("response_format: `"mp3`"")
 ) {
-  throw "OpenAI speech bridge must create natural GPT-style Kodi audio server-side with configurable model and voice."
+  throw "OpenAI speech bridge must use the OpenAI-style default voice path, configurable model/voice, and default speed."
 }
 
 $serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
@@ -306,12 +308,12 @@ if (
   -not $webAppSource.Contains("speakKodiMessageWithBrowserVoice") -or
   -not $webAppSource.Contains("speak-message-button") -or
   -not $webAppSource.Contains('utterance.lang = "he-IL"') -or
-  -not $webAppSource.Contains("utterance.pitch = 0.82") -or
-  -not $webAppSource.Contains("utterance.rate = 0.88") -or
+  -not $webAppSource.Contains("utterance.pitch = 1") -or
+  -not $webAppSource.Contains("utterance.rate = 1") -or
   -not $webAppSource.Contains("Volume2") -or
   -not $webAppSource.Contains("VolumeX")
 ) {
-  throw "Web chat must use server-side natural Kodi speech first, with warm Hebrew browser speech only as fallback."
+  throw "Web chat must use server-side natural Kodi speech first, with neutral browser speech only as fallback."
 }
 
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw

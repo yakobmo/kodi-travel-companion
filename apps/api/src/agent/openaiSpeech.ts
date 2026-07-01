@@ -19,14 +19,8 @@ function getOpenAiClient() {
   return new OpenAI({ apiKey });
 }
 
-function buildKodiVoiceInstructions() {
-  return [
-    "Speak Hebrew naturally, like a warm male travel companion named Kodi.",
-    "Sound friendly, calm, confident, and service-oriented.",
-    "Avoid robotic narration. Do not sound like a call center or navigation system.",
-    "Use a conversational pace that is easy for a family in a car to follow.",
-    "Keep the tone present and human, like a helpful friend who knows the route."
-  ].join(" ");
+function getOpenAiSpeechInstructions() {
+  return process.env.OPENAI_TTS_INSTRUCTIONS?.trim() || undefined;
 }
 
 export async function createKodiSpeechAudio(text: string): Promise<OpenAiSpeechResult> {
@@ -42,16 +36,17 @@ export async function createKodiSpeechAudio(text: string): Promise<OpenAiSpeechR
   }
 
   const model = process.env.OPENAI_TTS_MODEL?.trim() || "gpt-4o-mini-tts";
-  const voice = process.env.OPENAI_TTS_VOICE?.trim() || "echo";
+  const voice = process.env.OPENAI_TTS_VOICE?.trim() || "alloy";
+  const instructions = getOpenAiSpeechInstructions();
 
   try {
     const response = await client.audio.speech.create({
       model,
       voice,
       input: speechText,
-      instructions: buildKodiVoiceInstructions(),
+      ...(instructions ? { instructions } : {}),
       response_format: "mp3",
-      speed: 0.95
+      speed: 1.0
     });
     const audio = Buffer.from(await response.arrayBuffer());
 

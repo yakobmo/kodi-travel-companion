@@ -2314,8 +2314,8 @@ export function App() {
       utterance.voice = kodiVoice;
       utterance.lang = kodiVoice.lang || "he-IL";
     }
-    utterance.rate = 0.88;
-    utterance.pitch = 0.82;
+    utterance.rate = 1;
+    utterance.pitch = 1;
     utterance.volume = 1;
     setSpeechOutputState("speaking");
     setSpeakingMessageId(messageId ?? null);
