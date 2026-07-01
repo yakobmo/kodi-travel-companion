@@ -14,6 +14,7 @@ export function createNavigationLinks(target: NavigationTarget) {
       app: `waze://?ll=${encodedLl}&navigate=yes`,
       web: `https://waze.com/ul?ll=${encodedLl}&navigate=yes`
     },
-    googleMaps: `https://www.google.com/maps/dir/?api=1&destination=${encodedLl}&travelmode=driving`
+    googleMaps: `https://www.google.com/maps/dir/?api=1&destination=${encodedLl}&travelmode=driving`,
+    googleMapsWalking: `https://www.google.com/maps/dir/?api=1&destination=${encodedLl}&travelmode=walking`
   };
 }

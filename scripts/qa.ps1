@@ -553,6 +553,16 @@ if (-not $appSource.Contains("openSelectedPlaceInWaze")) {
   throw "Web app is missing the Waze action."
 }
 
+$navigationLinksSource = Get-Content (Join-Path $root "apps\api\src\navigation\links.ts") -Raw
+if (
+  -not $navigationLinksSource.Contains("googleMapsWalking") -or
+  -not $navigationLinksSource.Contains("travelmode=walking") -or
+  -not $appSource.Contains("openSelectedPlaceInGoogleMapsWalking") -or
+  -not $appSource.Contains("links.googleMapsWalking")
+) {
+  throw "Web app must offer Google Maps walking navigation so Kodi does not recreate native walking guidance."
+}
+
 if (
   -not $appSource.Contains("renderMessageText") -or
   -not $appSource.Contains("messageUrlPattern") -or

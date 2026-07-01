@@ -83,6 +83,7 @@ interface NavigationLinksResponse {
     web: string;
   };
   googleMaps: string;
+  googleMapsWalking: string;
 }
 
 interface AgentActionAuthorizationResponse {
@@ -1768,6 +1769,38 @@ export function App() {
     }
   }
 
+  async function openSelectedPlaceInGoogleMapsWalking() {
+    if (!selectedPlace || !canNavigate) {
+      return;
+    }
+
+    setNavigationState("opening");
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/navigation/links`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          lat: selectedPlace.lat,
+          lng: selectedPlace.lng,
+          label: selectedPlace.name
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Navigation API failed with ${response.status}`);
+      }
+
+      const links = (await response.json()) as NavigationLinksResponse;
+      window.open(links.googleMapsWalking, "_blank", "noopener,noreferrer");
+      setNavigationState("idle");
+    } catch {
+      setNavigationState("error");
+    }
+  }
+
   async function requestGroupDestinationApproval() {
     if (!selectedPlace) {
       return;
@@ -2790,6 +2823,15 @@ export function App() {
             <button disabled={!canNavigate || navigationState === "opening"} onClick={openSelectedPlaceInWaze} type="button">
               <Navigation size={18} aria-hidden="true" />
               פתח ב-Waze
+            </button>
+            <button
+              className="secondary-action"
+              disabled={!canNavigate || navigationState === "opening"}
+              onClick={openSelectedPlaceInGoogleMapsWalking}
+              type="button"
+            >
+              <MapPin size={18} aria-hidden="true" />
+              פתח הליכה ב-Google Maps
             </button>
             <button
               className="secondary-action"

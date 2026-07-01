@@ -10,7 +10,7 @@ Kodi + live map + trip points + at least the trip manager's live location
 
 This is the heart of the app.
 
-The map engine is Google Maps. Kodi must not recreate Google Maps behavior such as map movement, zoom gestures, compass, follow-location, or native route/map interaction. Kodi's unique layer is the trip agent: conversation, group context, imported trip points, recommendations, admin approvals, and opening the selected point in Waze or Google Maps.
+The map engine is Google Maps. Kodi must not recreate Google Maps behavior such as map movement, zoom gestures, compass, follow-location, walking guidance, or native route/map interaction. Kodi's unique layer is the trip agent: conversation, group context, imported trip points, recommendations, admin approvals, and opening the selected point in Waze or Google Maps. Walking navigation should open Google Maps in walking mode so the user gets Google's compass, turn-by-turn walking UI, and familiar map controls.
 
 Implementation rule: browser map rendering must use Google Maps JavaScript API when a browser-safe key is configured through `GOOGLE_MAPS_BROWSER_API_KEY` or `VITE_GOOGLE_MAPS_API_KEY`. `GOOGLE_MAPS_API_KEY` is server-side for Places/Routes and is not exposed to browsers unless explicitly allowed by `GOOGLE_MAPS_ALLOW_SERVER_KEY_IN_BROWSER=true` during controlled testing. The internal map drawing layer is a development fallback only, not the product map.
 
