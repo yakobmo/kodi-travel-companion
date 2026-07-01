@@ -192,9 +192,12 @@ if (
   -not $openAiAgentSource.Contains("OpenAI") -or
   -not $openAiAgentSource.Contains("OPENAI_API_KEY") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_MODEL") -or
+  -not $openAiAgentSource.Contains("OPENAI_AGENT_FAST_MODEL") -or
+  -not $openAiAgentSource.Contains("OPENAI_AGENT_REASONING_MODEL") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_TIMEOUT_MS") -or
   -not $openAiAgentSource.Contains("openai_agent_timeout") -or
   -not $openAiAgentSource.Contains("withAgentTimeout") -or
+  -not $openAiAgentSource.Contains("shouldUseReasoningModel") -or
   -not $openAiAgentSource.Contains("fallbackRulesReply") -or
   -not $openAiAgentSource.Contains("Google Maps is the map engine") -or
   -not $openAiAgentSource.Contains("elite Hebrew AI travel companion") -or
@@ -463,7 +466,9 @@ if (
   -not $serverSourceForContext.Contains("tryBuildKodiReplyWithOpenAi") -or
   -not $serverSourceForContext.Contains('capability: "openai_agent"') -or
   -not $serverSourceForContext.Contains("agentRuntime") -or
-  -not $serverSourceForContext.Contains("fallbackUsed")
+  -not $serverSourceForContext.Contains("fallbackUsed") -or
+  -not $serverSourceForContext.Contains("buildFocusedReferenceMessage") -or
+  -not $serverSourceForContext.Contains("message: focusedReferenceMessage")
 ) {
   throw "Kodi agent flow must use trip context and trip timeline resolvers before choosing destinations or external search anchors."
 }

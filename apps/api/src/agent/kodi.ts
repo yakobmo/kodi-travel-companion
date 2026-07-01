@@ -54,6 +54,23 @@ function includesAny(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
 
+function shouldResetStaleConversationContext(text: string) {
+  return includesAny(text, [
+    "יצאת מהשיחה",
+    "לא זה",
+    "לא הבנת",
+    "אוורוף זה סוף",
+    "Averof זה סוף",
+    "אנחנו נוחתים באתונה",
+    "נוחתים באתונה",
+    "המלון הראשון",
+    "מלון ראשון",
+    "מאריתה",
+    "מארתה",
+    "Marathia"
+  ]);
+}
+
 function joinRecentMessages(messages: ConversationMessage[] = []) {
   return messages
     .slice(-8)
@@ -83,7 +100,7 @@ function summarizeRecentConversation(
   currentMessage: string,
   tripState?: TripState
 ): ConversationContextSummary {
-  const recentMessages = messages.slice(-8);
+  const recentMessages = shouldResetStaleConversationContext(currentMessage) ? [] : messages.slice(-8);
   const allText = `${joinRecentMessages(recentMessages)} ${currentMessage}`;
   const childNames =
     tripState?.members
@@ -115,7 +132,7 @@ function summarizeRecentConversation(
     speakerNames: unique(recentMessages.filter((message) => message.source !== "agent").map((message) => message.author)),
     mentionedNeeds: unique(mentionedNeeds),
     childNames: unique(childNames),
-    currentDestinationName: tripState?.groupDestination?.placeName
+    currentDestinationName: shouldResetStaleConversationContext(allText) ? undefined : tripState?.groupDestination?.placeName
   };
 }
 

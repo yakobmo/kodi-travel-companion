@@ -40,10 +40,10 @@ function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
   if (!Number.isFinite(value) || value <= 0) {
-    return 8_000;
+    return 18_000;
   }
 
-  return Math.min(Math.max(Math.round(value), 3_000), 8_000);
+  return Math.min(Math.max(Math.round(value), 6_000), 25_000);
 }
 
 function isOpenAiTimeout(error: unknown) {
@@ -175,6 +175,35 @@ function shouldEnableWebSearch(input: OpenAiKodiReplyInput) {
   ].some((term) => text.includes(term));
 }
 
+function shouldUseReasoningModel(input: OpenAiKodiReplyInput) {
+  const text = `${input.message} ${input.recentMessages?.slice(-6).map((message) => message.text).join(" ") ?? ""}`.toLowerCase();
+
+  return shouldEnableWebSearch(input) || [
+    "budget",
+    "cash",
+    "weather",
+    "forecast",
+    "accessible",
+    "next year",
+    "plan",
+    "׳×׳§׳¦׳™׳‘",
+    "׳׳–׳•׳׳",
+    "׳׳–׳’",
+    "׳׳•׳•׳™׳¨",
+    "׳ ׳’׳™׳©",
+    "׳ ׳’׳™׳©׳•׳×",
+    "׳©׳ ׳” ׳”׳‘׳׳”",
+    "׳×׳›׳ ׳Ÿ"
+  ].some((term) => text.includes(term));
+}
+
+function getAgentModel(input: OpenAiKodiReplyInput) {
+  const fastModel = process.env.OPENAI_AGENT_FAST_MODEL?.trim() || "gpt-5.4-mini";
+  const reasoningModel = process.env.OPENAI_AGENT_REASONING_MODEL?.trim() || process.env.OPENAI_AGENT_MODEL?.trim() || "gpt-5.5";
+
+  return shouldUseReasoningModel(input) ? reasoningModel : fastModel;
+}
+
 function compactTripState(input: AgentMessageRequest["tripState"]) {
   if (!input) {
     return undefined;
@@ -224,7 +253,7 @@ function compactTripState(input: AgentMessageRequest["tripState"]) {
 
 export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): Promise<OpenAiKodiReplyResult> {
   const client = getOpenAiClient();
-  const model = process.env.OPENAI_AGENT_MODEL?.trim() || "gpt-5.5";
+  const model = getAgentModel(input);
   const enableWebSearch = shouldEnableWebSearch(input);
   const timeoutMs = getAgentTimeoutMs();
 
@@ -252,7 +281,11 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
           tripContextClarification: input.tripContextClarification,
           permissionPolicy: input.permissionPolicy,
           webSearchAvailableForThisQuestion: webSearchEnabled,
-          fallbackRulesReply: input.rulesReply
+          fallbackRulesReply: {
+            intent: input.rulesReply.intent,
+            requiresAdminApproval: input.rulesReply.requiresAdminApproval,
+            source: input.rulesReply.source
+          }
         })
       }),
       timeoutMs

@@ -78,7 +78,7 @@ For simple trip-context questions such as "where do we sleep tonight and what ta
 
 The full AI agent remains the right path for open-ended reasoning, research, explanations, ambiguity, planning, and questions that require synthesizing many sources.
 
-The full AI agent must still have a server-side time budget. The default target is about 8 seconds through `OPENAI_AGENT_TIMEOUT_MS`; if the full model or live web-search path is too slow, Kodi should return the grounded rules/trip fallback instead of making the group wait 45-60 seconds.
+The full AI agent must still have a server-side time budget, but Kodi's product identity is the intelligent agent, not the rules fallback. Normal chat should use a fast OpenAI model by default through `OPENAI_AGENT_FAST_MODEL`; deeper planning, live-research, budget, weather, accessibility, or web-search questions can use `OPENAI_AGENT_REASONING_MODEL`. The default server budget is about 18 seconds through `OPENAI_AGENT_TIMEOUT_MS`, with streaming/typing UX as the later target. If the model path fails, the grounded rules fallback must be short, honest, and context-aware; it must not pretend to be the full agent or answer from stale destinations.
 
 ## UX Principle
 

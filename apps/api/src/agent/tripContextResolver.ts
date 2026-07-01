@@ -6,7 +6,14 @@ export interface ResolvedCoordinate {
   lat: number;
   lng: number;
   label?: string;
-  source: "live_member_location" | "group_destination" | "nearest_lodging" | "active_route_stop" | "first_known_place";
+  source:
+    | "live_member_location"
+    | "athens_airport"
+    | "group_destination"
+    | "named_lodging"
+    | "nearest_lodging"
+    | "active_route_stop"
+    | "first_known_place";
 }
 
 export interface TripReferenceResolution {
@@ -37,6 +44,66 @@ function distanceMeters(first: { lat: number; lng: number }, second: { lat: numb
 
 function includesAny(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
+}
+
+function normalizeText(text: string) {
+  return text.toLowerCase().replace(/[׳״"']/g, "").replace(/\s+/g, " ").trim();
+}
+
+function mentionsAthensAirport(text: string) {
+  const normalized = normalizeText(text);
+
+  return includesAny(normalized, ["שדה התעופה", "נתבג אתונה", "נוחת", "נחיתה", "athens airport", "airport"]);
+}
+
+function getAthensAirport(tripState: TripState) {
+  return tripState.places.find((place) => /airport|שדה|אתונה/i.test(`${place.name} ${place.address ?? ""}`) && hasCoordinates(place));
+}
+
+function findNamedLodging(message: string, tripState: TripState) {
+  const normalized = normalizeText(message);
+  const lodgingPlaces = tripState.places.filter((place) => place.type === "lodging" && hasCoordinates(place));
+
+  if (
+    includesAny(normalized, [
+      "מארתה",
+      "מאריתה",
+      "מרתה",
+      "מרתיה",
+      "marathia",
+      "hotel marathia",
+      "המלון הראשון",
+      "מלון ראשון",
+      "לילה ראשון",
+      "הלינה הראשונה",
+      "first hotel",
+      "first lodging"
+    ])
+  ) {
+    return lodgingPlaces.find((place) => normalizeText(place.name).includes("marathia"));
+  }
+
+  return lodgingPlaces.find((place) => {
+    const name = normalizeText(place.name);
+    return name.length >= 4 && normalized.includes(name);
+  });
+}
+
+function shouldIgnoreActiveDestination(message: string) {
+  const normalized = normalizeText(message);
+
+  return includesAny(normalized, [
+    "אוורוף זה סוף",
+    "averof זה סוף",
+    "לא היעד הראשון",
+    "יצאת מהשיחה",
+    "נוחתים באתונה",
+    "מלון ראשון",
+    "המלון הראשון",
+    "מאריתה",
+    "מארתה",
+    "marathia"
+  ]);
 }
 
 function getOrigin(tripState: TripState): ResolvedCoordinate | undefined {
@@ -93,7 +160,16 @@ function getNearestLodging(origin: ResolvedCoordinate, tripState: TripState) {
 }
 
 export function resolveTripReferenceForMessage(message: string, tripState: TripState): TripReferenceResolution {
-  const origin = getOrigin(tripState);
+  const airport = mentionsAthensAirport(message) ? getAthensAirport(tripState) : undefined;
+  const defaultOrigin = getOrigin(tripState);
+  const origin = airport
+    ? {
+        lat: Number(airport.lat),
+        lng: Number(airport.lng),
+        label: airport.name,
+        source: "athens_airport" as const
+      }
+    : defaultOrigin;
   const asksAboutLodging = includesAny(message, [
     "מלון",
     "בית מלון",
@@ -128,6 +204,16 @@ export function resolveTripReferenceForMessage(message: string, tripState: TripS
   }
 
   if (asksAboutLodging) {
+    const namedLodging = findNamedLodging(message, tripState);
+    if (namedLodging) {
+      return {
+        origin,
+        destination: toDestination(namedLodging, "named_lodging"),
+        confidence: "high",
+        reason: "Resolved a named or first-night lodging reference from the message."
+      };
+    }
+
     const activeDestinationPlace = tripState.places.find(
       (place) =>
         place.id === tripState.groupDestination?.placeId &&
@@ -135,7 +221,7 @@ export function resolveTripReferenceForMessage(message: string, tripState: TripS
         hasCoordinates(place)
     );
 
-    if (activeDestinationPlace) {
+    if (activeDestinationPlace && !shouldIgnoreActiveDestination(message)) {
       return {
         origin,
         destination: toDestination(activeDestinationPlace, "group_destination"),

@@ -101,6 +101,43 @@ function isConversationMessage(value: unknown) {
   return typeof candidate.author === "string" && typeof candidate.text === "string";
 }
 
+function buildFocusedReferenceMessage(message: string, recentMessages: unknown[]) {
+  const trimmed = message.trim();
+  const normalized = trimmed.toLowerCase();
+  const shouldReset =
+    normalized.includes("יצאת מהשיחה") ||
+    normalized.includes("לא הבנת") ||
+    normalized.includes("אוורוף זה סוף") ||
+    normalized.includes("נוחתים באתונה");
+
+  if (shouldReset) {
+    return trimmed;
+  }
+
+  const needsPreviousQuestion =
+    trimmed.length <= 24 ||
+    ["מארתה", "מאריתה", "מרתה", "מרתיה", "marathia", "כן", "לא", "אותו", "אותה"].some((term) =>
+      normalized.includes(term)
+    );
+
+  if (!needsPreviousQuestion) {
+    return trimmed;
+  }
+
+  const previousMemberMessages = recentMessages
+    .filter(
+      (item): item is { author: string; text: string; source?: string } =>
+        Boolean(item) &&
+        typeof item === "object" &&
+        typeof (item as { text?: unknown }).text === "string" &&
+        (item as { source?: unknown }).source !== "agent"
+    )
+    .slice(-2)
+    .map((item) => item.text);
+
+  return [...previousMemberMessages, trimmed].join(" ");
+}
+
 function buildAgentContextSummary(input: {
   tripGroupId?: string;
   member: { id?: string; displayName?: string; role?: string };
@@ -1741,9 +1778,10 @@ app.post("/api/agent/message", async (req, res) => {
     tripGroupId: tripState.trip.groupId,
     members: tripState.members
   });
-  const timelineReference = resolveTimelineReferenceForMessage(message, tripState);
+  const focusedReferenceMessage = buildFocusedReferenceMessage(message, recentMessages);
+  const timelineReference = resolveTimelineReferenceForMessage(focusedReferenceMessage, tripState);
   const fastTripAnswer = buildFastTripAnswer({
-    message,
+    message: focusedReferenceMessage,
     tripState,
     timelineReference
   });
@@ -1782,7 +1820,7 @@ app.post("/api/agent/message", async (req, res) => {
     });
     return;
   }
-  const placesUsageGate = shouldUseExternalPlacesSearch(message)
+  const placesUsageGate = shouldUseExternalPlacesSearch(focusedReferenceMessage)
     ? authorizeTripUsageCapability({
         usagePool,
         capability: "google_places",
@@ -1794,7 +1832,7 @@ app.post("/api/agent/message", async (req, res) => {
     : undefined;
   const externalPlacesSearch = placesUsageGate?.allowed
     ? await searchGooglePlacesText({
-        query: buildExternalPlacesQuery(message),
+        query: buildExternalPlacesQuery(focusedReferenceMessage),
         ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext),
         radiusMeters: 3000,
         languageCode: "he"
@@ -1816,9 +1854,9 @@ app.post("/api/agent/message", async (req, res) => {
           regionCode: "il"
         })
       : undefined;
-  const tripReference = resolveTripReferenceForMessage(message, tripState);
+  const tripReference = resolveTripReferenceForMessage(focusedReferenceMessage, tripState);
   const canEstimateRoute =
-    shouldUseRouteEstimate(message) &&
+    shouldUseRouteEstimate(focusedReferenceMessage) &&
     tripReference.confidence !== "low" &&
     tripReference.origin &&
     tripReference.destination;
@@ -1837,7 +1875,7 @@ app.post("/api/agent/message", async (req, res) => {
     routeEstimate = await estimateGoogleRoute({
       origin: { lat: Number(tripReference.origin?.lat), lng: Number(tripReference.origin?.lng) },
       destination: { lat: Number(tripReference.destination?.lat), lng: Number(tripReference.destination?.lng) },
-      travelMode: includesAnyTerm(message, ["הליכה", "ברגל"]) ? "WALK" : "DRIVE",
+      travelMode: includesAnyTerm(focusedReferenceMessage, ["הליכה", "ברגל"]) ? "WALK" : "DRIVE",
       languageCode: "he"
     });
     await safeRecordUsageGateEvent({
@@ -1853,11 +1891,12 @@ app.post("/api/agent/message", async (req, res) => {
       : undefined;
   const rulesReply = buildKodiReplyFromContext({
     ...req.body,
+    message: focusedReferenceMessage,
     tripState,
     externalPlacesSearch,
     reverseGeocodedLocation,
     routeEstimate,
-    tripContextClarification: shouldUseRouteEstimate(message) ? tripReference.clarificationQuestion : undefined
+    tripContextClarification: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.clarificationQuestion : undefined
   });
   const openAiUsageGate = authorizeTripUsageCapability({
     usagePool,
@@ -1871,11 +1910,12 @@ app.post("/api/agent/message", async (req, res) => {
     !shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed && openAiUsageGate.providerConfigured
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
+          message: focusedReferenceMessage,
           tripState,
           externalPlacesSearch,
           reverseGeocodedLocation,
           routeEstimate,
-          tripContextClarification: shouldUseRouteEstimate(message) ? tripReference.clarificationQuestion : undefined,
+          tripContextClarification: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.clarificationQuestion : undefined,
           permissionPolicy,
           rulesReply
         })
@@ -1909,8 +1949,8 @@ app.post("/api/agent/message", async (req, res) => {
       tripState,
       externalPlacesSearchStatus: externalPlacesSearch?.status,
       routeEstimateStatus: routeEstimate?.status,
-      tripContextConfidence: shouldUseRouteEstimate(message) ? tripReference.confidence : undefined,
-      tripContextReason: shouldUseRouteEstimate(message) ? tripReference.reason : undefined,
+      tripContextConfidence: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.confidence : undefined,
+      tripContextReason: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.reason : undefined,
       timelineReferenceConfidence: hereAndNowContext ? "live_location" : timelineReference.confidence,
       timelineReferenceReason: hereAndNowContext
         ? "Here-and-now request: live/current location takes precedence over planned trip timeline."
