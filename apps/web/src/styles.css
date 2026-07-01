@@ -1390,6 +1390,19 @@ input {
   gap: 6px;
 }
 
+.invite-menu-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.menu-block button.secondary-menu-action {
+  border: 1px solid #b7d8df;
+  background: #f4fbfd;
+  color: #07536b;
+  padding-inline: 12px;
+}
+
 .trip-place-list {
   display: grid;
   gap: 6px;

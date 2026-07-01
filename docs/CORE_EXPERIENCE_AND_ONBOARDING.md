@@ -94,7 +94,23 @@ This should feel similar to joining a WhatsApp group:
 
 1. The manager opens the group/invite action after the main map is active.
 2. The app creates a simple trip invite link.
-3. The manager sends that link through WhatsApp, SMS, email, or any other app.
+3. The manager taps a clear share action that opens the phone's native share sheet.
+4. The manager sends that link through WhatsApp, SMS, email, or any other app.
+5. A participant opens the link on their phone.
+6. The participant sees a join screen, not the manager setup flow.
+7. The participant enters a name and optionally age or age group.
+8. The participant joins the shared Kodi conversation.
+9. Location sharing is requested separately and only on that participant's device.
+
+WhatsApp is the UX model and a sharing channel, not the product source of truth. Kodi's app remains the place that owns the trip group, map state, permissions, agent context, and operational actions.
+
+For the web MVP, do not import phone contacts or require a WhatsApp Business integration. Use Web Share first, with copy-link fallback. Native contact picking, WhatsApp deep integration, and richer invitation management can be later versions after the core trip/account model is stable.
+
+Legacy fallback sequence:
+
+1. The app creates a simple trip invite link.
+2. The manager copies that link.
+3. The manager sends it through any communication app.
 4. A participant opens the link on their phone.
 5. The participant sees a join screen, not the manager setup flow.
 6. The participant enters name and age or age group.

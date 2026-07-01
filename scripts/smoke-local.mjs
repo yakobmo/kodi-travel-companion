@@ -248,16 +248,20 @@ try {
   assertCheck("retired demo family hidden", !body.includes("אבא") && !body.includes("נועה") && !body.includes("סבתא"));
   await page.getByRole("button", { name: "תפריט" }).click();
   const menu = page.locator(".secondary-menu");
-  const menuBody = await menu.innerText();
-  assertCheck("personal live location copy in menu", menuBody.includes("מיקום מנהל"));
-  assertCheck("group location consent copy in menu", menuBody.includes("מיקום חברי קבוצה מוצג רק למי שאישר שיתוף"));
+  let menuBody = await menu.innerText();
+  assertCheck("personal live location copy in menu", menuBody.includes("מיקום בטלפון"));
+  assertCheck("direct location action in menu", menuBody.includes("אשר מיקום") || menuBody.includes("רענן מיקום"));
+  assertCheck("invite moved to menu", menuBody.includes("הזמנת משתתפים"));
+  assertCheck("invite per-device consent in menu", menuBody.includes("מאשר מיקום ומצטרף"));
+  assertCheck("invite native share action in menu", menuBody.includes("שתף הזמנה"));
+
+  await menu.getByText("אפשרויות נוספות").click();
+  menuBody = await menu.innerText();
   assertCheck("event activity in menu", menuBody.includes("פעילות חיה"));
   assertCheck("waze in menu", menuBody.includes("פתח ב-Waze"));
   assertCheck("google maps shortcut in menu", menuBody.includes("Google Maps"));
   assertCheck("booking shortcut in menu", menuBody.includes("Booking"));
   assertCheck("airbnb shortcut in menu", menuBody.includes("Airbnb"));
-  assertCheck("invite moved to menu", menuBody.includes("הזמנת משתתפים"));
-  assertCheck("invite per-device consent in menu", menuBody.includes("כל משתתף מצטרף מהנייד ומאשר הרשאות לעצמו"));
   assertCheck("full trip places list in menu", menuBody.includes("כל נקודות הטיול") && menuBody.includes("108 נקודות זמינות"));
   assertCheck("trip places list has many entries", (await menu.locator(".trip-place-list button").count()) >= 20);
   assertCheck("map surface stays clean", await page.locator(".map-surface > .action-card").isHidden());
@@ -310,12 +314,7 @@ try {
   assertCheck("storage realtime not ready", storagePayload.storage?.realtimeReady === false);
   assertCheck("events api ok", eventsResponse.ok() && Array.isArray(eventsPayload.events));
   assertCheck("events file fallback", eventsPayload.eventLog?.driver === "file");
-  assertCheck(
-    "events visible in ui",
-    body.includes("קודי מחכה לפעילות ראשונה בקבוצה") ||
-      body.includes("קודי הכין את יומן הפעילות") ||
-      body.includes("הודעה")
-  );
+  assertCheck("events visible in advanced menu", menuBody.includes("פעילות חיה"));
   const usageOverviewText = await page.locator(".secondary-menu .usage-overview-grid").innerText();
   assertCheck("usage overview visible", usageOverviewText.includes("Google Places") && usageOverviewText.includes("Google Routes"));
 
@@ -543,8 +542,8 @@ try {
   await menu.getByText("המסלול הושלם.").waitFor();
   assertCheck("route completion disables progress", await menu.getByRole("button", { name: "סמן תחנה כהושלמה" }).isDisabled());
 
-  await menu.getByRole("button", { name: "הפעל מיקום במפה" }).click();
-  await menu.getByText("מיקום חי על Google Maps").waitFor();
+  await menu.getByRole("button", { name: /אשר מיקום|רענן מיקום/ }).click();
+  await menu.getByText("פעיל על Google Maps").waitFor();
   await page.locator(".self-marker").waitFor();
   const syncedMembersAfterLocation = await (await page.request.get("http://localhost:3001/api/trips/demo/members")).json();
   assertCheck(

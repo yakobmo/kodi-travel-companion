@@ -831,15 +831,27 @@ if (
 if (
   -not $appSource.Contains("tripInviteUrl") -or
   -not $appSource.Contains("copyTripInviteLink") -or
+  -not $appSource.Contains("shareTripInvite") -or
+  -not $appSource.Contains("navigator.share") -or
+  -not $appSource.Contains("Share2") -or
   -not $appSource.Contains("joinTripFromInvite") -or
   -not $appSource.Contains("showJoinFlow") -or
   -not $appSource.Contains("join-shell") -or
   -not $appSource.Contains("invite-menu") -or
+  -not $appSource.Contains("whatsapp-style-share-link") -or
   -not $appSource.Contains("per-device-location-consent") -or
   -not $appSource.Contains("location-menu") -or
   -not $appSource.Contains("group_family_greece_demo")
 ) {
-  throw "Web app must support a simple invite flow: name, per-device location consent, and shared Kodi chat."
+  throw "Web app must support a simple WhatsApp-style invite flow: native share, fallback copy, name, per-device location consent, and shared Kodi chat."
+}
+
+if (
+  -not $coreExperienceSource.Contains("WhatsApp is the UX model") -or
+  -not $coreExperienceSource.Contains("Web Share first") -or
+  -not $coreExperienceSource.Contains("copy-link fallback")
+) {
+  throw "Core experience doc must define WhatsApp as the invite UX model, not the product source of truth."
 }
 
 if ($appSource.Contains("agent-button")) {

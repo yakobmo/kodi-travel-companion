@@ -8,6 +8,7 @@ import {
   Navigation,
   Radio,
   ShieldCheck,
+  Share2,
   Sparkles,
   Users,
   Volume2,
@@ -834,6 +835,7 @@ export function App() {
     age: ""
   });
   const [inviteCopyState, setInviteCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [inviteShareState, setInviteShareState] = useState<"idle" | "sharing" | "shared" | "copied" | "error">("idle");
   const [summary, setSummary] = useState<TripPlacesSummary>({
     total: demoTripSummary.totalPlaces,
     lodgingCount: demoTripSummary.lodgingCount,
@@ -2399,6 +2401,7 @@ export function App() {
 
   async function copyTripInviteLink() {
     setInviteCopyState("idle");
+    setInviteShareState("idle");
 
     try {
       if (navigator.clipboard?.writeText) {
@@ -2410,6 +2413,40 @@ export function App() {
       setInviteCopyState("copied");
     } catch {
       setInviteCopyState("error");
+    }
+  }
+
+  async function shareTripInvite() {
+    setInviteCopyState("idle");
+    setInviteShareState("sharing");
+
+    const shareData = {
+      title: "הצטרפות לקבוצת הטיול בקודי",
+      text: `הצטרפות לקבוצת הטיול ${setupDraft.tripName || "בקודי"}`,
+      url: tripInviteUrl
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setInviteShareState("shared");
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(tripInviteUrl);
+        setInviteShareState("copied");
+        return;
+      }
+
+      throw new Error("share_unavailable");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setInviteShareState("idle");
+        return;
+      }
+
+      setInviteShareState("error");
     }
   }
 
@@ -3077,13 +3114,22 @@ export function App() {
             {navigationState === "error" ? <small>לא הצלחתי ליצור קישור ניווט כרגע.</small> : null}
           </section>
         ) : null}
-        <section className="menu-block invite-menu" data-consent-model="per-device-location-consent">
+        <section className="menu-block invite-menu" data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
           <strong>הזמנת משתתפים</strong>
-          <p>מי שמקבל את הקישור נכנס, כותב שם, מאשר מיקום מהמכשיר שלו ונכנס לשיחה עם קודי.</p>
+          <p>שלחו קישור כמו בקבוצת וואטסאפ. מי שמקבל נכנס, כותב שם, מאשר מיקום ומצטרף.</p>
           <input aria-label="קישור הזמנה בתפריט ניהול" dir="ltr" readOnly value={tripInviteUrl} />
-          <button onClick={copyTripInviteLink} type="button">
-            העתק קישור
-          </button>
+          <div className="invite-menu-actions">
+            <button disabled={inviteShareState === "sharing"} onClick={shareTripInvite} type="button">
+              <Share2 size={16} aria-hidden="true" />
+              {inviteShareState === "sharing" ? "פותח שיתוף..." : "שתף הזמנה"}
+            </button>
+            <button className="secondary-menu-action" onClick={copyTripInviteLink} type="button">
+              העתק קישור
+            </button>
+          </div>
+          {inviteShareState === "shared" ? <small>ההזמנה נשלחה</small> : null}
+          {inviteShareState === "copied" ? <small>הקישור הועתק</small> : null}
+          {inviteShareState === "error" ? <small>לא הצלחתי לשתף. אפשר להעתיק קישור.</small> : null}
           {inviteCopyState === "copied" ? <small>הקישור הועתק</small> : null}
           {inviteCopyState === "error" ? <small>לא הצלחתי להעתיק. אפשר לסמן ולהעתיק ידנית.</small> : null}
         </section>
