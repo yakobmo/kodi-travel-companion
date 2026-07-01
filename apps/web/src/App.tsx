@@ -864,7 +864,10 @@ export function App() {
   const googleMapMarkersRef = useRef<any[]>([]);
   const locationWatchIdRef = useRef<number | null>(null);
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const lastMessageCountRef = useRef(0);
+  const shouldStickToLatestMessageRef = useRef(true);
 
   useEffect(() => {
     return () => {
@@ -873,8 +876,33 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ block: "end" });
+    const container = messagesContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const hasNewMessage = messages.length > lastMessageCountRef.current;
+    const shouldScrollToLatest = hasNewMessage || shouldStickToLatestMessageRef.current;
+    lastMessageCountRef.current = messages.length;
+
+    if (!shouldScrollToLatest) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
   }, [messages]);
+
+  function updateMessageScrollIntent() {
+    const container = messagesContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldStickToLatestMessageRef.current = distanceFromBottom < 80;
+  }
 
   function applyTripEvents(data: TripEventsResponse) {
     setTripEvents(data.events);
@@ -2164,6 +2192,8 @@ export function App() {
     utterance.lang = "he-IL";
     utterance.rate = 0.95;
     utterance.pitch = 1;
+    setSpeechOutputState("speaking");
+    setSpeakingMessageId(messageId ?? null);
     utterance.onstart = () => {
       setSpeechOutputState("speaking");
       setSpeakingMessageId(messageId ?? null);
@@ -2177,6 +2207,7 @@ export function App() {
       setSpeakingMessageId(null);
     };
     window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.resume();
   }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -3086,7 +3117,7 @@ export function App() {
           <div className="active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
         </header>
 
-        <div className="messages" aria-live="polite">
+        <div className="messages" aria-live="polite" onScroll={updateMessageScrollIntent} ref={messagesContainerRef}>
           {messages.map((message, index) => (
             <article
               className={`message${message.author === "קודי" ? " kodi" : ""}${

@@ -583,7 +583,10 @@ if (-not $styleSource.Contains(".message-link") -or -not $styleSource.Contains("
 
 if (
   -not $appSource.Contains("messagesEndRef") -or
-  -not $appSource.Contains("scrollIntoView") -or
+  -not $appSource.Contains("messagesContainerRef") -or
+  -not $appSource.Contains("shouldStickToLatestMessageRef") -or
+  -not $appSource.Contains("updateMessageScrollIntent") -or
+  -not $appSource.Contains("container.scrollTop = container.scrollHeight") -or
   -not $styleSource.Contains(".app-shell") -or
   -not $styleSource.Contains("overflow: hidden") -or
   -not $styleSource.Contains("overscroll-behavior: contain") -or
