@@ -855,6 +855,10 @@ if (
   throw "Mobile core UX must prioritize chat, default the map to a 40 km local context, and expose a direct Google Maps handoff."
 }
 
+if ($styleSource.Contains(".map-placeholder span")) {
+  throw "Map placeholder typography must target direct children only; nested button/link text must not inherit the giant fallback map title style."
+}
+
 if (
   -not $appSource.Contains("trip-places-menu") -or
   -not $appSource.Contains("trip-place-list") -or
