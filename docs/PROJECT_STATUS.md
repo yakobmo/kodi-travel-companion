@@ -282,6 +282,7 @@ Current Supabase state:
 - Public smoke passed on `2026-07-01` for install/menu simplification: Render served `assets/index-DvgYdZio.js` and `assets/index-CCIm6WMe.css`, including the install prompt path and collapsed advanced menu styles.
 - Public smoke passed on `2026-07-01` for WhatsApp-style invite sharing: Render served `assets/index-J6xKOAk0.js` and `assets/index-C-AMusoS.css`, including `navigator.share` and the `whatsapp-style-share-link` invite model.
 - Public smoke passed on `2026-07-01` for Kodi browser-voice fallback tuning: Render served `assets/index-CwyqiGym.js`, including browser voice enumeration, Hebrew `he-IL`, male Hebrew voice hints, and calmer speech rate/pitch values. This remains a fallback, not the final GPT-style neural voice target.
+- Public smoke passed on `2026-07-01` for natural Kodi speech: Render served `assets/index-DmO31BYO.js` with `/api/agent/speech` client playback, and the public `/api/agent/speech` endpoint returned `200 OK`, `audio/mpeg`, `X-Kodi-Voice-Model: gpt-4o-mini-tts`, and `X-Kodi-Voice: echo` for a short Hebrew Kodi voice sample.
 
 ## Next Continuation Checkpoint
 
