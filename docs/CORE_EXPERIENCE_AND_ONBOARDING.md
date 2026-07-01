@@ -16,6 +16,8 @@ Implementation rule: browser map rendering must use Google Maps JavaScript API w
 
 Product framing rule: the user experience is "Kodi inside Google Maps context", not "Kodi built its own map". Location, movement, zoom, compass, map gestures, and route-like map behavior should feel like the normal Google Maps experience. Kodi should add the conversation and decision layer on top of Google Maps, not compete with Google Maps.
 
+Kodi's agent role includes editing the trip plan. In the product UX, the user should be able to say things like "Kodi, add this beach", "move the next stop", "replace this restaurant", or "add the viewpoint you found". The first supported implementation is editing the Kodi trip layer shown on Google Maps, not silently editing the user's private Google Maps/My Maps account. Direct Google write-back is a later OAuth/API-gated capability and must be explicitly verified before the UI claims it happened.
+
 Without the manager's live location, Kodi cannot reliably answer "what now?", "what is nearby?", "how long to the hotel?", or "open this in Waze" in a travel-specific way.
 
 Group member locations are a flagship extension, but the minimum viable live context is:

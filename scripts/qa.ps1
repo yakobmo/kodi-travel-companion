@@ -104,6 +104,9 @@ if (
   -not $coreExperienceSource.Contains("Kodi + live map + trip points + at least the trip manager's live location") -or
   -not $coreExperienceSource.Contains("one clear next action") -or
   -not $coreExperienceSource.Contains("manager's live location") -or
+  -not $coreExperienceSource.Contains("Kodi's agent role includes editing the trip plan") -or
+  -not $coreExperienceSource.Contains("editing the Kodi trip layer shown on Google Maps") -or
+  -not $coreExperienceSource.Contains("Direct Google write-back is a later OAuth/API-gated capability") -or
   -not $coreExperienceSource.Contains("hamburger") -or
   -not $coreExperienceSource.Contains("Google account sync is not active yet") -or
   -not $coreExperienceSource.Contains("Participant Invitation Flow") -or
@@ -111,6 +114,17 @@ if (
   -not $coreExperienceSource.Contains("Location sharing is requested separately")
 ) {
   throw "Core experience doc must define Kodi + map + trip points + manager location, with one clear onboarding action at a time."
+}
+
+$googleIntegrationSource = Get-Content (Join-Path $root "docs\GOOGLE_INTEGRATION_PLAN.md") -Raw
+if (
+  -not $googleIntegrationSource.Contains("Kodi As The Google Maps Agent") -or
+  -not $googleIntegrationSource.Contains("Kodi can edit the **Kodi trip layer** first") -or
+  -not $googleIntegrationSource.Contains("If Google does not provide a supported write API") -or
+  -not $googleIntegrationSource.Contains("owner/admin approves") -or
+  -not $googleIntegrationSource.Contains("Future Google write-back model")
+) {
+  throw "Google integration plan must define Kodi as the map agent while keeping Google write-back gated by OAuth and supported APIs."
 }
 
 $tripUsagePoolSource = Get-Content (Join-Path $root "apps\api\src\billing\tripUsagePool.ts") -Raw

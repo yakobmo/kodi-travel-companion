@@ -98,6 +98,48 @@ Use separate Google layers:
 - Trip Context Resolver: Kodi must resolve the current reference point before calling Places or Routes. The reference can come from live GPS, active group destination, active route stop, nearby lodging, or recent conversation context.
 - Trip Timeline Resolver: Kodi must derive a trip-stage view from the imported Google map order so future questions such as "in two days near the Pelion hotel" can use the right lodging anchor before live OAuth exists.
 
+## Kodi As The Google Maps Agent
+
+Product intent:
+
+Kodi is the user's agent in the Google Maps trip context.
+
+That means Kodi should be able to:
+
+- Search for new attractions, services, restaurants, beaches, viewpoints, pharmacies, ATMs, fuel, lodging context, and other open-ended needs.
+- Recommend whether a found place should be added to the trip.
+- Add, move, rename, tag, or remove points in the Kodi trip layer after owner/admin approval.
+- Change the active group destination or planned route in the app.
+- Open the selected point in Google Maps or Waze.
+- Explain what changed and why.
+
+Important implementation boundary:
+
+Kodi can edit the **Kodi trip layer** first. This is the authoritative app layer stored in our backend and displayed on top of Google Maps.
+
+Kodi must not claim that changes were written into the user's private Google Maps/My Maps account until all of these are true:
+
+1. The trip owner completed Google OAuth.
+2. The backend has a supported Google API path for the specific write action.
+3. The owner/admin approved the operation.
+4. The write result was verified.
+
+If Google does not provide a supported write API for a specific Google Maps/My Maps/list action, Kodi should still complete the product need inside the Kodi trip layer and offer a Google Maps URL/export/manual-open path.
+
+This gives the user the practical experience they want now: "Kodi added this attraction to my trip map", while protecting the product from falsely promising "Kodi edited Google Maps itself" before Google supports that exact operation.
+
+Near-term edit model:
+
+```text
+User asks -> Kodi reasons/searches -> Kodi proposes map edit -> owner/admin approves -> backend writes Kodi trip layer -> Google Maps view updates -> optional Google Maps/Waze link opens
+```
+
+Future Google write-back model:
+
+```text
+User asks -> Kodi proposes map edit -> owner/admin approves -> backend writes Kodi trip layer -> backend attempts supported Google write-back -> result is audited -> UI says whether Google write-back succeeded, failed, or is unsupported
+```
+
 Location clarification:
 
 - Product-wise, Kodi is connected to the Google Maps context.
