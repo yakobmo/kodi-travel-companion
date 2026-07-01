@@ -304,6 +304,38 @@ function buildRouteEstimateContext(routeEstimate?: GoogleRouteEstimateResult) {
   return `לפי Google Routes, זמן ההגעה המשוער הוא ${routeEstimate.route.durationText}, מרחק ${routeEstimate.route.distanceText}.`;
 }
 
+function getReverseGeocodedReadableAddress(reverseGeocodedLocation: GoogleReverseGeocodeResult | undefined) {
+  if (reverseGeocodedLocation?.status !== "ready") {
+    return "";
+  }
+
+  return reverseGeocodedLocation.readableAddress ?? reverseGeocodedLocation.formattedAddress ?? "";
+}
+
+function getNearbyReadablePlace(
+  liveLocation: { lat: number; lng: number } | undefined,
+  externalPlacesSearch: GooglePlacesTextSearchResult | undefined
+) {
+  if (externalPlacesSearch?.status !== "ready") {
+    return "";
+  }
+
+  const placesWithNames = externalPlacesSearch.places.filter((place) => place.displayName || place.formattedAddress);
+  const nearbyWithDistance = liveLocation
+    ? placesWithNames
+        .filter((place) => typeof place.lat === "number" && typeof place.lng === "number")
+        .map((place) => ({
+          place,
+          distanceKm: getDistanceKm(liveLocation, { lat: Number(place.lat), lng: Number(place.lng) })
+        }))
+        .filter((item) => item.distanceKm <= 2)
+        .sort((first, second) => first.distanceKm - second.distanceKm)
+    : [];
+  const selectedPlace = nearbyWithDistance[0]?.place ?? placesWithNames[0];
+
+  return selectedPlace ? [selectedPlace.displayName, selectedPlace.formattedAddress].filter(Boolean).join(" - ") : "";
+}
+
 function buildCurrentLocationAnswer(
   memberId: string | undefined,
   memberName: string,
@@ -329,40 +361,25 @@ function buildCurrentLocationAnswer(
       : "";
   const timeText = updatedAt ? ` עדכון אחרון: ${updatedAt}.` : "";
   const liveLocation = visibleMember?.liveLocation;
-  const nearestPlace =
-    externalPlacesSearch?.status === "ready" && liveLocation
-      ? externalPlacesSearch.places.find((place) => {
-          if (!place.displayName && !place.formattedAddress) {
-            return false;
-          }
-
-          if (typeof place.lat !== "number" || typeof place.lng !== "number") {
-            return false;
-          }
-
-          return getDistanceKm(liveLocation, { lat: place.lat, lng: place.lng }) <= 1;
-        })
-      : undefined;
-  const nearestPlaceText = nearestPlace
-    ? [nearestPlace.displayName, nearestPlace.formattedAddress].filter(Boolean).join(" - ")
-    : "";
+  const nearestPlaceText = getNearbyReadablePlace(liveLocation ?? undefined, externalPlacesSearch);
+  const reverseGeocodedAddress = getReverseGeocodedReadableAddress(reverseGeocodedLocation);
 
   if (nearestPlaceText) {
     const addressText =
-      reverseGeocodedLocation?.status === "ready" && reverseGeocodedLocation.formattedAddress
-        ? ` הכתובת ש-Google מזהה סביב הנקודה: ${reverseGeocodedLocation.formattedAddress}.`
+      reverseGeocodedAddress
+        ? ` הכתובת ש-Google מזהה סביב הנקודה: ${reverseGeocodedAddress}.`
         : "";
     return `${memberName}, לפי המיקום החי שלך נראה שאתה ב/ליד ${nearestPlaceText}.${addressText}${accuracyText}${timeText}`;
   }
 
-  if (reverseGeocodedLocation?.status === "ready" && reverseGeocodedLocation.formattedAddress) {
-    return `${memberName}, לפי המיקום החי שלך אתה עכשיו ב-${reverseGeocodedLocation.formattedAddress}.${accuracyText}${timeText}`;
+  if (reverseGeocodedAddress) {
+    return `${memberName}, לפי המיקום החי שלך אתה עכשיו ב-${reverseGeocodedAddress}.${accuracyText}${timeText}`;
   }
 
   if (visibleMember?.liveLocation) {
     return (
-      `${memberName}, אני רואה את המיקום החי שלך בקואורדינטות ${visibleMember.liveLocation.lat}, ${visibleMember.liveLocation.lng}, ` +
-      `אבל כרגע לא הצלחתי לתרגם אותן לשם מקום דרך Google.${accuracyText}${timeText} כדאי לרענן מיקום אם זה לא נראה נכון.`
+      `${memberName}, אני רואה מיקום חי, אבל כרגע Google לא החזיר לי שם רחוב או נקודת ציון ברורה.` +
+      `${accuracyText}${timeText} כדאי ללחוץ על רענון מיקום ולשאול שוב; המענה שלי צריך להיות שם מקום קריא.`
     );
   }
 

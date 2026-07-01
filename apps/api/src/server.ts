@@ -236,7 +236,7 @@ function buildExternalPlacesQuery(message: string) {
     .trim();
 
   if (shouldReverseGeocodeCurrentLocation(message)) {
-    return "school landmark point of interest nearby";
+    return "school nearby";
   }
 
   if (normalizedMessage.length >= 3) {
@@ -311,16 +311,29 @@ function getRequestCurrentLocation(context: unknown) {
 
 function withRequestCurrentLocation(
   tripState: ReturnType<typeof buildDemoTripState>,
-  member: { id?: unknown; displayName?: unknown },
+  member: { id?: unknown; displayName?: unknown; role?: unknown },
   currentLocation?: { lat: number; lng: number }
 ) {
-  if (!currentLocation || typeof member.id !== "string") {
+  if (!currentLocation) {
+    return tripState;
+  }
+
+  const memberId =
+    typeof member.id === "string" && tripState.members.some((item) => item.member.id === member.id)
+      ? member.id
+      : tripState.members.find(
+          (item) => typeof member.displayName === "string" && item.member.displayName === member.displayName
+        )?.member.id ??
+        tripState.members.find((item) => item.member.role === "owner")?.member.id ??
+        tripState.members[0]?.member.id;
+
+  if (!memberId) {
     return tripState;
   }
 
   const now = new Date().toISOString();
   const members = tripState.members.map((item) => {
-    if (item.member.id !== member.id) {
+    if (item.member.id !== memberId) {
       return item;
     }
 
@@ -350,7 +363,7 @@ function withRequestCurrentLocation(
     agentContext: {
       ...tripState.agentContext,
       visibleLiveLocationMemberIds: Array.from(
-        new Set([...tripState.agentContext.visibleLiveLocationMemberIds, member.id])
+        new Set([...tripState.agentContext.visibleLiveLocationMemberIds, memberId])
       )
     }
   };

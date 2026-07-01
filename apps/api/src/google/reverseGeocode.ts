@@ -14,6 +14,7 @@ export interface GoogleReverseGeocodeResult {
   lat: number;
   lng: number;
   formattedAddress?: string;
+  readableAddress?: string;
   placeId?: string;
   locationTypes: string[];
   resultTypes: string[];
@@ -28,6 +29,11 @@ interface GoogleGeocodeResult {
   formatted_address?: string;
   place_id?: string;
   types?: string[];
+  address_components?: Array<{
+    long_name?: string;
+    short_name?: string;
+    types?: string[];
+  }>;
   geometry?: {
     location_type?: string;
   };
@@ -47,6 +53,61 @@ function getGoogleMapsApiKey() {
 
 function isFiniteCoordinate(value: number) {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function hasAnyType(result: GoogleGeocodeResult | undefined, types: string[]) {
+  return Boolean(result?.types?.some((type) => types.includes(type)));
+}
+
+function scoreGeocodeResult(result: GoogleGeocodeResult) {
+  let score = 0;
+
+  if (result.formatted_address) {
+    score += 1;
+  }
+
+  if (hasAnyType(result, ["street_address", "premise", "point_of_interest", "establishment", "school"])) {
+    score += 10;
+  }
+
+  if (hasAnyType(result, ["route", "neighborhood", "locality"])) {
+    score += 5;
+  }
+
+  if (hasAnyType(result, ["plus_code"])) {
+    score -= 5;
+  }
+
+  if (result.geometry?.location_type === "ROOFTOP") {
+    score += 3;
+  }
+
+  if (result.geometry?.location_type === "RANGE_INTERPOLATED") {
+    score += 2;
+  }
+
+  return score;
+}
+
+function selectBestGeocodeResult(results: GoogleGeocodeResult[] = []) {
+  return [...results].sort((first, second) => scoreGeocodeResult(second) - scoreGeocodeResult(first))[0];
+}
+
+function buildReadableAddress(result: GoogleGeocodeResult | undefined) {
+  if (!result?.formatted_address) {
+    return undefined;
+  }
+
+  const components = result.address_components ?? [];
+  const getComponent = (types: string[]) =>
+    components.find((component) => component.types?.some((type) => types.includes(type)))?.long_name;
+  const streetNumber = getComponent(["street_number"]);
+  const route = getComponent(["route"]);
+  const premise = getComponent(["premise", "point_of_interest", "establishment", "school"]);
+  const locality = getComponent(["locality", "postal_town", "administrative_area_level_2"]);
+
+  const street = [route, streetNumber].filter(Boolean).join(" ");
+  return [premise, street, locality].filter(Boolean).join(", ") || result.formatted_address;
 }
 
 export async function reverseGeocodeLocation(input: GoogleReverseGeocodeInput): Promise<GoogleReverseGeocodeResult> {
@@ -108,13 +169,14 @@ export async function reverseGeocodeLocation(input: GoogleReverseGeocodeInput): 
     };
   }
 
-  const best = payload.results?.[0];
+  const best = selectBestGeocodeResult(payload.results);
 
   return {
     ...base,
     configured: true,
     status: "ready",
     formattedAddress: best?.formatted_address,
+    readableAddress: buildReadableAddress(best),
     placeId: best?.place_id,
     locationTypes: best?.geometry?.location_type ? [best.geometry.location_type] : [],
     resultTypes: Array.isArray(best?.types) ? best.types : []

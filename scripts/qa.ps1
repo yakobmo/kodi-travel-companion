@@ -204,6 +204,7 @@ if (
   -not $serverSource.Contains("shouldUseHereAndNowContext") -or
   -not $serverSource.Contains("getRequestCurrentLocation") -or
   -not $serverSource.Contains("withRequestCurrentLocation") -or
+  -not $serverSource.Contains('item.member.role === "owner"') -or
   -not $serverSource.Contains("shouldReverseGeocodeCurrentLocation") -or
   -not $serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message)") -or
   -not $serverSource.Contains("reverseGeocodeLocation") -or
@@ -221,12 +222,21 @@ if (
   -not $reverseGeocodeSource.Contains("formattedAddress") -or
   -not $kodiSourceEarly.Contains("buildCurrentLocationAnswer") -or
   -not $kodiSourceEarly.Contains("item.member.id === memberId") -or
-  -not $kodiSourceEarly.Contains("externalPlacesSearch?.status === `"ready`"") -or
-  -not $kodiSourceEarly.Contains("getDistanceKm(liveLocation") -or
-  -not $kodiSourceEarly.Contains("<= 1") -or
+  -not $kodiSourceEarly.Contains('externalPlacesSearch?.status !== "ready"') -or
+  -not $kodiSourceEarly.Contains("getReverseGeocodedReadableAddress") -or
+  -not $kodiSourceEarly.Contains("getNearbyReadablePlace") -or
+  -not $kodiSourceEarly.Contains("getDistanceKm(liveLocation, { lat: Number(place.lat), lng: Number(place.lng) })") -or
+  -not $kodiSourceEarly.Contains("<= 2") -or
   -not $kodiSourceEarly.Contains("reverseGeocodedLocation")
 ) {
   throw "Kodi must answer current-location questions from Google reverse geocoding before falling back to raw coordinates."
+}
+
+if (
+  $kodiSourceEarly.Contains("בקואורדינטות `${visibleMember.liveLocation.lat}") -or
+  $kodiSourceEarly.Contains("לא הצלחתי לתרגם אותן לשם מקום")
+) {
+  throw "Kodi current-location fallback must not expose raw coordinates as the user-facing answer."
 }
 
 if ($openAiAgentSource.Contains("dangerouslyAllowBrowser")) {
