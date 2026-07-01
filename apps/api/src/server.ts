@@ -374,7 +374,21 @@ function getSearchLocationFromTripState(
   timelineReference?: TripTimelineResolution,
   forceLiveLocation = false
 ) {
-  const visibleMember = tripState.members.find((item) => item.consent.state === "enabled" && item.liveLocation);
+  const visibleMembers = tripState.members.filter((item) => item.consent.state === "enabled" && item.liveLocation);
+  const visibleMember = forceLiveLocation
+    ? [...visibleMembers].sort((first, second) => {
+        const firstGpsRank = first.liveLocation?.source === "gps" ? 1 : 0;
+        const secondGpsRank = second.liveLocation?.source === "gps" ? 1 : 0;
+        if (firstGpsRank !== secondGpsRank) {
+          return secondGpsRank - firstGpsRank;
+        }
+
+        return (
+          new Date(second.liveLocation?.updatedAt ?? 0).getTime() -
+          new Date(first.liveLocation?.updatedAt ?? 0).getTime()
+        );
+      })[0]
+    : visibleMembers[0];
 
   if (forceLiveLocation && visibleMember?.liveLocation) {
     return {

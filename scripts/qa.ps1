@@ -205,6 +205,8 @@ if (
   -not $serverSource.Contains("getRequestCurrentLocation") -or
   -not $serverSource.Contains("withRequestCurrentLocation") -or
   -not $serverSource.Contains('item.member.role === "owner"') -or
+  -not $serverSource.Contains('first.liveLocation?.source === "gps"') -or
+  -not $serverSource.Contains("new Date(second.liveLocation?.updatedAt") -or
   -not $serverSource.Contains("shouldReverseGeocodeCurrentLocation") -or
   -not $serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message)") -or
   -not $serverSource.Contains("reverseGeocodeLocation") -or
