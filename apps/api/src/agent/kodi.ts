@@ -346,6 +346,21 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     };
   }
 
+  if (includesAny(message, ["כאן", "לידי", "לידינו", "בסביבה", "כאן ועכשיו", "באר שבע", "near me", "around me"])) {
+    return {
+      author: "קודי",
+      intent: "place_recommendation",
+      requiresAdminApproval: false,
+      source: "rules",
+      text:
+        `${memberName}, הבנתי: כרגע עובדים במצב כאן ועכשיו, לא לפי מסלול יוון. ` +
+        "אני מתייחס למיקום החי שלכם כנקודת העוגן ומחפש סביבכם, כשהמסלול המתוכנן נשאר רק ברקע. " +
+        `${externalPlacesContext} ` +
+        "כש-Google Places פעיל, אני אמור להביא מקומות אמיתיים סביב המיקום הנוכחי, להשוות ביניהם, להסביר למה אחד עדיף, ואז לאפשר לפתוח אותו ב-Google Maps או Waze. " +
+        "אם תרצו להוסיף מקום שמצאתי למפה, אבקש אישור מנהל ואז אוסיף אותו לשכבת הטיול של קודי."
+    };
+  }
+
   if (includesAny(message, ["מה כדאי", "מה לעשות", "לאן ללכת", "תמליץ", "המלצה", "הכי טוב", "משהו עם מים"])) {
     const recommendation = selectRecommendedPlace(message, input.tripState);
     const best = recommendation.best;

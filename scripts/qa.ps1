@@ -107,6 +107,8 @@ if (
   -not $coreExperienceSource.Contains("Kodi's agent role includes editing the trip plan") -or
   -not $coreExperienceSource.Contains("editing the Kodi trip layer shown on Google Maps") -or
   -not $coreExperienceSource.Contains("Direct Google write-back is a later OAuth/API-gated capability") -or
+  -not $coreExperienceSource.Contains("Here-And-Now Mode") -or
+  -not $coreExperienceSource.Contains("live/current location takes precedence over the planned trip timeline") -or
   -not $coreExperienceSource.Contains("hamburger") -or
   -not $coreExperienceSource.Contains("Google account sync is not active yet") -or
   -not $coreExperienceSource.Contains("Participant Invitation Flow") -or
@@ -122,7 +124,8 @@ if (
   -not $googleIntegrationSource.Contains("Kodi can edit the **Kodi trip layer** first") -or
   -not $googleIntegrationSource.Contains("If Google does not provide a supported write API") -or
   -not $googleIntegrationSource.Contains("owner/admin approves") -or
-  -not $googleIntegrationSource.Contains("Future Google write-back model")
+  -not $googleIntegrationSource.Contains("Future Google write-back model") -or
+  -not $googleIntegrationSource.Contains("Here-and-now requests must prefer the live/current location")
 ) {
   throw "Google integration plan must define Kodi as the map agent while keeping Google write-back gated by OAuth and supported APIs."
 }
@@ -158,11 +161,23 @@ if (
   -not $openAiAgentSource.Contains("tripArcHint") -or
   -not $openAiAgentSource.Contains("cash planning") -or
   -not $openAiAgentSource.Contains("road accessibility") -or
+  -not $openAiAgentSource.Contains("Support a here-and-now mode") -or
   -not $openAiAgentSource.Contains("Do not claim live Google account sync") -or
   -not $openAiAgentSource.Contains("Return JSON only") -or
   -not $openAiAgentSource.Contains('source: "openai"')
 ) {
   throw "OpenAI agent bridge must be backend-only, elite-agent grounded in Google/trip context, web-search capable for live questions, JSON validated, and guarded by a fallback."
+}
+
+$serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
+if (
+  -not $serverSource.Contains("shouldUseHereAndNowContext") -or
+  -not $serverSource.Contains("getRequestCurrentLocation") -or
+  -not $serverSource.Contains("withRequestCurrentLocation") -or
+  -not $serverSource.Contains("forceLiveLocation") -or
+  -not $serverSource.Contains("Here-and-now request: live/current location takes precedence")
+) {
+  throw "Agent server flow must support here-and-now mode by preferring request live location over the planned timeline."
 }
 
 if ($openAiAgentSource.Contains("dangerouslyAllowBrowser")) {
@@ -940,7 +955,8 @@ if (-not $serverSource.Contains("resetDemoTripSetupState")) {
 
 if (
   -not $serverSource.Contains("const tripState = req.body?.tripState ?? buildDemoTripState()") -and
-  -not $serverSource.Contains("const tripState = req.body?.tripState ?? (await buildDemoTripStateAsync())")
+  -not $serverSource.Contains("const tripState = req.body?.tripState ?? (await buildDemoTripStateAsync())") -and
+  -not $serverSource.Contains("const tripState = withRequestCurrentLocation")
 ) {
   throw "Kodi agent endpoint must attach TripState context when the client does not send one."
 }
@@ -949,9 +965,17 @@ if ($serverSource.Contains("agent_not_implemented") -or $serverSource.Contains("
   throw "Kodi agent endpoint still looks like a placeholder."
 }
 
-$kodiSource = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw
+$kodiSource = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -Encoding utf8
 if (-not $kodiSource.Contains("buildVisibleLocationSummary")) {
   throw "Kodi agent is missing TripState-based location summary logic."
+}
+
+if (
+  -not $kodiSource.Contains("כאן ועכשיו") -or
+  -not $kodiSource.Contains("לא לפי מסלול יוון") -or
+  -not $kodiSource.Contains("מיקום החי שלכם כנקודת העוגן")
+) {
+  throw "Kodi fallback must answer here-and-now requests from live location instead of the planned itinerary."
 }
 
 if (-not $kodiSource.Contains("selectRecommendedPlace")) {

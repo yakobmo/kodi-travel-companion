@@ -257,18 +257,108 @@ function buildExternalPlacesQuery(message: string) {
   return message;
 }
 
+function shouldUseHereAndNowContext(message: string) {
+  return includesAnyTerm(message, [
+    "כאן",
+    "לידי",
+    "לידינו",
+    "בסביבה",
+    "איפה אני",
+    "מיקום עכשווי",
+    "כאן ועכשיו",
+    "הטיול החי",
+    "בבאר שבע",
+    "באר שבע",
+    "near me",
+    "around me",
+    "here",
+    "current location"
+  ]);
+}
+
+function getRequestCurrentLocation(context: unknown) {
+  if (!context || typeof context !== "object") {
+    return undefined;
+  }
+
+  const currentLocation = (context as { currentLocation?: { lat?: unknown; lng?: unknown } }).currentLocation;
+  if (typeof currentLocation?.lat !== "number" || typeof currentLocation.lng !== "number") {
+    return undefined;
+  }
+
+  return {
+    lat: currentLocation.lat,
+    lng: currentLocation.lng
+  };
+}
+
+function withRequestCurrentLocation(
+  tripState: ReturnType<typeof buildDemoTripState>,
+  member: { id?: unknown; displayName?: unknown },
+  currentLocation?: { lat: number; lng: number }
+) {
+  if (!currentLocation || typeof member.id !== "string") {
+    return tripState;
+  }
+
+  const now = new Date().toISOString();
+  const members = tripState.members.map((item) => {
+    if (item.member.id !== member.id) {
+      return item;
+    }
+
+    return {
+      ...item,
+      consent: {
+        ...item.consent,
+        state: "enabled" as const,
+        updatedAt: now
+      },
+      liveLocation: {
+        memberId: item.member.id,
+        tripGroupId: item.member.tripGroupId,
+        lat: currentLocation.lat,
+        lng: currentLocation.lng,
+        updatedAt: now,
+        source: "gps" as const
+      },
+      displayLabel: typeof member.displayName === "string" ? member.displayName : item.displayLabel,
+      updatedMinutesAgo: 0
+    };
+  });
+
+  return {
+    ...tripState,
+    members,
+    agentContext: {
+      ...tripState.agentContext,
+      visibleLiveLocationMemberIds: Array.from(
+        new Set([...tripState.agentContext.visibleLiveLocationMemberIds, member.id])
+      )
+    }
+  };
+}
+
 function getSearchLocationFromTripState(
   tripState: ReturnType<typeof buildDemoTripState>,
-  timelineReference?: TripTimelineResolution
+  timelineReference?: TripTimelineResolution,
+  forceLiveLocation = false
 ) {
+  const visibleMember = tripState.members.find((item) => item.consent.state === "enabled" && item.liveLocation);
+
+  if (forceLiveLocation && visibleMember?.liveLocation) {
+    return {
+      lat: visibleMember.liveLocation.lat,
+      lng: visibleMember.liveLocation.lng
+    };
+  }
+
   if (timelineReference && timelineReference.confidence !== "low" && timelineReference.referenceLocation) {
     return {
       lat: timelineReference.referenceLocation.lat,
       lng: timelineReference.referenceLocation.lng
     };
   }
-
-  const visibleMember = tripState.members.find((item) => item.consent.state === "enabled" && item.liveLocation);
 
   if (visibleMember?.liveLocation) {
     return {
@@ -1412,7 +1502,13 @@ app.post("/api/agent/message", async (req, res) => {
     return;
   }
 
-  const tripState = req.body?.tripState ?? (await buildDemoTripStateAsync());
+  const requestCurrentLocation = getRequestCurrentLocation(context);
+  const hereAndNowContext = shouldUseHereAndNowContext(message);
+  const tripState = withRequestCurrentLocation(
+    req.body?.tripState ?? (await buildDemoTripStateAsync()),
+    normalizedMember,
+    requestCurrentLocation
+  );
   const usagePool = buildDemoTripUsagePool({
     tripGroupId: tripState.trip.groupId,
     members: tripState.members
@@ -1431,7 +1527,7 @@ app.post("/api/agent/message", async (req, res) => {
   const externalPlacesSearch = placesUsageGate?.allowed
     ? await searchGooglePlacesText({
         query: buildExternalPlacesQuery(message),
-        ...getSearchLocationFromTripState(tripState, timelineReference),
+        ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext),
         radiusMeters: 3000,
         languageCode: "he"
       })
@@ -1534,9 +1630,11 @@ app.post("/api/agent/message", async (req, res) => {
       routeEstimateStatus: routeEstimate?.status,
       tripContextConfidence: shouldUseRouteEstimate(message) ? tripReference.confidence : undefined,
       tripContextReason: shouldUseRouteEstimate(message) ? tripReference.reason : undefined,
-      timelineReferenceConfidence: timelineReference.confidence,
-      timelineReferenceReason: timelineReference.reason,
-      timelineSegmentTitle: timelineReference.segment?.title,
+      timelineReferenceConfidence: hereAndNowContext ? "live_location" : timelineReference.confidence,
+      timelineReferenceReason: hereAndNowContext
+        ? "Here-and-now request: live/current location takes precedence over planned trip timeline."
+        : timelineReference.reason,
+      timelineSegmentTitle: hereAndNowContext ? undefined : timelineReference.segment?.title,
       usageGateResults: [placesUsageGate, routesUsageGate, openAiUsageGate].filter(
         (item): item is TripUsageGateDecision => Boolean(item)
       ),

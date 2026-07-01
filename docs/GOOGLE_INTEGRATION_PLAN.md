@@ -147,6 +147,7 @@ Location clarification:
 - The app must use the device/browser location permission or a future permissioned Google account flow.
 - Once permission exists, the live location is displayed on Google Maps and used by Kodi as map context.
 - The UI should make this feel like normal Google Maps location behavior, not a separate custom GPS product.
+- Here-and-now requests must prefer the live/current location over the planned trip timeline. If the user says "here", "near me", "around us", "current location", "here and now", or names their current city, Kodi should search and reason from the current map position even when the saved trip source is a different itinerary. A generic "what now?" remains inside the planned trip unless the user explicitly points to the current location.
 
 Use one trip-space usage model:
 

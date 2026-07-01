@@ -85,6 +85,7 @@ Implemented locally:
 - Live-research trigger added for questions about weather, sunset, cash, food budget, exchange/ATM/euro availability, accessibility, road access, parking, opening hours, and recent conditions. Kodi can use the OpenAI Responses web-search tool when enabled, and retries without the tool if hosted search is unavailable so the chat does not fail.
 - Voice input added to the group chat composer through browser speech recognition in Hebrew, exposed as a clean microphone button next to the message box.
 - Rules fallback improved for cash/exchange questions, so even without local OpenAI configuration Kodi gives cautious travel-agent guidance instead of a generic response.
+- Here-and-now mode added on 2026-07-01: when the user asks about here, near me, current location, or a live trip outside the planned itinerary, Kodi uses the requesting device's live location as the active anchor and keeps the saved trip only as background context.
 - Public mobile smoke on 2026-06-30 passed after entry cleanup: a clean browser lands on onboarding, does not render the main app shell, and does not show seeded demo members or map/card layers before setup.
 - Public smoke on 2026-06-30 passed after manager-location map focus deploy: `/api/health`, `/api/trips/demo/storage`, and the public app shell returned successfully.
 - Public smoke on 2026-06-30 passed after mobile cleanup deploy: `/api/health`, `/api/trips/demo/storage`, and `/api/trips/demo/messages` returned successfully, with retired seeded family-dialogue messages hidden from the public API.

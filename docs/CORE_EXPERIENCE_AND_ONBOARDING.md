@@ -31,6 +31,25 @@ Live location is conceptually part of the Google Maps experience. In the web app
 
 UX wording should avoid suggesting that Kodi has a separate GPS system. Prefer language such as "Google Maps location is active" or "live location on the map" over infrastructure wording.
 
+## Here-And-Now Mode
+
+Kodi must also support a live "here and now" mode outside the planned itinerary.
+
+The user may be in Be'er Sheva, at home, on a spontaneous day trip, or anywhere else, and ask Kodi to work from the current location instead of the saved Greece route.
+
+Examples:
+
+- "Kodi, what is good near me now?"
+- "Kodi, find a playground around here."
+- "Kodi, I am in Be'er Sheva, where should we eat?"
+- "Kodi, leave the planned route for a moment and help me with what is around us."
+
+Product rule:
+
+When the user's wording points to here/near me/current location/here-and-now, the live/current location takes precedence over the planned trip timeline. The saved trip remains background context, but it must not drag the answer back to a hotel, region, or attraction from the planned route. A generic "what should we do now?" does not leave the planned trip by itself.
+
+Kodi should be able to switch back naturally when the user refers again to the planned trip, for example "tomorrow in Pelion" or "the hotel in Zagori".
+
 ## UX Principle
 
 The user should see one clear next action at a time.
