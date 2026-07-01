@@ -341,6 +341,10 @@ function buildExternalPlacesQuery(message: string) {
 }
 
 function shouldUseFastTripAnswer(message: string) {
+  if (process.env.KODI_FAST_TRIP_ANSWER_ENABLED !== "true") {
+    return false;
+  }
+
   const normalizedMessage = message.toLowerCase();
   const asksLodging = includesAnyTerm(normalizedMessage, [
     "hotel",
@@ -1907,7 +1911,7 @@ app.post("/api/agent/message", async (req, res) => {
     }
   });
   const openAiReply =
-    !shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed && openAiUsageGate.providerConfigured
+    openAiUsageGate.allowed && openAiUsageGate.providerConfigured
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
           message: focusedReferenceMessage,

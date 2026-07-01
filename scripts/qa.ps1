@@ -239,12 +239,15 @@ if (
   -not $serverSource.Contains('first.liveLocation?.source === "gps"') -or
   -not $serverSource.Contains("new Date(second.liveLocation?.updatedAt") -or
   -not $serverSource.Contains("shouldReverseGeocodeCurrentLocation") -or
-  -not $serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message)") -or
   -not $serverSource.Contains("reverseGeocodeLocation") -or
   -not $serverSource.Contains("forceLiveLocation") -or
   -not $serverSource.Contains("Here-and-now request: live/current location takes precedence")
 ) {
   throw "Agent server flow must support here-and-now mode by preferring request live location over the planned timeline."
+}
+
+if ($serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed")) {
+  throw "Current-location questions must reach the OpenAI agent after reverse geocoding; do not force them into rules-only replies."
 }
 
 $reverseGeocodeSource = Get-Content (Join-Path $root "apps\api\src\google\reverseGeocode.ts") -Raw

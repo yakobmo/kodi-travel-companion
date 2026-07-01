@@ -342,3 +342,25 @@ Each entry must include:
 - Why it happened.
 - The decision that prevents it.
 - The QA or automation check that enforces it.
+
+### 14. Do Not Let Guardrail Rules Become Kodi's Brain
+
+What happened:
+
+Repeated tactical fixes added rules and fast-lane answers that returned before the OpenAI agent could reason. Kodi then sounded like a limited bot, status panel, or setup wrapper instead of the intelligent travel companion.
+
+Why it happened:
+
+The fallback layer was treated as the primary response path for convenience and latency. That solved narrow cases but damaged the core product promise: Kodi should synthesize Google map context, live location, trip timeline, recent chat, Places/Routes data, and external/web context.
+
+Decision:
+
+- Default runtime is agent-first.
+- Rules are fallback, safety grounding, or explicitly enabled fast paths only.
+- `KODI_FAST_TRIP_ANSWER_ENABLED` must be explicitly set to `true` before canned fast trip answers can bypass OpenAI.
+- Current-location questions should still reach the OpenAI agent after reverse geocoding, with raw coordinates avoided in user-facing copy.
+- Prompt updates must preserve Kodi as a warm, capable travel partner, not an API/status explainer.
+
+QA/automation:
+
+- `scripts/qa.ps1` now fails if current-location questions are forced into rules-only replies by the old `!shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed` gate.
