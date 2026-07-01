@@ -94,6 +94,7 @@ Implemented locally:
 - Public smoke on 2026-06-30 passed after mobile cleanup deploy: `/api/health`, `/api/trips/demo/storage`, and `/api/trips/demo/messages` returned successfully, with retired seeded family-dialogue messages hidden from the public API.
 - Public smoke on 2026-07-01 passed after chat navigation deploy: `/api/health`, public bundle inspection, and public browser smoke confirmed Waze URLs inside chat render as tappable links.
 - Public smoke on 2026-07-01 passed after PWA shortcut deploy: `/manifest.webmanifest`, `/sw.js`, `/icons/kodi-192.png`, and `/icons/kodi-512.png` returned successfully; manifest reports `display=standalone` and three install icons.
+- Public smoke on 2026-07-01 passed after voice-output deploy: `/api/health`, public app shell, and public bundle inspection confirmed `SpeechSynthesisUtterance`, Hebrew `he-IL`, and the Kodi speaker control are deployed.
 
 ## Current Storage
 
