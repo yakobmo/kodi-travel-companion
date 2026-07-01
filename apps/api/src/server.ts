@@ -344,6 +344,48 @@ function formatFastPlaceLine(place: GooglePlacesTextSearchResult["places"][numbe
   return `${title}${address}${mapsLink}`;
 }
 
+function distanceMetersBetween(first: { lat: number; lng: number }, second: { lat: number; lng: number }) {
+  const earthRadiusMeters = 6371000;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const deltaLat = toRadians(second.lat - first.lat);
+  const deltaLng = toRadians(second.lng - first.lng);
+  const firstLat = toRadians(first.lat);
+  const secondLat = toRadians(second.lat);
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(firstLat) * Math.cos(secondLat) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+
+  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function findFastNearbyFoodPlace(
+  tripState: ReturnType<typeof buildDemoTripState>,
+  lodging: { id?: string; lat?: number; lng?: number }
+) {
+  if (typeof lodging.lat !== "number" || typeof lodging.lng !== "number") {
+    return undefined;
+  }
+
+  const lodgingLocation = { lat: lodging.lat, lng: lodging.lng };
+
+  return tripState.places
+    .filter((place) => place.id !== lodging.id && place.type === "food" && typeof place.lat === "number" && typeof place.lng === "number")
+    .map((place) => ({
+      place,
+      distanceMeters: distanceMetersBetween(lodgingLocation, { lat: Number(place.lat), lng: Number(place.lng) })
+    }))
+    .filter((item) => item.distanceMeters <= 25000)
+    .sort((first, second) => first.distanceMeters - second.distanceMeters)[0];
+}
+
+function buildGoogleMapsSearchNearLocation(query: string, location: { lat?: number; lng?: number }) {
+  if (typeof location.lat !== "number" || typeof location.lng !== "number") {
+    return undefined;
+  }
+
+  return `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${location.lat},${location.lng},14z`;
+}
+
 function buildFastTripAnswer(input: {
   message: string;
   tripState: ReturnType<typeof buildDemoTripState>;
@@ -359,12 +401,19 @@ function buildFastTripAnswer(input: {
     return undefined;
   }
 
-  const nearbyFood = input.externalPlacesSearch?.places.find((place) => place.displayName || place.formattedAddress);
+  const nearbySavedFood = findFastNearbyFoodPlace(input.tripState, lodging);
+  const nearbyExternalFood = input.externalPlacesSearch?.places.find((place) => place.displayName || place.formattedAddress);
   const lodgingAddress = lodging.address ? `\nכתובת: ${lodging.address}` : "";
   const foodText =
-    input.externalPlacesSearch?.status === "ready" && nearbyFood
-      ? `\nטברנה/מסעדה קרובה להתחיל ממנה: ${formatFastPlaceLine(nearbyFood)}`
-      : "\nחיפוש טברנה חיה דרך Google Places לא החזיר תוצאה מהירה כרגע, אבל המלון הוא העוגן הנכון לחיפוש סביבו.";
+    nearbySavedFood
+      ? `\nמהנקודות שכבר שמורות במפת הטיול, מקום אוכל קרוב להתחיל ממנו: ${nearbySavedFood.place.name}${
+          nearbySavedFood.place.address ? `, ${nearbySavedFood.place.address}` : ""
+        } (${Math.max(1, Math.round(nearbySavedFood.distanceMeters / 1000))} ק״מ מהמלון בערך).`
+      : input.externalPlacesSearch?.status === "ready" && nearbyExternalFood
+        ? `\nטברנה/מסעדה קרובה להתחיל ממנה: ${formatFastPlaceLine(nearbyExternalFood)}`
+        : `\nלא מצאתי כרגע נקודת אוכל שמורה קרובה מספיק במפת הטיול. חיפוש מהיר בגוגל מפות סביב המלון: ${
+            buildGoogleMapsSearchNearLocation("taverna restaurant", lodging) ?? "פתח את המלון במפה וחפש טברנה לידו"
+          }`;
 
   return {
     text: `הלינה הלילה לפי ציר הטיול היא ${lodging.name}.${lodgingAddress}${foodText}\nאם תרצה, כתוב "שים בוויז" ואפתח ניווט למלון או למקום שבחרת.`,
@@ -1671,36 +1720,10 @@ app.post("/api/agent/message", async (req, res) => {
     members: tripState.members
   });
   const timelineReference = resolveTimelineReferenceForMessage(message, tripState);
-  const placesUsageGate = shouldUseExternalPlacesSearch(message)
-    ? authorizeTripUsageCapability({
-        usagePool,
-        capability: "google_places",
-        triggeringMember: {
-          id: normalizedMember.id,
-          role: normalizedMember.role
-        }
-      })
-    : undefined;
-  const externalPlacesSearch = placesUsageGate?.allowed
-    ? await searchGooglePlacesText({
-        query: buildExternalPlacesQuery(message),
-        ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext),
-        radiusMeters: 3000,
-        languageCode: "he"
-      })
-    : undefined;
-  if (placesUsageGate?.allowed) {
-    await safeRecordUsageGateEvent({
-      usageGate: placesUsageGate,
-      actorName: String(normalizedMember.displayName),
-      source: "kodi_agent"
-    });
-  }
   const fastTripAnswer = buildFastTripAnswer({
     message,
     tripState,
-    timelineReference,
-    externalPlacesSearch
+    timelineReference
   });
   if (fastTripAnswer) {
     const permissionPolicy =
@@ -1727,17 +1750,40 @@ app.post("/api/agent/message", async (req, res) => {
         },
         recentMessages,
         tripState,
-        externalPlacesSearchStatus: externalPlacesSearch?.status,
         timelineReferenceConfidence: hereAndNowContext ? "live_location" : timelineReference.confidence,
         timelineReferenceReason: hereAndNowContext
           ? "Here-and-now request: live/current location takes precedence over planned trip timeline."
           : timelineReference.reason,
         timelineSegmentTitle: hereAndNowContext ? undefined : timelineReference.segment?.title,
-        usageGateResults: [placesUsageGate].filter((item): item is TripUsageGateDecision => Boolean(item)),
         permissionPolicy
       })
     });
     return;
+  }
+  const placesUsageGate = shouldUseExternalPlacesSearch(message)
+    ? authorizeTripUsageCapability({
+        usagePool,
+        capability: "google_places",
+        triggeringMember: {
+          id: normalizedMember.id,
+          role: normalizedMember.role
+        }
+      })
+    : undefined;
+  const externalPlacesSearch = placesUsageGate?.allowed
+    ? await searchGooglePlacesText({
+        query: buildExternalPlacesQuery(message),
+        ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext),
+        radiusMeters: 3000,
+        languageCode: "he"
+      })
+    : undefined;
+  if (placesUsageGate?.allowed) {
+    await safeRecordUsageGateEvent({
+      usageGate: placesUsageGate,
+      actorName: String(normalizedMember.displayName),
+      source: "kodi_agent"
+    });
   }
   const reverseGeocodedLocation =
     requestCurrentLocation && shouldReverseGeocodeCurrentLocation(message)

@@ -72,7 +72,8 @@ Kodi should feel conversational and quick. Not every message should wait for the
 For simple trip-context questions such as "where do we sleep tonight and what taverna is near the hotel?", the backend should answer through a fast lane:
 
 - resolve the current/future lodging from the trip timeline, active route, or group destination
-- use Google Places only for the nearby external lookup
+- prefer nearby food/attraction points already saved in the Google trip map
+- use Google Places only when the user really needs a live external lookup
 - skip the full OpenAI agent when the answer is already clear
 - return latency metadata so QA can catch slow regressions
 
