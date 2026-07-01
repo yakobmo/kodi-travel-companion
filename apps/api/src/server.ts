@@ -55,6 +55,7 @@ import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripSta
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext } from "./agent/kodi.js";
 import { tryBuildKodiReplyWithOpenAi } from "./agent/openaiAgent.js";
+import { reverseGeocodeLocation } from "./google/reverseGeocode.js";
 import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
 import {
   buildTripTimelineFromGoogleMapOrder,
@@ -234,6 +235,10 @@ function buildExternalPlacesQuery(message: string) {
     .replace(/\?/g, "")
     .trim();
 
+  if (shouldReverseGeocodeCurrentLocation(message)) {
+    return "school landmark point of interest nearby";
+  }
+
   if (normalizedMessage.length >= 3) {
     return `${normalizedMessage} nearby`;
   }
@@ -255,6 +260,18 @@ function buildExternalPlacesQuery(message: string) {
   }
 
   return message;
+}
+
+function shouldReverseGeocodeCurrentLocation(message: string) {
+  return includesAnyTerm(message, [
+    "איפה אני",
+    "איפה אני עכשיו",
+    "איפה אנחנו",
+    "מיקום נוכחי",
+    "אתה רואה אותי",
+    "where am i",
+    "current location"
+  ]);
 }
 
 function shouldUseHereAndNowContext(message: string) {
@@ -1539,6 +1556,15 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
+  const reverseGeocodedLocation =
+    requestCurrentLocation && shouldReverseGeocodeCurrentLocation(message)
+      ? await reverseGeocodeLocation({
+          lat: requestCurrentLocation.lat,
+          lng: requestCurrentLocation.lng,
+          languageCode: "he",
+          regionCode: "il"
+        })
+      : undefined;
   const tripReference = resolveTripReferenceForMessage(message, tripState);
   const canEstimateRoute =
     shouldUseRouteEstimate(message) &&
@@ -1578,6 +1604,7 @@ app.post("/api/agent/message", async (req, res) => {
     ...req.body,
     tripState,
     externalPlacesSearch,
+    reverseGeocodedLocation,
     routeEstimate,
     tripContextClarification: shouldUseRouteEstimate(message) ? tripReference.clarificationQuestion : undefined
   });
@@ -1595,6 +1622,7 @@ app.post("/api/agent/message", async (req, res) => {
           ...req.body,
           tripState,
           externalPlacesSearch,
+          reverseGeocodedLocation,
           routeEstimate,
           tripContextClarification: shouldUseRouteEstimate(message) ? tripReference.clarificationQuestion : undefined,
           permissionPolicy,

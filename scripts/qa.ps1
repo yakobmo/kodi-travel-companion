@@ -42,6 +42,7 @@ $requiredFiles = @(
   "apps/api/src/data/localSetupState.ts",
   "apps/api/src/data/localTripState.ts",
   "apps/api/src/google/placesSearch.ts",
+  "apps/api/src/google/reverseGeocode.ts",
   "apps/api/src/google/routes.ts",
   "apps/api/src/google/sourceAdapter.ts",
   "apps/api/src/permissions/agentActions.ts",
@@ -190,6 +191,7 @@ if (
   -not $openAiAgentSource.Contains("cash planning") -or
   -not $openAiAgentSource.Contains("road accessibility") -or
   -not $openAiAgentSource.Contains("Support a here-and-now mode") -or
+  -not $openAiAgentSource.Contains("reverseGeocodedLocation") -or
   -not $openAiAgentSource.Contains("Do not claim live Google account sync") -or
   -not $openAiAgentSource.Contains("Return JSON only") -or
   -not $openAiAgentSource.Contains('source: "openai"')
@@ -202,10 +204,26 @@ if (
   -not $serverSource.Contains("shouldUseHereAndNowContext") -or
   -not $serverSource.Contains("getRequestCurrentLocation") -or
   -not $serverSource.Contains("withRequestCurrentLocation") -or
+  -not $serverSource.Contains("shouldReverseGeocodeCurrentLocation") -or
+  -not $serverSource.Contains("reverseGeocodeLocation") -or
   -not $serverSource.Contains("forceLiveLocation") -or
   -not $serverSource.Contains("Here-and-now request: live/current location takes precedence")
 ) {
   throw "Agent server flow must support here-and-now mode by preferring request live location over the planned timeline."
+}
+
+$reverseGeocodeSource = Get-Content (Join-Path $root "apps\api\src\google\reverseGeocode.ts") -Raw
+$kodiSourceEarly = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -Encoding utf8
+if (
+  -not $reverseGeocodeSource.Contains("maps.googleapis.com/maps/api/geocode/json") -or
+  -not $reverseGeocodeSource.Contains("latlng") -or
+  -not $reverseGeocodeSource.Contains("formattedAddress") -or
+  -not $kodiSourceEarly.Contains("buildCurrentLocationAnswer") -or
+  -not $kodiSourceEarly.Contains("item.member.id === memberId") -or
+  -not $kodiSourceEarly.Contains("externalPlacesSearch?.status === `"ready`"") -or
+  -not $kodiSourceEarly.Contains("reverseGeocodedLocation")
+) {
+  throw "Kodi must answer current-location questions from Google reverse geocoding before falling back to raw coordinates."
 }
 
 if ($openAiAgentSource.Contains("dangerouslyAllowBrowser")) {
@@ -705,6 +723,15 @@ if (
 
 if (-not $styleSource.Contains(".current-location-button") -or -not $styleSource.Contains(".current-location-button.active")) {
   throw "Web app must style the visible current-location action in the map top bar."
+}
+
+if (
+  -not $appSource.Contains("googleMapFitSignatureRef") -or
+  -not $appSource.Contains("mapFitSignature") -or
+  $appSource.Contains("map.setCenter(center)") -or
+  $appSource.Contains("map.setZoom(mapAnchorLocation")
+) {
+  throw "Google Maps viewport must not be re-centered and re-zoomed on every live location update."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/members/") -or -not $appSource.Contains("locationSyncState")) {

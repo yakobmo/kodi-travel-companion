@@ -862,6 +862,7 @@ export function App() {
   const googleMapElementRef = useRef<HTMLDivElement | null>(null);
   const googleMapInstanceRef = useRef<any | null>(null);
   const googleMapMarkersRef = useRef<any[]>([]);
+  const googleMapFitSignatureRef = useRef("");
   const locationWatchIdRef = useRef<number | null>(null);
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1608,7 +1609,18 @@ export function App() {
     typeof window === "undefined"
       ? "https://kodi-travel-companion.onrender.com?join=group_family_greece_demo"
       : `${window.location.origin}${window.location.pathname}?join=group_family_greece_demo`;
-  const visibleMembers = members.filter((member) => member.locationSharing === "enabled" && member.liveLocation);
+  const visibleMembers = useMemo(
+    () => members.filter((member) => member.locationSharing === "enabled" && member.liveLocation),
+    [members]
+  );
+  const mapFitSignature = useMemo(
+    () =>
+      [
+        currentLocation ? "current-location-on" : "current-location-off",
+        mapPlaces.map((place) => `${place.id}:${place.lat}:${place.lng}`).join("|")
+      ].join("::"),
+    [currentLocation, mapPlaces]
+  );
   const recentTripEvents = tripEvents.slice(0, 3);
   const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
 
@@ -1650,12 +1662,8 @@ export function App() {
             fullscreenControl: true,
             mapTypeControl: false,
             streetViewControl: true
-          });
+        });
         googleMapInstanceRef.current = map;
-        if (existingMap) {
-          map.setCenter(center);
-          map.setZoom(mapAnchorLocation ? 13 : 9);
-        }
 
         googleMapMarkersRef.current.forEach((marker) => marker.setMap?.(null));
         googleMapMarkersRef.current = [];
@@ -1706,8 +1714,9 @@ export function App() {
             })
           );
         });
-        if (hasBounds) {
+        if (hasBounds && (!existingMap || googleMapFitSignatureRef.current !== mapFitSignature)) {
           map.fitBounds(bounds, 44);
+          googleMapFitSignatureRef.current = mapFitSignature;
         }
         googleMapMarkersRef.current = nextMarkers;
       } catch {
@@ -1724,7 +1733,7 @@ export function App() {
         googleMapMarkersRef.current = [];
       }
     };
-  }, [currentLocation, googleMapsApiKey, mapAnchorLocation, mapPlaces, selectedPlace, visibleMembers]);
+  }, [currentLocation, googleMapsApiKey, mapAnchorLocation, mapFitSignature, mapPlaces, selectedPlace, visibleMembers]);
 
   useEffect(
     () => () => {

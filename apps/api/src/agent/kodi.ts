@@ -1,5 +1,6 @@
 import type { AgeGroup, MemberRole, TripPlace, TripState } from "../domain/types.js";
 import type { GooglePlacesTextSearchResult } from "../google/placesSearch.js";
+import type { GoogleReverseGeocodeResult } from "../google/reverseGeocode.js";
 import type { GoogleRouteEstimateResult } from "../google/routes.js";
 
 export interface ConversationMessage {
@@ -22,6 +23,7 @@ export interface AgentMessageRequest {
   selectedPlace?: Pick<TripPlace, "id" | "name" | "type" | "address" | "lat" | "lng" | "note" | "tags">;
   tripState?: TripState;
   externalPlacesSearch?: GooglePlacesTextSearchResult;
+  reverseGeocodedLocation?: GoogleReverseGeocodeResult;
   routeEstimate?: GoogleRouteEstimateResult;
   tripContextClarification?: string;
 }
@@ -289,6 +291,60 @@ function buildRouteEstimateContext(routeEstimate?: GoogleRouteEstimateResult) {
   return `לפי Google Routes, זמן ההגעה המשוער הוא ${routeEstimate.route.durationText}, מרחק ${routeEstimate.route.distanceText}.`;
 }
 
+function buildCurrentLocationAnswer(
+  memberId: string | undefined,
+  memberName: string,
+  reverseGeocodedLocation: GoogleReverseGeocodeResult | undefined,
+  externalPlacesSearch: GooglePlacesTextSearchResult | undefined,
+  tripState: TripState | undefined
+) {
+  const visibleMember =
+    tripState?.members.find((item) => item.member.id === memberId && item.consent.state === "enabled" && item.liveLocation) ??
+    tripState?.members.find(
+      (item) => item.member.displayName === memberName && item.consent.state === "enabled" && item.liveLocation
+    );
+  const updatedAt = visibleMember?.liveLocation?.updatedAt
+    ? new Date(visibleMember.liveLocation.updatedAt).toLocaleString("he-IL", {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "Asia/Jerusalem"
+      })
+    : undefined;
+  const accuracyText =
+    typeof visibleMember?.liveLocation?.accuracyMeters === "number"
+      ? ` דיוק GPS משוער: ${Math.round(visibleMember.liveLocation.accuracyMeters)} מטר.`
+      : "";
+  const timeText = updatedAt ? ` עדכון אחרון: ${updatedAt}.` : "";
+  const nearestPlace =
+    externalPlacesSearch?.status === "ready"
+      ? externalPlacesSearch.places.find((place) => place.displayName || place.formattedAddress)
+      : undefined;
+  const nearestPlaceText = nearestPlace
+    ? [nearestPlace.displayName, nearestPlace.formattedAddress].filter(Boolean).join(" - ")
+    : "";
+
+  if (nearestPlaceText) {
+    const addressText =
+      reverseGeocodedLocation?.status === "ready" && reverseGeocodedLocation.formattedAddress
+        ? ` הכתובת ש-Google מזהה סביב הנקודה: ${reverseGeocodedLocation.formattedAddress}.`
+        : "";
+    return `${memberName}, לפי המיקום החי שלך נראה שאתה ב/ליד ${nearestPlaceText}.${addressText}${accuracyText}${timeText}`;
+  }
+
+  if (reverseGeocodedLocation?.status === "ready" && reverseGeocodedLocation.formattedAddress) {
+    return `${memberName}, לפי המיקום החי שלך אתה עכשיו ב-${reverseGeocodedLocation.formattedAddress}.${accuracyText}${timeText}`;
+  }
+
+  if (visibleMember?.liveLocation) {
+    return (
+      `${memberName}, אני רואה את המיקום החי שלך בקואורדינטות ${visibleMember.liveLocation.lat}, ${visibleMember.liveLocation.lng}, ` +
+      `אבל כרגע לא הצלחתי לתרגם אותן לשם מקום דרך Google.${accuracyText}${timeText} כדאי לרענן מיקום אם זה לא נראה נכון.`
+    );
+  }
+
+  return `${memberName}, אין לי כרגע מיקום חי שלך. לחץ על "מיקום נוכחי" ואחרי שהדפדפן מאשר מיקום אשיב לפי המקום האמיתי שלך.`;
+}
+
 export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMessageResponse {
   const message = input.message.trim();
   const recentText = joinRecentMessages(input.recentMessages);
@@ -308,6 +364,22 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     : "";
   const externalPlacesContext = buildExternalPlacesContext(input.externalPlacesSearch);
   const routeEstimateContext = buildRouteEstimateContext(input.routeEstimate);
+
+  if (includesAny(message, ["איפה אני", "איפה אני עכשיו", "מיקום נוכחי", "אתה רואה אותי", "איפה אנחנו"])) {
+    return {
+      author: "קודי",
+      intent: "group_location",
+      requiresAdminApproval: false,
+      source: "rules",
+      text: buildCurrentLocationAnswer(
+        input.member?.id,
+        memberName,
+        input.reverseGeocodedLocation,
+        input.externalPlacesSearch,
+        input.tripState
+      )
+    };
+  }
 
   if (input.tripContextClarification) {
     return {
