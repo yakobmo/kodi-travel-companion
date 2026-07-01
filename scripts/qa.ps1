@@ -616,6 +616,16 @@ if (
   throw "Group chat must behave like a fixed-height WhatsApp-style conversation with internal message scrolling and a persistent composer."
 }
 
+if (
+  -not $styleSource.Contains("grid-template-columns: minmax(0, auto) minmax(0, 1fr)") -or
+  -not $styleSource.Contains("min-height: 48px") -or
+  -not $styleSource.Contains("white-space: nowrap") -or
+  -not $styleSource.Contains("#087f9d") -or
+  -not $styleSource.Contains("#eaf9fd")
+) {
+  throw "Mobile group chat header must stay compact, one-line, and use the blue/turquoise visual direction."
+}
+
 if (-not $appSource.Contains("/api/trips/demo/agent-actions/authorize") -or -not $appSource.Contains("requestGroupDestinationApproval")) {
   throw "Web app must request server authorization before operational group actions."
 }

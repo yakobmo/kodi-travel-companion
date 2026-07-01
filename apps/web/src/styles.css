@@ -1,6 +1,6 @@
 :root {
   color: #16211f;
-  background: #f4f6f3;
+  background: #f2f8fb;
   font-family: Arial, sans-serif;
 }
 
@@ -419,7 +419,7 @@ input {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;
   overflow: hidden;
-  background: #edf1ec;
+  background: #eef8fb;
 }
 
 .map-surface {
@@ -1048,7 +1048,7 @@ input {
   display: grid;
   gap: 12px;
   padding: 18px;
-  border-bottom: 1px solid #e1e6e3;
+  border-bottom: 1px solid #cfe6ef;
   background: #ffffff;
 }
 
@@ -1070,14 +1070,14 @@ input {
   border: 0;
   padding: 6px 9px;
   border-radius: 999px;
-  background: #edf5f2;
-  color: #184d43;
+  background: #e6f7fb;
+  color: #07536b;
   font-size: 12px;
   font-weight: 700;
 }
 
 .member-pills .kodi-pill {
-  background: #16211f;
+  background: #07394d;
   color: #ffffff;
 }
 
@@ -1091,7 +1091,7 @@ input {
 }
 
 .member-pills .active-speaker {
-  outline: 2px solid #096b5c;
+  outline: 2px solid #059bc0;
   outline-offset: 2px;
 }
 
@@ -1437,7 +1437,7 @@ input {
   overflow: auto;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
-  background: #f7faf8;
+  background: #f3fbfd;
 }
 
 .message {
@@ -1449,19 +1449,19 @@ input {
 }
 
 .message.kodi {
-  border: 1px solid #cce1dc;
-  background: #eef8f5;
+  border: 1px solid #bfe7f2;
+  background: #eaf9fd;
 }
 
 .message.current-user {
   align-self: flex-start;
   border-radius: 8px 8px 2px 8px;
-  background: #dff4ec;
+  background: #d8f4fb;
 }
 
 .message strong {
   display: block;
-  color: #0f483e;
+  color: #07536b;
   font-size: 13px;
 }
 
@@ -1479,10 +1479,10 @@ input {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid #b7ded2;
+  border: 1px solid #bfe7f2;
   border-radius: 8px;
   background: #ffffff;
-  color: #0f6f5f;
+  color: #087f9d;
 }
 
 .speak-message-button:focus-visible {
@@ -1502,7 +1502,7 @@ input {
   margin: 4px 2px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: #0f6f5f;
+  background: #087f9d;
   color: #ffffff;
   font-weight: 800;
   text-decoration: none;
@@ -1513,7 +1513,7 @@ input {
 }
 
 .message-link.maps-link {
-  background: #0f6f5f;
+  background: #087f9d;
 }
 
 .message-link:focus-visible {
@@ -1552,7 +1552,7 @@ input {
   grid-template-columns: minmax(0, 1fr) 44px auto;
   gap: 8px;
   padding: 14px;
-  border-top: 1px solid #e1e6e3;
+  border-top: 1px solid #cfe6ef;
   padding-bottom: max(14px, env(safe-area-inset-bottom));
   background: #ffffff;
 }
@@ -1564,10 +1564,10 @@ input {
   justify-content: center;
   gap: 8px;
   min-height: 34px;
-  border: 1px solid #b7ded2;
+  border: 1px solid #bfe7f2;
   border-radius: 8px;
-  background: #eef8f5;
-  color: #0f483e;
+  background: #eaf9fd;
+  color: #07536b;
   font-size: 13px;
   font-weight: 800;
 }
@@ -1594,7 +1594,7 @@ input {
   border: 0;
   border-radius: 8px;
   padding: 0 16px;
-  background: #16211f;
+  background: #07394d;
   color: #ffffff;
 }
 
@@ -1603,13 +1603,13 @@ input {
   align-items: center;
   justify-content: center;
   padding: 0;
-  background: #edf7f3;
-  color: #0f6f5f;
-  border: 1px solid #b7ded2;
+  background: #e6f7fb;
+  color: #087f9d;
+  border: 1px solid #bfe7f2;
 }
 
 .composer .voice-button.listening {
-  background: #0f6f5f;
+  background: #087f9d;
   color: #ffffff;
   box-shadow: 0 0 0 4px rgba(15, 111, 95, 0.18);
   animation: microphone-listening 1.1s ease-in-out infinite;
@@ -1743,12 +1743,17 @@ input {
   }
 
   .chat-sheet header {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    align-items: center;
     gap: 8px;
-    padding: 12px 14px;
+    min-height: 48px;
+    padding: 6px 10px;
   }
 
   .chat-sheet h2 {
-    font-size: 18px;
+    white-space: nowrap;
+    font-size: 16px;
+    line-height: 1.1;
   }
 
   .places-strip,
@@ -1774,10 +1779,18 @@ input {
 
   .member-pills {
     gap: 6px;
-    padding-top: 4px;
+    min-width: 0;
+    padding-top: 0;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
+  }
+
+  .member-pills span,
+  .member-pills button {
+    min-height: 30px;
+    padding: 4px 8px;
+    font-size: 12px;
   }
 
   .member-pills::-webkit-scrollbar {
@@ -1786,7 +1799,7 @@ input {
 
   .messages {
     min-height: 0;
-    padding: 12px;
+    padding: 10px 12px;
   }
 
   .message {
