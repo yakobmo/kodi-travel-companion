@@ -26,7 +26,11 @@ const retiredSeedMessageTextFragments = [
   "נועה עייפה",
   "בדיקת שמירת שיחה",
   "הודעה שנכנסה מבחוץ",
-  "בדיקת פעילות מיידית"
+  "בדיקת פעילות מיידית",
+  "Averof 12",
+  "יעד הקבוצתי הנוכחי",
+  "מסלול קבוצתי קצר סביב",
+  "התחנה הפעילה הבאה במסלול"
 ];
 
 function isRetiredSeedMessage(message: StoredDemoMessage) {

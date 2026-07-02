@@ -20,6 +20,10 @@ function buildDemoTripStateFromParts(input: {
   groupRoute: ReturnType<typeof loadDemoGroupRoute>;
 }): TripState {
   const { places, members, groupDestination, groupRoute } = input;
+  const validPlaceIds = new Set(places.map((place) => place.id));
+  const sanitizedGroupDestination =
+    groupDestination && validPlaceIds.has(groupDestination.placeId) ? groupDestination : null;
+  const sanitizedGroupRoute = sanitizeGroupRoute(groupRoute, validPlaceIds);
 
   return {
     trip: {
@@ -31,8 +35,8 @@ function buildDemoTripStateFromParts(input: {
     summary: buildTripPlacesSummary(places),
     places,
     members,
-    groupDestination,
-    groupRoute,
+    groupDestination: sanitizedGroupDestination,
+    groupRoute: sanitizedGroupRoute,
     agentContext: {
       name: "קודי",
       language: "he",
@@ -43,6 +47,30 @@ function buildDemoTripStateFromParts(input: {
         .filter((member) => member.consent.state === "enabled" && member.liveLocation)
         .map((member) => member.member.id)
     }
+  };
+}
+
+function sanitizeGroupRoute(
+  groupRoute: ReturnType<typeof loadDemoGroupRoute>,
+  validPlaceIds: Set<string>
+): ReturnType<typeof loadDemoGroupRoute> {
+  if (!groupRoute) {
+    return null;
+  }
+
+  const stops = groupRoute.stops.filter((stop) => validPlaceIds.has(stop.placeId));
+  if (stops.length < 2) {
+    return null;
+  }
+
+  const completedStopIds = groupRoute.completedStopIds.filter((placeId) => validPlaceIds.has(placeId));
+  const activeStopIndex = Math.min(groupRoute.activeStopIndex, stops.length - 1);
+
+  return {
+    ...groupRoute,
+    activeStopIndex,
+    completedStopIds,
+    stops
   };
 }
 

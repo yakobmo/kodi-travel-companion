@@ -14,7 +14,7 @@ The app is built around:
 - Waze and Google Maps navigation links.
 - Group permissions: everyone can speak, only owner/admin can perform operational changes.
 - Opt-in live member location sharing.
-- Group destination and group route state.
+- Group destination and group route state as backend capabilities, not as default visible trip context.
 - One owner-managed trip usage pool, so family members do not need separate paid AI subscriptions.
 
 Product-heart decision: the primary experience is Kodi + map + trip points + at least the manager's live location. Group member locations, external app shortcuts, participant management, usage visibility, and admin tools are important, but they should not crowd the first-run path.
@@ -25,13 +25,15 @@ Map architecture correction: Google Maps is the product map engine. Kodi does no
 
 Location architecture correction: product-wise, Kodi is connected to the Google Maps context. The app should feel like normal Google Maps with Kodi over it. Implementation-wise, the browser still requires device/location permission before the app can use the user's live location; Kodi cannot silently inherit private live location from the user's Google Maps app or account.
 
+Trip-order correction: the default current trip target is derived from the ordered Google Maps trip points, not from a stale stored group destination. Group destination/route controls must be explicit admin actions and must not appear as a default block in the hamburger.
+
 ## Current Core
 
 Implemented locally:
 
 - React + TypeScript web app.
 - Node + Express API.
-- Trip state with 108 imported places.
+- Trip state with 107 imported places after removing a stale `Averof 12` stop that was not part of the intended live trip flow.
 - Hebrew chat/map UI.
 - Kodi wake behavior inside the group conversation.
 - Active speaker selection.

@@ -49,6 +49,13 @@ const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
 const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
 const retiredDemoMemberIds = new Set(["dad", "noa", "grandma"]);
 const retiredDemoNames = new Set(["אבא", "אמא", "נועה", "סבתא", "QA"]);
+const retiredMessageFragments = [
+  "Averof 12",
+  "יעד הקבוצתי הנוכחי",
+  "מסלול קבוצתי קצר סביב",
+  "התחנה הפעילה הבאה במסלול",
+  "QA live route"
+];
 
 declare global {
   interface Window {
@@ -217,6 +224,17 @@ function rememberLocalSetupCompleted() {
 function getSafeManagerName(managerName = "מנהל הטיול") {
   const trimmedName = managerName.trim();
   return trimmedName.length > 1 && !retiredDemoNames.has(trimmedName) ? trimmedName : "מנהל הטיול";
+}
+
+function sanitizeChatMessages(chatMessages: ChatMessage[]) {
+  return chatMessages.filter((message) => {
+    if (retiredDemoNames.has(message.author)) {
+      return false;
+    }
+
+    const text = `${message.author}\n${message.text}`;
+    return !retiredMessageFragments.some((fragment) => text.includes(fragment));
+  });
 }
 
 function normalizeTripMembers(members: DemoMember[], managerName = "מנהל הטיול"): DemoMember[] {
@@ -914,7 +932,7 @@ export function App() {
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "fallback">("loading");
   const [navigationState, setNavigationState] = useState<"idle" | "opening" | "error">("idle");
-  const [messages, setMessages] = useState<ChatMessage[]>(demoMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => sanitizeChatMessages(demoMessages));
   const [tripEvents, setTripEvents] = useState<TripEvent[]>([]);
   const [eventRealtimeState, setEventRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [eventLogDriver, setEventLogDriver] = useState<"file" | "supabase" | "unknown">("unknown");
@@ -1277,11 +1295,11 @@ export function App() {
 
         const data = (await response.json()) as TripMessagesResponse;
         if (!ignore) {
-          setMessages(data.messages);
+          setMessages(sanitizeChatMessages(data.messages));
         }
       } catch {
         if (!ignore) {
-          setMessages(demoMessages);
+          setMessages(sanitizeChatMessages(demoMessages));
         }
       }
     }
@@ -1327,7 +1345,7 @@ export function App() {
           return;
         }
 
-        setMessages(data.messages);
+        setMessages(sanitizeChatMessages(data.messages));
         setChatRealtimeState("live");
       } catch {
         if (!ignore) {
@@ -1351,7 +1369,7 @@ export function App() {
         try {
           const data = JSON.parse(event.data) as TripMessagesResponse;
           if (!ignore && Array.isArray(data.messages)) {
-            setMessages(data.messages);
+            setMessages(sanitizeChatMessages(data.messages));
             setChatRealtimeState("live");
           }
         } catch {
@@ -3247,116 +3265,6 @@ export function App() {
             )}
           </div>
         </section>
-        {selectedPlace ? (
-          <section className="menu-block selected-place-menu" aria-label="פעולות לנקודה נבחרת">
-            <span>{getPlaceTypeLabel(selectedPlace.type)}</span>
-            <strong>{selectedPlace.name}</strong>
-            <p>{canNavigate ? "ניווט וקבוצת יעד דרך הנקודה שנבחרה במפה." : "לנקודה הזו חסרות קואורדינטות."}</p>
-            <button disabled={!canNavigate || navigationState === "opening"} onClick={openSelectedPlaceInWaze} type="button">
-              <Navigation size={18} aria-hidden="true" />
-              פתח ב-Waze
-            </button>
-            <button
-              className="secondary-action"
-              disabled={!canNavigate || navigationState === "opening"}
-              onClick={openSelectedPlaceInGoogleMapsWalking}
-              type="button"
-            >
-              <MapPin size={18} aria-hidden="true" />
-              פתח הליכה ב-Google Maps
-            </button>
-            <button
-              className="secondary-action"
-              disabled={actionApprovalState === "checking"}
-              onClick={requestGroupDestinationApproval}
-              type="button"
-            >
-              <CheckCircle2 size={18} aria-hidden="true" />
-              בקש להפוך ליעד קבוצתי
-            </button>
-            <small className="action-approval-status">
-              {actionApprovalState === "approved"
-                ? "אושר על ידי מנהל/ת ונשמר בשיחה."
-                : actionApprovalState === "blocked"
-                  ? "נדרש מנהל/ת כדי לשנות יעד קבוצתי."
-                  : actionApprovalState === "error"
-                    ? "לא הצלחתי לבדוק הרשאה כרגע."
-                    : actionApprovalState === "checking"
-                      ? "בודק הרשאות מול השרת..."
-                      : "פעולה קבוצתית תיבדק מול הרשאות השרת."}
-            </small>
-            {groupDestination ? (
-              <div className="group-destination-card" aria-label="יעד קבוצתי נוכחי">
-                <span>יעד קבוצתי נוכחי</span>
-                <strong>{groupDestination.placeName}</strong>
-                <small>נקבע על ידי {groupDestination.setByName}</small>
-              </div>
-            ) : null}
-            <button
-              className="secondary-action"
-              disabled={routeApprovalState === "checking"}
-              onClick={requestGroupRouteApproval}
-              type="button"
-            >
-              <CheckCircle2 size={18} aria-hidden="true" />
-              בנה מסלול קבוצתי קצר
-            </button>
-            <small className="action-approval-status">
-              {routeApprovalState === "approved"
-                ? "מסלול קבוצתי אושר ונשמר."
-                : routeApprovalState === "blocked"
-                  ? "נדרש מנהל/ת כדי ליצור מסלול קבוצתי."
-                  : routeApprovalState === "error"
-                    ? "לא הצלחתי ליצור מסלול כרגע."
-                    : routeApprovalState === "checking"
-                      ? "בודק הרשאה ובונה מסלול..."
-                      : "מסלול קבוצתי דורש אישור מנהל/ת."}
-            </small>
-            {groupRoute ? (
-              <div className="group-route-card" aria-label="מסלול קבוצתי פעיל">
-                <span>מסלול קבוצתי פעיל</span>
-                <strong>{groupRoute.title}</strong>
-                {groupRoute.status === "completed" ? <p className="route-completed-note">המסלול הושלם. אפשר ליצור מסלול חדש כשצריך.</p> : null}
-                <p>הסדר מתחיל בנקודה שנבחרה וממשיך לנקודות הקרובות ברשימת הטיול. ETA מדויק יגיע דרך Google Routes.</p>
-                <ol>
-                  {groupRoute.stops.map((stop, index) => (
-                    <li
-                      className={`${index === activeRouteStopIndex ? "active-route-stop" : ""} ${
-                        groupRoute.completedStopIds.includes(stop.placeId) ? "completed-route-stop" : ""
-                      }`}
-                      key={stop.placeId}
-                    >
-                      <button onClick={() => setActiveRouteStopIndex(index)} type="button">
-                        {groupRoute.completedStopIds.includes(stop.placeId) ? "הושלם · " : index === activeRouteStopIndex ? "עכשיו · " : ""}
-                        {stop.placeName}
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-                <button
-                  className="route-navigation-action"
-                  disabled={navigationState === "opening" || groupRoute.status === "completed"}
-                  onClick={openActiveRouteStopInWaze}
-                  type="button"
-                >
-                  <Navigation size={18} aria-hidden="true" />
-                  פתח תחנה פעילה ב-Waze
-                </button>
-                <button
-                  className="route-navigation-action"
-                  disabled={routeApprovalState === "checking" || groupRoute.status === "completed"}
-                  onClick={completeActiveRouteStop}
-                  type="button"
-                >
-                  <CheckCircle2 size={18} aria-hidden="true" />
-                  סמן תחנה כהושלמה
-                </button>
-                <small>נוצר על ידי {groupRoute.createdByName}</small>
-              </div>
-            ) : null}
-            {navigationState === "error" ? <small>לא הצלחתי ליצור קישור ניווט כרגע.</small> : null}
-          </section>
-        ) : null}
         <section className="menu-block invite-menu" data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
           <strong>הזמנת משתתפים</strong>
           <p>שלחו קישור כמו בקבוצת וואטסאפ. מי שמקבל נכנס, כותב שם, מאשר מיקום ומצטרף.</p>

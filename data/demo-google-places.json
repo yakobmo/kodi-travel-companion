@@ -1,20 +1,5 @@
 [
   {
-    "id": "1486677374736450871:2211595056354325483",
-    "sourceIndex": 0,
-    "name": "Averof 12",
-    "note": "",
-    "address": "Averof 12, Athina 104 33, יוון",
-    "lat": 37.9891138,
-    "lng": 23.7286964,
-    "googleIds": [
-      "1486677374736450871",
-      "2211595056354325483"
-    ],
-    "placePath": "/g/11dznxyvss",
-    "type": "stop"
-  },
-  {
     "id": "1394979828863038067:4276476451525207232",
     "sourceIndex": 1,
     "name": "Lake sources Louros River",
