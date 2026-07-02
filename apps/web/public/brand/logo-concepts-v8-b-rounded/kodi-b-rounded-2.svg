@@ -1,0 +1,10 @@
+<svg width="512" height="512" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kodi rounded B option 2">
+  <rect x="9" y="9" width="102" height="102" rx="22" fill="#00658C"/>
+  <circle cx="60" cy="60" r="37" fill="none" stroke="#FFFFFF" stroke-width="5"/>
+  <path d="M60 24v8M60 88v8M24 60h8M88 60h8" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M43 36v48" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+  <path d="M55 60L72 43" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+  <path d="M55 60L80 84" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round"/>
+  <path d="M82 34C80 40 78 46 75 51C72 49 69 46 65 42C70 40 76 37 82 34Z" fill="#50E2D6" stroke="#D3FFFA" stroke-width="1.1" stroke-linejoin="round"/>
+  <circle cx="75" cy="51" r="1.7" fill="#D3FFFA" opacity=".65"/>
+</svg>

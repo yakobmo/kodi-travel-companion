@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kodi B rounded logo refinement</title>
+  <style>
+    :root {
+      --ink: #00476d;
+      --muted: #42657a;
+      --line: #cfe5ef;
+      --bg: #eef9fc;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    main {
+      padding: 32px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+    }
+    p {
+      margin: 0 0 28px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      direction: ltr;
+    }
+    .card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      min-height: 228px;
+      display: grid;
+      place-items: center;
+      padding: 22px 18px;
+      box-sizing: border-box;
+    }
+    img {
+      width: 136px;
+      height: 136px;
+    }
+    strong {
+      display: block;
+      margin-top: 16px;
+      font-size: 15px;
+      color: var(--ink);
+      direction: rtl;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>B מעוגל יותר</h1>
+    <p>אותו בסיס של B, רק חץ פחות חד ויותר רך.</p>
+    <section class="grid">
+      <article class="card">
+        <img src="kodi-b-rounded-1.svg" alt="B1" />
+        <strong>B1 - מעוגל עדין</strong>
+      </article>
+      <article class="card">
+        <img src="kodi-b-rounded-2.svg" alt="B2" />
+        <strong>B2 - רך ומואר</strong>
+      </article>
+      <article class="card">
+        <img src="kodi-b-rounded-3.svg" alt="B3" />
+        <strong>B3 - מינימלי</strong>
+      </article>
+      <article class="card">
+        <img src="kodi-b-rounded-4.svg" alt="B4" />
+        <strong>B4 - עם קפל עדין</strong>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
