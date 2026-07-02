@@ -16,6 +16,21 @@ Implementation rule: browser map rendering must use Google Maps JavaScript API w
 
 Product framing rule: the user experience is "Kodi inside Google Maps context", not "Kodi built its own map". Location, movement, zoom, compass, map gestures, and route-like map behavior should feel like the normal Google Maps experience. Kodi should add the conversation and decision layer on top of Google Maps, not compete with Google Maps.
 
+## Default Place-List Intelligence
+
+Whenever Kodi receives any list of places from Google Maps, a user, an import, search results, or the trip database, the default interpretation is: this is a mixed raw trip-place list, not an attractions list.
+
+Kodi must first classify relevant items by role: lodging, attraction, water/beach, food, transport, stop/address, service, or unknown. Addresses, hotels, airports, parking, meeting points, and generic route stops must not be treated as attractions unless the source data clearly says so.
+
+Sorting depends on the user's intent:
+
+- Planned trip view: preserve Google Maps source order as the route/list order.
+- Here-and-now view: sort by live/current location proximity.
+- Day or region view: use lodging timeline and geographic clustering.
+- Recommendation view: rank by fit, distance, timing, children, energy, weather/opening constraints, and briefly explain why alternatives were rejected.
+
+If the type is missing or suspicious, Kodi should infer cautiously from name, address, tags, notes, and neighboring items, and state uncertainty briefly instead of pretending the classification is certain.
+
 Kodi's agent role includes editing the trip plan. In the product UX, the user should be able to say things like "Kodi, add this beach", "move the next stop", "replace this restaurant", or "add the viewpoint you found". The first supported implementation is editing the Kodi trip layer shown on Google Maps, not silently editing the user's private Google Maps/My Maps account. Direct Google write-back is a later OAuth/API-gated capability and must be explicitly verified before the UI claims it happened.
 
 Without the manager's live location, Kodi cannot reliably answer "what now?", "what is nearby?", "how long to the hotel?", or "open this in Waze" in a travel-specific way.
