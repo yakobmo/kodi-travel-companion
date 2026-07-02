@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi route compass logo">
+  <defs>
+    <linearGradient id="bg" x1="78" y1="58" x2="432" y2="454" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0677a7"/>
+      <stop offset="1" stop-color="#004565"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="154" y1="133" x2="370" y2="372" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6ff7e6"/>
+      <stop offset="1" stop-color="#14b6c8"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="147" fill="none" stroke="#f8fdff" stroke-width="17"/>
+  <path d="M256 101v34M256 377v34M101 256h34M377 256h34" fill="none" stroke="#f8fdff" stroke-width="17" stroke-linecap="round"/>
+  <path d="M177 319c32 31 79 28 108 1 25-24 28-59 58-88" fill="none" stroke="#f8fdff" stroke-width="26" stroke-linecap="round"/>
+  <circle cx="169" cy="313" r="28" fill="#f8fdff"/>
+  <circle cx="169" cy="313" r="12" fill="#086996"/>
+  <path d="M332 145c-8-3-15 6-10 13l37 44 14 56c2 9 14 10 18 2l51-112c4-8-4-16-12-12l-98 9z" fill="url(#teal)"/>
+  <circle cx="383" cy="395" r="8" fill="#6ff7e6"/>
+</svg>

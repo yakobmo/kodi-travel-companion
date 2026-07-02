@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi smart route logo">
+  <defs>
+    <linearGradient id="bg" x1="72" y1="58" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#087ca5"/>
+      <stop offset="1" stop-color="#00415f"/>
+    </linearGradient>
+    <linearGradient id="route" x1="131" y1="133" x2="383" y2="381" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".55" stop-color="#dffbff"/>
+      <stop offset="1" stop-color="#4be8dc"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="86" fill="url(#bg)"/>
+  <path d="M154 357c53-93 159-99 205-200" fill="none" stroke="url(#route)" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="154" cy="357" r="44" fill="#f8fdff"/>
+  <circle cx="154" cy="357" r="18" fill="#087199"/>
+  <circle cx="360" cy="157" r="44" fill="#4be8dc"/>
+  <path d="M348 158h28M362 144v28" stroke="#00415f" stroke-width="14" stroke-linecap="round"/>
+  <path d="M218 190h74M218 241h50M218 292h92" stroke="#ffffff" stroke-width="19" stroke-linecap="round" opacity=".92"/>
+  <path d="M386 374v20M376 384h20" stroke="#68efe1" stroke-width="6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi guide star logo">
+  <defs>
+    <linearGradient id="bg" x1="70" y1="54" x2="434" y2="454" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#066f9a"/>
+      <stop offset="1" stop-color="#003d66"/>
+    </linearGradient>
+    <linearGradient id="star" x1="170" y1="122" x2="350" y2="368" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#74f9e8"/>
+      <stop offset="1" stop-color="#17b7c9"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#ffffff" stroke-width="17" opacity=".95"/>
+  <path d="M256 102v34M256 376v34M102 256h34M376 256h34" fill="none" stroke="#ffffff" stroke-width="17" stroke-linecap="round"/>
+  <path d="M256 137l39 79 87 13-63 61 15 86-78-41-78 41 15-86-63-61 87-13 39-79z" fill="url(#star)"/>
+  <circle cx="256" cy="256" r="45" fill="#ffffff"/>
+  <path d="M240 274l16-63 16 63 45 18-61 16-61-16 45-18z" fill="#075f8a"/>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi map agent logo">
+  <defs>
+    <linearGradient id="bg" x1="76" y1="62" x2="436" y2="456" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0477a0"/>
+      <stop offset="1" stop-color="#004463"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="140" y1="116" x2="383" y2="390" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#66f6e5"/>
+      <stop offset="1" stop-color="#0fafc8"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="88" fill="url(#bg)"/>
+  <path d="M130 150c0-16 15-28 31-24l72 19c15 4 31 4 46 0l72-19c16-4 31 8 31 24v220c0 16-15 28-31 24l-72-19c-15-4-31-4-46 0l-72 19c-16 4-31-8-31-24V150z" fill="#f8fdff"/>
+  <path d="M232 145v230M280 145v230" stroke="#0b5c83" stroke-width="12" opacity=".18"/>
+  <path d="M165 300c44-54 96 32 145-34 14-19 25-45 45-66" fill="none" stroke="url(#accent)" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="164" cy="300" r="23" fill="#0b5c83"/>
+  <path d="M342 163c-7-3-14 5-9 12l29 36 10 46c2 9 14 10 18 2l41-91c4-8-4-16-12-13l-77 8z" fill="url(#accent)"/>
+  <circle cx="375" cy="388" r="7" fill="#6ff7e6"/>
+</svg>
