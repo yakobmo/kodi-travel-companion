@@ -469,6 +469,19 @@ try {
   assertCheck("agent timeline context used", futurePelionAgentPayload.contextSummary?.timelineReferenceConfidence !== "low");
   assertCheck("agent timeline segment title", Boolean(futurePelionAgentPayload.contextSummary?.timelineSegmentTitle));
 
+  const tripOverviewAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
+    data: {
+      member: { id: "mom", displayName: "מנהל הטיול", role: "owner", ageGroup: "adult" },
+      message: "קודי, מה אופי הטיול שלנו ביוון?",
+      recentMessages: []
+    }
+  });
+  const tripOverviewAgentPayload = await tripOverviewAgentResponse.json();
+  assertCheck("agent trip overview ok", tripOverviewAgentResponse.ok());
+  assertCheck("agent trip overview intent", tripOverviewAgentPayload.intent === "general");
+  assertCheck("agent trip overview route arc", tripOverviewAgentPayload.text?.includes("צפון יוון") && tripOverviewAgentPayload.text?.includes("פיליון"));
+  assertCheck("agent trip overview not local compromise", !tripOverviewAgentPayload.text?.includes("אפשר לחפש נקודה קלה ליד"));
+
   const blockedActionResponse = await page.request.post("http://localhost:3001/api/trips/demo/agent-actions/authorize", {
     data: {
       member: { id: "noa", displayName: "נועה", role: "member" },

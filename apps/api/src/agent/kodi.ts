@@ -164,6 +164,52 @@ function getRecommendationPreferences(message: string) {
   };
 }
 
+function isWholeTripOverviewQuestion(message: string) {
+  const normalized = message.toLowerCase();
+
+  return (
+    includesAny(normalized, [
+      "מה אופי הטיול",
+      "אופי הטיול",
+      "מה זה הטיול",
+      "איזה טיול זה",
+      "מה מחכה לנו",
+      "מה מצפה לנו",
+      "ספר על הטיול",
+      "תאר את הטיול",
+      "מסלול הטיול כולו",
+      "כל הטיול",
+      "התמונה הגדולה",
+      "overview",
+      "trip overview",
+      "what kind of trip"
+    ]) &&
+    includesAny(normalized, ["טיול", "יוון", "מסלול", "trip", "greece"])
+  );
+}
+
+function buildWholeTripOverviewAnswer(memberName: string, tripState?: TripState) {
+  const places = tripState?.places ?? [];
+  const placesCount = places.length;
+  const lodgingCount = places.filter((place) => place.type === "lodging").length;
+  const attractionCount = places.filter((place) => place.type === "attraction").length;
+  const waterCount = places.filter((place) => place.type === "water").length;
+  const foodCount = places.filter((place) => place.type === "food").length;
+  const countText =
+    placesCount > 0
+      ? ` כרגע אני רואה במפת הטיול ${placesCount} נקודות: ${lodgingCount} לינות, ${attractionCount} אטרקציות, ${waterCount} נקודות מים/חופים ו-${foodCount} נקודות אוכל.`
+      : "";
+
+  return (
+    `${memberName}, זה טיול מעגלי ביוון, לא ביקור עירוני קצר. ` +
+    "האופי שלו הוא טבע, נסיעות נוף, הרים, כפרים, מים, גשרים, תצפיות ולינות שמחלקות את הדרך: נחיתה באתונה, עליה לצפון יוון וצומרקה, המשך לזגוריה, מעבר לחצי האי פיליון, ואז חזרה לאתונה לסיום. " +
+    "זה אומר שהקצב הנכון הוא לא לרוץ מנקודה לנקודה, אלא לבחור בכל יום עוגן טוב: איפה ישנים, כמה כוח יש לילדים, כמה נסיעה נשארה, ומה מזג האוויר מאפשר. " +
+    "בפועל אני אמור לעזור לכם בדיוק שם: להבין איפה אתם במסלול, מה קרוב אליכם עכשיו או ליעד הבא, מה מתאים למשפחה, מתי לפתוח Waze/Google Maps, ומתי לוותר על חלופה פחות מתאימה." +
+    countText +
+    " אם תרצה, השלב הבא שלי יכול להיות לסדר לכם את הטיול לפי ימים/לינות ולתת לכל יום כותרת קצרה וברורה."
+  );
+}
+
 function scorePlace(place: TripPlace, message: string): RecommendationCandidate {
   const preferences = getRecommendationPreferences(message);
   const tagsAndNote = `${place.tags.join(" ")} ${place.note ?? ""}`.toLowerCase();
@@ -414,6 +460,16 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
   const needsText = conversationSummary.mentionedNeeds.length > 0 ? conversationSummary.mentionedNeeds.join(", ") : "";
   const externalPlacesContext = buildExternalPlacesContext(input.externalPlacesSearch);
   const routeEstimateContext = buildRouteEstimateContext(input.routeEstimate);
+
+  if (isWholeTripOverviewQuestion(message)) {
+    return {
+      author: "קודי",
+      intent: "general",
+      requiresAdminApproval: false,
+      source: "rules",
+      text: buildWholeTripOverviewAnswer(memberName, input.tripState)
+    };
+  }
 
   if (includesAny(message, ["איפה אני", "איפה אני עכשיו", "מיקום נוכחי", "אתה רואה אותי", "איפה אנחנו"])) {
     return {
