@@ -488,8 +488,11 @@ if (
 }
 
 $demoTripSource = Get-Content (Join-Path $root "apps\web\src\demoTrip.ts") -Raw
-if (-not $demoTripSource.Contains("totalPlaces: 108")) {
-  throw "Web demo trip summary does not reference the imported 108 places."
+if (
+  -not $demoTripSource.Contains("../../../data/demo-google-places.json") -or
+  -not $demoTripSource.Contains("totalPlaces: googlePlaces.length")
+) {
+  throw "Web demo trip fallback must derive its places from the imported Google places source."
 }
 
 if (-not $demoTripSource.Contains("demoMembers")) {

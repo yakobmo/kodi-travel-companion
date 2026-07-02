@@ -1,36 +1,32 @@
+import googlePlacesRaw from "../../../data/demo-google-places.json";
+
+type DemoPlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
+
+interface DemoGooglePlace {
+  id: string;
+  sourceIndex?: number;
+  name: string;
+  type: DemoPlaceType;
+  note?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+}
+
+const googlePlaces = googlePlacesRaw as DemoGooglePlace[];
+
 export const demoTripSummary = {
   name: "צפון יוון",
-  totalPlaces: 108,
-  lodgingCount: 10,
-  waterCount: 23,
+  totalPlaces: googlePlaces.length,
+  lodgingCount: googlePlaces.filter((place) => place.type === "lodging").length,
+  waterCount: googlePlaces.filter((place) => place.type === "water").length,
   groupName: "קבוצת הטיול"
 };
 
-export const demoPlaces = [
-  {
-    id: "hotel-marathia",
-    name: "Hotel Marathia",
-    type: "lodging" as const,
-    note: "לינה לילה ראשון",
-    tags: ["lodging"],
-    lat: 39.2515,
-    lng: 22.7516
-  },
-  {
-    id: "pozar-baths",
-    name: "Pozar Baths",
-    type: "water" as const,
-    note: "מועמד לאטרקציית מים",
-    tags: ["water"]
-  },
-  {
-    id: "stone-forest",
-    name: "Stone Forest",
-    type: "attraction" as const,
-    note: "נקודה מרשימה",
-    tags: ["attraction"]
-  }
-];
+export const demoPlaces = googlePlaces.map((place) => ({
+  ...place,
+  tags: [place.type]
+}));
 
 export const demoMembers = [
   {
