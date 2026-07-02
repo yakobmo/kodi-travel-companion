@@ -320,6 +320,7 @@ Current Supabase state:
 - Kodi speech pace correction added on `2026-07-02`: OpenAI TTS now defaults to `OPENAI_TTS_SPEED=1.16` when not explicitly configured, browser fallback speech uses rate `1.14`, and `/api/agent/speech` exposes `X-Kodi-Voice-Speed` for public smoke checks. This keeps Kodi's voice warmer and less sluggish without making Hebrew playback feel rushed.
 - Public smoke passed on `2026-07-02` for the Kodi speech pace correction: Render serves web bundle `index-C103Z4RT.js`, `/api/agent/speech` returned `200 OK`, `audio/mpeg`, `X-Kodi-Voice-Model: gpt-4o-mini-tts`, `X-Kodi-Voice: alloy`, and `X-Kodi-Voice-Speed: 1.16`.
 - Kodi read-aloud UX correction added on `2026-07-02`: read-aloud now starts immediately through browser speech instead of waiting for server MP3 generation, the manual control is a clear `הקרא` / `עוצר` button with an active pulse state, and voice-intent detection covers more natural Hebrew phrases such as `תקריא לי`, `בדיבור`, `בקול רם`, and `אני רוצה לשמוע`.
+- Public smoke passed on `2026-07-02` for the immediate read-aloud UX correction: Render serves `index-BJMZgb7X.js` and `index-5wfyTwaN.css`; the public JS bundle contains `הקרא`, `SpeechSynthesisUtterance`, and `תקריא לי`, and the public CSS bundle contains `speak-message-button.speaking`, `speakButtonPulse`, and the wider readable speak button sizing.
 
 Resume from the Kodi build protocol with no new product discovery.
 
