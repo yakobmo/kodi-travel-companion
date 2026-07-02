@@ -2062,6 +2062,7 @@ app.post("/api/agent/speech", async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Kodi-Voice-Model", speech.model ?? "");
   res.setHeader("X-Kodi-Voice", speech.voice ?? "");
+  res.setHeader("X-Kodi-Voice-Speed", String(speech.speed ?? ""));
   res.send(speech.audio);
 });
 

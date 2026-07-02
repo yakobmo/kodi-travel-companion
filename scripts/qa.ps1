@@ -224,10 +224,11 @@ if (
   -not $openAiSpeechSource.Contains("OPENAI_TTS_VOICE") -or
   -not $openAiSpeechSource.Contains('"alloy"') -or
   -not $openAiSpeechSource.Contains("OPENAI_TTS_INSTRUCTIONS") -or
-  -not $openAiSpeechSource.Contains("speed: 1.0") -or
+  -not $openAiSpeechSource.Contains("OPENAI_TTS_SPEED") -or
+  -not $openAiSpeechSource.Contains("return 1.16") -or
   -not $openAiSpeechSource.Contains("response_format: `"mp3`"")
 ) {
-  throw "OpenAI speech bridge must use the OpenAI-style default voice path, configurable model/voice, and default speed."
+  throw "OpenAI speech bridge must use the OpenAI-style default voice path, configurable model/voice/speed, and the faster Kodi default speech pace."
 }
 
 $serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw

@@ -6,6 +6,7 @@ export interface OpenAiSpeechResult {
   contentType?: string;
   model?: string;
   voice?: string;
+  speed?: number;
   error?: string;
 }
 
@@ -23,6 +24,16 @@ function getOpenAiSpeechInstructions() {
   return process.env.OPENAI_TTS_INSTRUCTIONS?.trim() || undefined;
 }
 
+function getOpenAiSpeechSpeed() {
+  const value = Number(process.env.OPENAI_TTS_SPEED);
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return 1.16;
+  }
+
+  return Math.min(Math.max(value, 0.8), 1.35);
+}
+
 export async function createKodiSpeechAudio(text: string): Promise<OpenAiSpeechResult> {
   const client = getOpenAiClient();
 
@@ -38,6 +49,7 @@ export async function createKodiSpeechAudio(text: string): Promise<OpenAiSpeechR
   const model = process.env.OPENAI_TTS_MODEL?.trim() || "gpt-4o-mini-tts";
   const voice = process.env.OPENAI_TTS_VOICE?.trim() || "alloy";
   const instructions = getOpenAiSpeechInstructions();
+  const speed = getOpenAiSpeechSpeed();
 
   try {
     const response = await client.audio.speech.create({
@@ -46,7 +58,7 @@ export async function createKodiSpeechAudio(text: string): Promise<OpenAiSpeechR
       input: speechText,
       ...(instructions ? { instructions } : {}),
       response_format: "mp3",
-      speed: 1.0
+      speed
     });
     const audio = Buffer.from(await response.arrayBuffer());
 
@@ -55,13 +67,15 @@ export async function createKodiSpeechAudio(text: string): Promise<OpenAiSpeechR
       audio,
       contentType: "audio/mpeg",
       model,
-      voice
+      voice,
+      speed
     };
   } catch (error) {
     return {
       status: "error",
       model,
       voice,
+      speed,
       error: error instanceof Error ? error.message : "openai_speech_failed"
     };
   }

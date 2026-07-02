@@ -2638,7 +2638,7 @@ export function App() {
       utterance.voice = kodiVoice;
       utterance.lang = kodiVoice.lang || "he-IL";
     }
-    utterance.rate = 1;
+    utterance.rate = 1.14;
     utterance.pitch = 1;
     utterance.volume = 1;
     setSpeechOutputState("speaking");
