@@ -48,28 +48,23 @@ function Draw-KodiCompassK {
     $shadowPath.Dispose()
   }
 
-  $gradient = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
-    (New-Object System.Drawing.RectangleF $iconX, $iconY, $iconSize, $iconSize),
-    ([System.Drawing.Color]::FromArgb(8, 96, 146)),
-    ([System.Drawing.Color]::FromArgb(3, 79, 120)),
-    45
-  )
-  $Graphics.FillPath($gradient, $iconPath)
+  $bgBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(0, 101, 140))
+  $Graphics.FillPath($bgBrush, $iconPath)
 
   $centerX = $X + ($Size / 2)
   $centerY = $Y + ($Size / 2)
-  $ringSize = $Size * 0.59
+  $ringSize = $Size * 0.645
   $ringRect = New-Object System.Drawing.RectangleF ($centerX - ($ringSize / 2)), ($centerY - ($ringSize / 2)), $ringSize, $ringSize
-  $ringPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::White), ([Math]::Max(4, $Size * 0.039))
+  $ringPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::White), ([Math]::Max(4, $Size * 0.044))
   $ringPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
   $ringPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
   $Graphics.DrawEllipse($ringPen, $ringRect)
 
-  $tickPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::White), ([Math]::Max(4, $Size * 0.039))
+  $tickPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::White), ([Math]::Max(3, $Size * 0.035))
   $tickPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
   $tickPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
   $tickOuter = $ringSize / 2
-  $tickInner = $tickOuter - ($Size * 0.092)
+  $tickInner = $tickOuter - ($Size * 0.07)
   foreach ($angle in @(0, 90, 180, 270)) {
     $radians = ($angle - 90) * [Math]::PI / 180
     $x1 = $centerX + [Math]::Cos($radians) * $tickInner
@@ -79,29 +74,47 @@ function Draw-KodiCompassK {
     $Graphics.DrawLine($tickPen, ([float]$x1), ([float]$y1), ([float]$x2), ([float]$y2))
   }
 
-  $font = New-Object System.Drawing.Font "Arial", ($Size * 0.295), ([System.Drawing.FontStyle]::Bold), ([System.Drawing.GraphicsUnit]::Pixel)
-  $format = New-Object System.Drawing.StringFormat
-  $format.Alignment = [System.Drawing.StringAlignment]::Center
-  $format.LineAlignment = [System.Drawing.StringAlignment]::Center
-  $textRect = New-Object System.Drawing.RectangleF ($X + ($Size * 0.18)), ($Y + ($Size * 0.25)), ($Size * 0.64), ($Size * 0.42)
-  $Graphics.DrawString("K", $font, (New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::White)), $textRect, $format)
+  $kPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::White), ([Math]::Max(8, $Size * 0.105))
+  $kPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+  $kPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
+  $Graphics.DrawLine($kPen, ($X + ($Size * 0.358)), ($Y + ($Size * 0.30)), ($X + ($Size * 0.358)), ($Y + ($Size * 0.70)))
+  $Graphics.DrawLine($kPen, ($X + ($Size * 0.458)), ($Y + ($Size * 0.50)), ($X + ($Size * 0.60)), ($Y + ($Size * 0.358)))
+  $Graphics.DrawLine($kPen, ($X + ($Size * 0.458)), ($Y + ($Size * 0.50)), ($X + ($Size * 0.667)), ($Y + ($Size * 0.70)))
 
-  $sparklePen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(126, 232, 216)), ([Math]::Max(2, $Size * 0.012))
-  $sparklePen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-  $sparklePen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-  $sparkleX = $X + ($Size * 0.842)
-  $sparkleY = $Y + ($Size * 0.805)
-  $sparkle = $Size * 0.021
-  $Graphics.DrawLine($sparklePen, $sparkleX, ($sparkleY - $sparkle), $sparkleX, ($sparkleY + $sparkle))
-  $Graphics.DrawLine($sparklePen, ($sparkleX - $sparkle), $sparkleY, ($sparkleX + $sparkle), $sparkleY)
+  $arrowPath = New-Object System.Drawing.Drawing2D.GraphicsPath
+  $arrowPath.AddBezier(
+    ($X + ($Size * 0.692)), ($Y + ($Size * 0.275)),
+    ($X + ($Size * 0.675)), ($Y + ($Size * 0.325)),
+    ($X + ($Size * 0.65)), ($Y + ($Size * 0.383)),
+    ($X + ($Size * 0.625)), ($Y + ($Size * 0.433))
+  )
+  $arrowPath.AddBezier(
+    ($X + ($Size * 0.625)), ($Y + ($Size * 0.433)),
+    ($X + ($Size * 0.60)), ($Y + ($Size * 0.408)),
+    ($X + ($Size * 0.567)), ($Y + ($Size * 0.375)),
+    ($X + ($Size * 0.533)), ($Y + ($Size * 0.342))
+  )
+  $arrowPath.AddBezier(
+    ($X + ($Size * 0.533)), ($Y + ($Size * 0.342)),
+    ($X + ($Size * 0.583)), ($Y + ($Size * 0.325)),
+    ($X + ($Size * 0.642)), ($Y + ($Size * 0.300)),
+    ($X + ($Size * 0.692)), ($Y + ($Size * 0.275))
+  )
+  $arrowPath.CloseFigure()
+  $arrowBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(66, 221, 208))
+  $arrowPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(185, 255, 247)), ([Math]::Max(1, $Size * 0.011))
+  $arrowPen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+  $Graphics.FillPath($arrowBrush, $arrowPath)
+  $Graphics.DrawPath($arrowPen, $arrowPath)
 
   $iconPath.Dispose()
-  $gradient.Dispose()
+  $bgBrush.Dispose()
   $ringPen.Dispose()
   $tickPen.Dispose()
-  $font.Dispose()
-  $format.Dispose()
-  $sparklePen.Dispose()
+  $kPen.Dispose()
+  $arrowPath.Dispose()
+  $arrowBrush.Dispose()
+  $arrowPen.Dispose()
 }
 
 function New-KodiIcon {
