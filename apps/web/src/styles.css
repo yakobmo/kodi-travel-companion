@@ -1537,7 +1537,7 @@ input {
 
 .trip-place-actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -1555,6 +1555,12 @@ input {
   border-color: #087f9d;
   background: #087f9d;
   color: #ffffff;
+}
+
+.trip-place-actions button.remove-place-action {
+  border-color: #efc4bd;
+  background: #fff7f5;
+  color: #9d3527;
 }
 
 .trip-place-actions button:disabled {

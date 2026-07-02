@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Share2,
   Sparkles,
+  Trash2,
   Users,
   Volume2,
   VolumeX
@@ -46,6 +47,7 @@ type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
 const DEFAULT_NEARBY_MAP_RADIUS_KM = 40;
 const DEFAULT_VISIBLE_PLACE_LIMIT = 40;
 const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
+const LOCAL_REMOVED_PLACE_IDS_KEY = "kodi-removed-place-ids";
 const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
 const retiredDemoMemberIds = new Set(["dad", "noa", "grandma"]);
 const retiredDemoNames = new Set(["אבא", "אמא", "נועה", "סבתא", "QA"]);
@@ -219,6 +221,46 @@ function rememberLocalSetupCompleted() {
   }
 
   window.localStorage.setItem(LOCAL_SETUP_COMPLETE_KEY, "true");
+}
+
+function getLocallyRemovedPlaceIds() {
+  if (typeof window === "undefined") {
+    return new Set<string>();
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(LOCAL_REMOVED_PLACE_IDS_KEY) ?? "[]");
+    return new Set(Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function rememberLocallyRemovedPlaceId(placeId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const removedPlaceIds = getLocallyRemovedPlaceIds();
+  removedPlaceIds.add(placeId);
+  window.localStorage.setItem(LOCAL_REMOVED_PLACE_IDS_KEY, JSON.stringify([...removedPlaceIds]));
+}
+
+function applyLocalPlaceRemovals(nextPlaces: TripPlace[]) {
+  const removedPlaceIds = getLocallyRemovedPlaceIds();
+  return nextPlaces.filter((place) => !removedPlaceIds.has(place.id));
+}
+
+function buildTripSummaryFromPlaces(nextPlaces: TripPlace[]): TripPlacesSummary {
+  return {
+    total: nextPlaces.length,
+    lodgingCount: nextPlaces.filter((place) => place.type === "lodging").length,
+    waterCount: nextPlaces.filter((place) => place.type === "water").length,
+    byType: nextPlaces.reduce<Record<string, number>>((counts, place) => {
+      counts[place.type] = (counts[place.type] ?? 0) + 1;
+      return counts;
+    }, {})
+  };
 }
 
 function getSafeManagerName(managerName = "מנהל הטיול") {
@@ -917,14 +959,19 @@ export function App() {
   });
   const [inviteCopyState, setInviteCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [inviteShareState, setInviteShareState] = useState<"idle" | "sharing" | "shared" | "copied" | "error">("idle");
-  const [summary, setSummary] = useState<TripPlacesSummary>({
-    total: demoTripSummary.totalPlaces,
-    lodgingCount: demoTripSummary.lodgingCount,
-    waterCount: demoTripSummary.waterCount,
-    byType: {}
-  });
-  const [places, setPlaces] = useState<TripPlace[]>(demoPlaces);
-  const [selectedPlaceId, setSelectedPlaceId] = useState(demoPlaces[0]?.id ?? "");
+  const initialPlaces = useMemo(() => applyLocalPlaceRemovals(demoPlaces), []);
+  const [summary, setSummary] = useState<TripPlacesSummary>(() =>
+    initialPlaces.length === demoPlaces.length
+      ? {
+          total: demoTripSummary.totalPlaces,
+          lodgingCount: demoTripSummary.lodgingCount,
+          waterCount: demoTripSummary.waterCount,
+          byType: buildTripSummaryFromPlaces(initialPlaces).byType
+        }
+      : buildTripSummaryFromPlaces(initialPlaces)
+  );
+  const [places, setPlaces] = useState<TripPlace[]>(initialPlaces);
+  const [selectedPlaceId, setSelectedPlaceId] = useState(initialPlaces[0]?.id ?? "");
   const [placeListFilter, setPlaceListFilter] = useState<PlaceListFilter>("route");
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "fallback">("loading");
@@ -1228,9 +1275,12 @@ export function App() {
           return;
         }
 
-        setSummary(data.summary);
-        setPlaces(data.places);
-        setSelectedPlaceId(data.places[0]?.id ?? "");
+        const visibleTripPlaces = applyLocalPlaceRemovals(data.places);
+        setSummary(
+          visibleTripPlaces.length === data.places.length ? data.summary : buildTripSummaryFromPlaces(visibleTripPlaces)
+        );
+        setPlaces(visibleTripPlaces);
+        setSelectedPlaceId(visibleTripPlaces[0]?.id ?? "");
         setMembers(normalizeTripMembers(mapMemberLocations(data.members), setupDraft.memberName));
         setGroupDestination(data.groupDestination ?? null);
         setGroupRoute(data.groupRoute ?? null);
@@ -2005,6 +2055,19 @@ export function App() {
   function prepareKodiPlaceQuestion(place: TripPlace) {
     setSelectedPlaceId(place.id);
     setDraft(`קודי, ספר לי על ${place.name} ותעזור לי להבין אם זה מתאים לנו עכשיו`);
+  }
+
+  function removePlaceFromRoute(place: TripPlace) {
+    rememberLocallyRemovedPlaceId(place.id);
+    setPlaces((currentPlaces) => {
+      const nextPlaces = currentPlaces.filter((item) => item.id !== place.id);
+      setSummary(buildTripSummaryFromPlaces(nextPlaces));
+      setSelectedPlaceId((currentSelectedId) =>
+        currentSelectedId === place.id ? (nextPlaces[0]?.id ?? "") : currentSelectedId
+      );
+      return nextPlaces;
+    });
+    setExpandedPlaceId((currentExpandedId) => (currentExpandedId === place.id ? null : currentExpandedId));
   }
 
   function openCurrentMapInGoogleMaps() {
@@ -3259,6 +3322,10 @@ export function App() {
                       <button onClick={() => prepareKodiPlaceQuestion(place)} type="button">
                         <Sparkles size={14} aria-hidden="true" />
                         קודי
+                      </button>
+                      <button className="remove-place-action" onClick={() => removePlaceFromRoute(place)} type="button">
+                        <Trash2 size={14} aria-hidden="true" />
+                        הסר
                       </button>
                     </div>
                   </article>
