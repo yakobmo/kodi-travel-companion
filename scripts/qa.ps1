@@ -285,6 +285,9 @@ if (
   -not $webAppSource.Contains("startVoiceInput") -or
   -not $webAppSource.Contains("finishVoiceInput") -or
   -not $webAppSource.Contains("voiceShouldSendRef") -or
+  -not $webAppSource.Contains("playChatTone") -or
+  -not $webAppSource.Contains('"record-start"') -or
+  -not $webAppSource.Contains('"voice-sent"') -or
   -not $webAppSource.Contains("submitChatText(spokenText)") -or
   -not $webAppSource.Contains("speechRecognitionRef.current.stop()") -or
   -not $webAppSource.Contains("releasePointerCapture") -or
@@ -299,6 +302,15 @@ if (
   -not $webAppSource.Contains("recognition.lang = `"he-IL`"")
 ) {
   throw "Web chat composer must keep Hebrew voice input available as a clean Kodi interaction path."
+}
+
+if (
+  -not $webAppSource.Contains("isKodiThinking") -or
+  -not $webAppSource.Contains("kodi-thinking-pulse") -or
+  -not $webAppSource.Contains("role=`"status`"") -or
+  -not $webAppSource.Contains("[messages, isKodiThinking]")
+) {
+  throw "Web chat must show a live Kodi thinking indicator while waiting for the agent."
 }
 
 if (
@@ -343,6 +355,15 @@ if (
   -not $webStylesSource.Contains("@keyframes microphone-listening")
 ) {
   throw "Web composer styles must reserve a stable voice button and a clear recording indicator."
+}
+
+if (
+  -not $webStylesSource.Contains(".kodi-thinking-pulse") -or
+  -not $webStylesSource.Contains("@keyframes kodi-thinking-pulse") -or
+  -not $webStylesSource.Contains("#087f9d") -or
+  -not $webStylesSource.Contains("#13b8b1")
+) {
+  throw "Web chat styles must include the Kodi thinking pulse in the app blue/turquoise palette."
 }
 
 if (-not $webStylesSource.Contains(".speak-message-button") -or -not $webStylesSource.Contains(".message-header")) {

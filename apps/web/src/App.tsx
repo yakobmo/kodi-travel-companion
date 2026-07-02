@@ -1031,6 +1031,7 @@ export function App() {
   const [activeMemberId, setActiveMemberId] = useState("mom");
   const [draft, setDraft] = useState("");
   const [speechState, setSpeechState] = useState<"idle" | "listening" | "unsupported" | "error">("idle");
+  const [isKodiThinking, setIsKodiThinking] = useState(false);
   const [speechOutputState, setSpeechOutputState] = useState<"idle" | "speaking" | "unsupported" | "error">("idle");
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [userShortcuts, setUserShortcuts] = useState<UserShortcut[]>([]);
@@ -1132,7 +1133,7 @@ export function App() {
     window.requestAnimationFrame(() => {
       container.scrollTop = container.scrollHeight;
     });
-  }, [messages]);
+  }, [messages, isKodiThinking]);
 
   function updateMessageScrollIntent() {
     const container = messagesContainerRef.current;
@@ -2445,6 +2446,42 @@ export function App() {
     }
   }
 
+  function playChatTone(kind: "record-start" | "voice-sent") {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const AudioContextCtor =
+      window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) {
+      return;
+    }
+
+    try {
+      const audioContext = new AudioContextCtor();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const now = audioContext.currentTime;
+      const frequency = kind === "record-start" ? 740 : 960;
+      const duration = kind === "record-start" ? 0.08 : 0.11;
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.08, now + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(now);
+      oscillator.stop(now + duration);
+      oscillator.onended = () => {
+        void audioContext.close();
+      };
+    } catch {
+      // Audio feedback is helpful but non-critical; browsers may block it.
+    }
+  }
+
   async function persistChatMessage(message: ChatMessage) {
     try {
       const response = await fetch(`${apiBaseUrl}/api/trips/demo/messages`, {
@@ -2504,6 +2541,7 @@ export function App() {
       voiceTranscriptRef.current = "";
       if (voiceShouldSendRef.current && spokenText) {
         voiceShouldSendRef.current = false;
+        playChatTone("voice-sent");
         void submitChatText(spokenText);
       } else {
         voiceShouldSendRef.current = false;
@@ -2520,6 +2558,7 @@ export function App() {
       }
     };
     try {
+      playChatTone("record-start");
       recognition.start();
     } catch {
       setSpeechState("error");
@@ -2700,24 +2739,29 @@ export function App() {
     const savedUserMessagePromise = persistChatMessage(localUserMessage);
 
     if (shouldAskKodi) {
-      const reply = await requestKodiReply(text, nextMessages);
-      const localKodiMessage: ChatMessage = {
-        id: `local-kodi-${Date.now()}`,
-        author: "קודי",
-        text: reply,
-        source: "agent",
-        createdAt: new Date().toISOString()
-      };
+      setIsKodiThinking(true);
+      try {
+        const reply = await requestKodiReply(text, nextMessages);
+        const localKodiMessage: ChatMessage = {
+          id: `local-kodi-${Date.now()}`,
+          author: "קודי",
+          text: reply,
+          source: "agent",
+          createdAt: new Date().toISOString()
+        };
 
-      setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
-      if (shouldSpeakKodiReply(text)) {
-        speakKodiMessage(reply, localKodiMessage.id);
+        setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
+        if (shouldSpeakKodiReply(text)) {
+          speakKodiMessage(reply, localKodiMessage.id);
+        }
+
+        const savedKodiMessage = await persistChatMessage(localKodiMessage);
+        setMessages((currentMessages) =>
+          currentMessages.map((message) => (message.id === localKodiMessage.id ? savedKodiMessage : message))
+        );
+      } finally {
+        setIsKodiThinking(false);
       }
-
-      const savedKodiMessage = await persistChatMessage(localKodiMessage);
-      setMessages((currentMessages) =>
-        currentMessages.map((message) => (message.id === localKodiMessage.id ? savedKodiMessage : message))
-      );
     }
 
     const savedUserMessage = await savedUserMessagePromise;
@@ -3630,6 +3674,18 @@ export function App() {
               <p>{renderMessageText(message.text)}</p>
             </article>
           ))}
+          {isKodiThinking ? (
+            <article className="message kodi thinking" aria-live="polite" role="status">
+              <div className="message-header">
+                <strong>קודי</strong>
+              </div>
+              <div className="kodi-thinking-pulse" aria-label="קודי חושב">
+                <span />
+                <span />
+                <span />
+              </div>
+            </article>
+          ) : null}
           <div ref={messagesEndRef} aria-hidden="true" />
         </div>
 
