@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi integrated K arrow logo A">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0678a4"/>
+      <stop offset="1" stop-color="#003f66"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="236" y1="158" x2="391" y2="332" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".55" stop-color="#d9fbff"/>
+      <stop offset="1" stop-color="#44eadb"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <path d="M166 135c0-10 8-18 18-18h34c10 0 18 8 18 18v112l112-121c7-8 19-9 27-2l24 20c8 7 8 20 1 27l-93 94 99 110c10 11 2 28-13 28h-43c-6 0-12-3-16-8l-98-117v107c0 10-8 18-18 18h-34c-10 0-18-8-18-18V135z" fill="#ffffff"/>
+  <path d="M238 256l92-99c8-9 22-10 31-2l43 38-63 4 2 63-40-35-65 69z" fill="url(#accent)"/>
+</svg>

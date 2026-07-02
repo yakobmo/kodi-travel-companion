@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi integrated K route logo B">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#05739d"/>
+      <stop offset="1" stop-color="#003f63"/>
+    </linearGradient>
+    <linearGradient id="route" x1="225" y1="147" x2="371" y2="354" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6ff7e6"/>
+      <stop offset="1" stop-color="#13b3cb"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <path d="M165 136c0-10 8-18 18-18h34c10 0 18 8 18 18v105l102-112c7-8 19-9 27-2l25 19c9 7 9 20 1 28l-87 92 94 107c10 11 2 28-13 28h-42c-7 0-13-3-17-8l-90-108v100c0 10-8 18-18 18h-34c-10 0-18-8-18-18V136z" fill="#ffffff"/>
+  <path d="M236 260c35-34 66-68 101-103" fill="none" stroke="url(#route)" stroke-width="25" stroke-linecap="round"/>
+  <path d="M337 157l49 11-12 48" fill="none" stroke="url(#route)" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

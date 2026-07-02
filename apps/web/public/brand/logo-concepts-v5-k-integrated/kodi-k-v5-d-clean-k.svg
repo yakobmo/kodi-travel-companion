@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi clean K logo D">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06749e"/>
+      <stop offset="1" stop-color="#003d63"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="247" y1="149" x2="375" y2="356" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#55efe0"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <path d="M167 135c0-10 8-18 18-18h35c10 0 18 8 18 18v112l111-121c7-8 19-9 27-2l25 20c8 7 9 20 1 28l-93 95 97 109c10 11 2 28-13 28h-43c-6 0-12-3-16-8l-96-116v107c0 10-8 18-18 18h-35c-10 0-18-8-18-18V135z" fill="#ffffff"/>
+  <path d="M238 257l111-121c7-8 19-9 27-2l25 20c8 7 9 20 1 28l-93 95z" fill="url(#accent)"/>
+</svg>

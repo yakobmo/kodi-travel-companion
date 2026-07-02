@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi integrated K negative arrow logo C">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0479a4"/>
+      <stop offset="1" stop-color="#003f63"/>
+    </linearGradient>
+    <mask id="cut">
+      <rect width="512" height="512" fill="#fff"/>
+      <path d="M286 194l65-57-5 47 47-5-72 64z" fill="#000"/>
+    </mask>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <path mask="url(#cut)" d="M166 135c0-10 8-18 18-18h35c10 0 18 8 18 18v112l111-121c7-8 19-9 27-2l25 20c8 7 9 20 1 28l-95 96 101 109c10 11 2 28-13 28h-43c-6 0-12-3-16-8l-98-116v106c0 10-8 18-18 18h-35c-10 0-18-8-18-18V135z" fill="#ffffff"/>
+  <path d="M324 196l22-19-2 18 18-2-24 21z" fill="#60f3e3"/>
+</svg>

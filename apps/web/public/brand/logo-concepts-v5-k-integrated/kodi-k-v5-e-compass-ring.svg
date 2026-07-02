@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi integrated K compass logo E">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0678a4"/>
+      <stop offset="1" stop-color="#003f66"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="252" y1="154" x2="387" y2="287" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#48ecdc"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="151" fill="none" stroke="#ffffff" stroke-width="15" opacity=".95"/>
+  <path d="M256 106v30M256 376v30M106 256h30M376 256h30" fill="none" stroke="#ffffff" stroke-width="15" stroke-linecap="round"/>
+  <path d="M174 151c0-9 7-16 16-16h31c9 0 16 7 16 16v96l99-109c6-7 17-8 24-2l24 18c8 6 9 19 2 26l-83 86 91 97c10 10 2 27-12 27h-39c-6 0-12-3-16-7l-90-103v94c0 9-7 16-16 16h-31c-9 0-16-7-16-16V151z" fill="#ffffff"/>
+  <path d="M237 257l99-109c6-7 17-8 24-2l24 18c8 6 9 19 2 26l-83 86z" fill="url(#accent)"/>
+</svg>
