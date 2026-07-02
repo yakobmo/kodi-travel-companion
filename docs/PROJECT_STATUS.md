@@ -30,6 +30,7 @@ Trip-order correction: the default current trip target is derived from the order
 Trip-list UX correction: the hamburger trip list is intentionally coarse. It defaults to `המסלול שלנו` and exposes only `קרוב אלינו`, `הכל`, `מקומות לינה`, and `אטרקציות`; finer grouping should be handled conversationally by Kodi instead of adding more visible filters.
 
 Hamburger place-card correction: the per-place `מפה` action opens the selected point in original Google Maps instead of only focusing Kodi's internal map layer.
+Public smoke passed on 2026-07-02 after the hamburger map-link correction: Render serves `index-DA3bIRsr.js`, `/api/health` returns OK, and `/api/navigation/links` returns a valid `googleMaps` URL for a sample trip point.
 
 Route-management direction: each trip point can be removed from the visible route on the current device. Kodi should be allowed, with manager approval, to help manage the route itself: suggest removals, add places, and reorder points according to the actual trip flow. The durable group-level version of those actions still needs a server-backed route editing endpoint before it becomes the shared source of truth.
 
