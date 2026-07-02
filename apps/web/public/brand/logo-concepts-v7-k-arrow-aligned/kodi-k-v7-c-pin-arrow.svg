@@ -1,0 +1,11 @@
+<svg width="512" height="512" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kodi K compass logo option C">
+  <rect x="8" y="8" width="104" height="104" rx="18" fill="#005D83"/>
+  <circle cx="60" cy="60" r="38" fill="none" stroke="#EFFBFF" stroke-width="5"/>
+  <path d="M60 21v10M60 89v10M21 60h10M89 60h10" stroke="#EFFBFF" stroke-width="4.2" stroke-linecap="round"/>
+  <path d="M43 35v50" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round"/>
+  <path d="M55 60L72 43" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round"/>
+  <path d="M55 60L81 85" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round"/>
+  <polygon points="85,31 76,53 62,39" fill="#2BD4C7"/>
+  <path d="M85 31L76 53L62 39Z" fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linejoin="round" opacity=".85"/>
+  <circle cx="88" cy="88" r="2.3" fill="#2BD4C7"/>
+</svg>

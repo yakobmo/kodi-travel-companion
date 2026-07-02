@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi premium K flow logo A">
+  <defs>
+    <linearGradient id="bg" x1="76" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#067aa5"/>
+      <stop offset="1" stop-color="#003e64"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="230" y1="144" x2="382" y2="384" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".45" stop-color="#d8fbff"/>
+      <stop offset="1" stop-color="#52efe0"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="94" fill="url(#bg)"/>
+  <path fill="#ffffff" d="M158 133c0-10 8-18 18-18h34c10 0 18 8 18 18v99l103-107c7-7 18-8 26-2l27 21c8 7 9 20 1 28l-91 92 98 110c10 11 2 28-13 28h-42c-7 0-13-3-17-8l-92-109v100c0 10-8 18-18 18h-34c-10 0-18-8-18-18V133z"/>
+  <path fill="url(#accent)" d="M228 259l105-110c7-7 18-8 26-2l27 21c8 7 9 20 1 28l-91 92z"/>
+</svg>

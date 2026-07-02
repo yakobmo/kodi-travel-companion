@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kodi K aligned arrow logo concepts</title>
+  <style>
+    :root {
+      --ink: #00476d;
+      --muted: #42657a;
+      --line: #cfe5ef;
+      --bg: #eef9fc;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    main {
+      padding: 32px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+    }
+    p {
+      margin: 0 0 28px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      direction: ltr;
+    }
+    .card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      min-height: 228px;
+      display: grid;
+      place-items: center;
+      padding: 22px 18px;
+      box-sizing: border-box;
+    }
+    img {
+      width: 132px;
+      height: 132px;
+      image-rendering: auto;
+    }
+    strong {
+      display: block;
+      margin-top: 16px;
+      font-size: 15px;
+      color: var(--ink);
+      direction: rtl;
+    }
+    .note {
+      margin-top: 22px;
+      font-size: 13px;
+      color: #59788a;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>לוגו קודי - K עם חץ מיושר</h1>
+    <p>המשולש יושב על האלכסון העליון של ה-K, לא מרחף מחוץ לצורה.</p>
+    <section class="grid">
+      <article class="card">
+        <img src="kodi-k-v7-a-true-compass.svg" alt="A" />
+        <strong>A - הכי קרוב למצפן המקורי</strong>
+      </article>
+      <article class="card">
+        <img src="kodi-k-v7-b-clean-arrow.svg" alt="B" />
+        <strong>B - נקי וחד</strong>
+      </article>
+      <article class="card">
+        <img src="kodi-k-v7-c-pin-arrow.svg" alt="C" />
+        <strong>C - עם נקודת קודי</strong>
+      </article>
+      <article class="card">
+        <img src="kodi-k-v7-d-minimal.svg" alt="D" />
+        <strong>D - מינימליסטי</strong>
+      </article>
+    </section>
+    <div class="note">וקטורים חדים ב-SVG. אין כאן צילום מסך מטושטש.</div>
+  </main>
+</body>
+</html>

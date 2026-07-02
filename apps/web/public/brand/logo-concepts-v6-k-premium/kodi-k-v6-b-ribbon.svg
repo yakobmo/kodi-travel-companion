@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi premium K ribbon logo B">
+  <defs>
+    <linearGradient id="bg" x1="76" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#05749d"/>
+      <stop offset="1" stop-color="#003d61"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="238" y1="143" x2="384" y2="291" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#72f8e8"/>
+      <stop offset="1" stop-color="#13b5cb"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="94" fill="url(#bg)"/>
+  <path d="M160 133c0-10 8-18 18-18h35c10 0 18 8 18 18v252c0 10-8 18-18 18h-35c-10 0-18-8-18-18V133z" fill="#fff"/>
+  <path d="M236 255l104-111c7-8 19-9 27-2l26 21c8 7 9 20 1 28l-93 94 96 90c12 11 4 31-12 31h-43c-5 0-10-2-14-6l-88-84c-17-16-18-43-4-61z" fill="#fff"/>
+  <path d="M236 255l104-111c7-8 19-9 27-2l26 21c8 7 9 20 1 28l-93 94z" fill="url(#accent)"/>
+</svg>

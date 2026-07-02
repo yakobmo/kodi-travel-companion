@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi premium K monogram logo D">
+  <defs>
+    <linearGradient id="bg" x1="76" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#047ba6"/>
+      <stop offset="1" stop-color="#003e64"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="245" y1="132" x2="383" y2="382" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#70f8e8"/>
+      <stop offset="1" stop-color="#11b4cb"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="94" fill="url(#bg)"/>
+  <path d="M170 131c0-10 8-18 18-18h38c10 0 18 8 18 18v102l92-108c7-8 19-10 28-3l25 19c9 7 10 20 2 29l-82 94 87 106c9 11 1 28-14 28h-44c-6 0-12-3-16-8l-78-98v88c0 10-8 18-18 18h-38c-10 0-18-8-18-18V131z" fill="#fff"/>
+  <path d="M244 257l92-108c7-8 19-10 28-3l25 19c9 7 10 20 2 29l-82 94z" fill="url(#accent)"/>
+  <circle cx="384" cy="385" r="7" fill="#71f8e8"/>
+</svg>
