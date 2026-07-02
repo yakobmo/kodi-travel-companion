@@ -916,6 +916,52 @@ function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
     return true;
   }
 
+  const naturalQuestionOrTask = [
+    "?",
+    "מה",
+    "כמה",
+    "איפה",
+    "איך",
+    "מתי",
+    "לאן",
+    "האם",
+    "יש",
+    "כדאי",
+    "אפשר",
+    "תבדוק",
+    "תחפש",
+    "תמצא",
+    "תמליץ",
+    "תסביר",
+    "ספר",
+    "שים",
+    "פתח",
+    "קח אותנו",
+    "תארגן",
+    "תכנן",
+    "מסלול",
+    "מלון",
+    "אטרקציה",
+    "חוף",
+    "מסעדה",
+    "טברנה",
+    "שנורקל",
+    "משקפת",
+    "משקפות",
+    "מזומן",
+    "אשראי",
+    "יורו",
+    "מזג",
+    "שקיעה",
+    "Waze",
+    "waze",
+    "Google Maps"
+  ].some((term) => text.includes(term));
+
+  if (naturalQuestionOrTask) {
+    return true;
+  }
+
   const recentMessages = currentMessages.slice(-4);
   const kodiWasRecentlyActive = recentMessages.some((message) => message.author === "קודי" || message.source === "agent");
   if (!kodiWasRecentlyActive) {
