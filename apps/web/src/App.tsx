@@ -41,6 +41,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
+type PlaceListFilter = "nearby" | "all" | PlaceType;
 type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
 const DEFAULT_NEARBY_MAP_RADIUS_KM = 40;
 const DEFAULT_VISIBLE_PLACE_LIMIT = 40;
@@ -62,6 +63,7 @@ declare global {
 
 interface TripPlace {
   id: string;
+  sourceIndex?: number;
   name: string;
   type: PlaceType;
   address?: string;
@@ -585,6 +587,17 @@ function getPlaceTypeLabel(type: PlaceType) {
   return labels[type];
 }
 
+const placeListFilters: Array<{ value: PlaceListFilter; label: string }> = [
+  { value: "nearby", label: "קרוב אליי" },
+  { value: "all", label: "הכל" },
+  { value: "lodging", label: "לינות" },
+  { value: "water", label: "מים" },
+  { value: "attraction", label: "אטרקציות" },
+  { value: "food", label: "אוכל" },
+  { value: "transport", label: "תחבורה" },
+  { value: "stop", label: "עצירות" }
+];
+
 function buildExternalAppShortcuts(place?: TripPlace) {
   const query = encodeURIComponent(place?.name ?? "travel");
   const locationQuery = encodeURIComponent(place?.address ?? place?.name ?? "near me");
@@ -803,6 +816,22 @@ function getDistanceKm(first: { lat: number; lng: number }, second: { lat: numbe
   return 2 * earthRadiusKm * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
+function getPlaceDistanceKm(place: TripPlace, anchor?: { lat: number; lng: number } | null) {
+  if (!anchor || typeof place.lat !== "number" || typeof place.lng !== "number") {
+    return null;
+  }
+
+  return getDistanceKm(anchor, { lat: place.lat, lng: place.lng });
+}
+
+function formatDistanceKm(distanceKm: number | null) {
+  if (distanceKm === null) {
+    return null;
+  }
+
+  return distanceKm < 1 ? `${Math.round(distanceKm * 1000)} מ׳` : `${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} ק״מ`;
+}
+
 function getApproximateRadiusCorners(center: { lat: number; lng: number }, radiusKm: number) {
   const latDelta = radiusKm / 111;
   const lngScale = Math.max(Math.cos((center.lat * Math.PI) / 180), 0.2);
@@ -874,6 +903,7 @@ export function App() {
   });
   const [places, setPlaces] = useState<TripPlace[]>(demoPlaces);
   const [selectedPlaceId, setSelectedPlaceId] = useState(demoPlaces[0]?.id ?? "");
+  const [placeListFilter, setPlaceListFilter] = useState<PlaceListFilter>("nearby");
   const [loadState, setLoadState] = useState<"loading" | "ready" | "fallback">("loading");
   const [navigationState, setNavigationState] = useState<"idle" | "opening" | "error">("idle");
   const [messages, setMessages] = useState<ChatMessage[]>(demoMessages);
@@ -1660,19 +1690,39 @@ export function App() {
     () => visiblePlaces.filter((place) => typeof place.lat === "number" && typeof place.lng === "number"),
     [visiblePlaces]
   );
-  const menuPlaces = useMemo(
-    () =>
-      [...places].sort((first, second) => {
-        const firstHasCoordinates = typeof first.lat === "number" && typeof first.lng === "number";
-        const secondHasCoordinates = typeof second.lat === "number" && typeof second.lng === "number";
-        if (firstHasCoordinates !== secondHasCoordinates) {
-          return firstHasCoordinates ? -1 : 1;
-        }
+  const menuPlaces = useMemo(() => {
+    const getSourceOrder = (place: TripPlace) =>
+      typeof place.sourceIndex === "number" ? place.sourceIndex : Number.MAX_SAFE_INTEGER;
+    const hasCoordinates = (place: TripPlace) => typeof place.lat === "number" && typeof place.lng === "number";
+    const compareByTripOrder = (first: TripPlace, second: TripPlace) =>
+      getSourceOrder(first) - getSourceOrder(second) || first.name.localeCompare(second.name, "he");
 
-        return first.name.localeCompare(second.name, "he");
-      }),
-    [places]
-  );
+    if (placeListFilter === "nearby" && mapAnchorLocation) {
+      return places
+        .filter(hasCoordinates)
+        .map((place) => ({
+          place,
+          distanceKm: getPlaceDistanceKm(place, mapAnchorLocation) ?? Number.MAX_SAFE_INTEGER
+        }))
+        .sort((first, second) => first.distanceKm - second.distanceKm || compareByTripOrder(first.place, second.place))
+        .map((item) => item.place);
+    }
+
+    const filteredPlaces =
+      placeListFilter === "all" || placeListFilter === "nearby"
+        ? places
+        : places.filter((place) => place.type === placeListFilter);
+
+    return [...filteredPlaces].sort((first, second) => {
+      const firstHasCoordinates = hasCoordinates(first);
+      const secondHasCoordinates = hasCoordinates(second);
+      if (firstHasCoordinates !== secondHasCoordinates) {
+        return firstHasCoordinates ? -1 : 1;
+      }
+
+      return compareByTripOrder(first, second);
+    });
+  }, [mapAnchorLocation, placeListFilter, places]);
 
   useEffect(() => {
     if (places.length > 0 && !places.some((place) => place.id === selectedPlaceId)) {
@@ -3118,20 +3168,6 @@ export function App() {
             סגור
           </button>
         </div>
-        <section className="menu-block install-menu" aria-label="התקנת קודי במסך הבית">
-          <strong>קודי במסך הבית</strong>
-          <p>
-            {installState === "installed"
-              ? "קודי כבר פעיל כקיצור אפליקציה."
-              : installPrompt
-                ? "הוסף את קודי כאייקון כמו אפליקציה בטלפון."
-                : "אם הדפדפן לא מציג התקנה, פתח את תפריט הדפדפן ובחר הוסף למסך הבית."}
-          </p>
-          <button disabled={installState === "installed"} onClick={installKodiShortcut} type="button">
-            <Download size={18} aria-hidden="true" />
-            {installState === "installed" ? "כבר מותקן" : "התקן את קודי"}
-          </button>
-        </section>
         {selectedPlace ? (
           <section className="menu-block selected-place-menu" aria-label="פעולות לנקודה נבחרת">
             <span>{getPlaceTypeLabel(selectedPlace.type)}</span>
@@ -3242,6 +3278,51 @@ export function App() {
             {navigationState === "error" ? <small>לא הצלחתי ליצור קישור ניווט כרגע.</small> : null}
           </section>
         ) : null}
+        <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
+          <strong>נקודות הטיול</strong>
+          <p>
+            {placeListFilter === "nearby" && mapAnchorLocation
+              ? `${menuPlaces.length} נקודות מסודרות לפי קרבה למיקום הנוכחי`
+              : `${menuPlaces.length} מתוך ${places.length} נקודות בתוכנית הטיול`}
+          </p>
+          <div className="place-filter-chips" aria-label="סינון נקודות טיול">
+            {placeListFilters.map((filter) => (
+              <button
+                className={placeListFilter === filter.value ? "active-place-filter" : ""}
+                key={filter.value}
+                onClick={() => setPlaceListFilter(filter.value)}
+                type="button"
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <div className="trip-place-list">
+            {menuPlaces.length > 0 ? (
+              menuPlaces.map((place) => {
+                const hasCoordinates = typeof place.lat === "number" && typeof place.lng === "number";
+                const distanceLabel = formatDistanceKm(getPlaceDistanceKm(place, mapAnchorLocation));
+                return (
+                  <button
+                    className={place.id === selectedPlace?.id ? "selected-trip-place" : ""}
+                    key={place.id}
+                    onClick={() => setSelectedPlaceId(place.id)}
+                    type="button"
+                  >
+                    <span>{place.name}</span>
+                    <small>
+                      {getPlaceTypeLabel(place.type)}
+                      {distanceLabel ? ` · ${distanceLabel}` : ""}
+                      {hasCoordinates ? " · במפה" : " · ברשימה"}
+                    </small>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="empty-trip-place-list">אין נקודות במסנן הזה.</div>
+            )}
+          </div>
+        </section>
         <section className="menu-block invite-menu" data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
           <strong>הזמנת משתתפים</strong>
           <p>שלחו קישור כמו בקבוצת וואטסאפ. מי שמקבל נכנס, כותב שם, מאשר מיקום ומצטרף.</p>
@@ -3268,34 +3349,9 @@ export function App() {
             {locationState === "requesting" ? "מבקש הרשאה..." : currentLocation ? "רענן מיקום" : "אשר מיקום"}
           </button>
         </section>
-        <details className="advanced-menu">
-          <summary>אפשרויות נוספות</summary>
-          <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
-          <strong>כל נקודות הטיול</strong>
-          <p>
-            {places.length} נקודות זמינות · {mapPlaces.length} מוצגות על מפת Google לפי קואורדינטות
-          </p>
-          <div className="trip-place-list">
-            {menuPlaces.map((place) => {
-              const hasCoordinates = typeof place.lat === "number" && typeof place.lng === "number";
-              return (
-                <button
-                  className={place.id === selectedPlace?.id ? "selected-trip-place" : ""}
-                  key={place.id}
-                  onClick={() => setSelectedPlaceId(place.id)}
-                  type="button"
-                >
-                  <span>{place.name}</span>
-                  <small>
-                    {getPlaceTypeLabel(place.type)} · {hasCoordinates ? "במפה" : "ברשימה"}
-                  </small>
-                </button>
-              );
-            })}
-          </div>
-          </section>
-        <section className="menu-block">
+        <section className="menu-block external-apps-menu">
           <strong>קישורים חיצוניים</strong>
+          <p>יציאה מהירה לכלים המקוריים: Google Maps, Booking, Airbnb וקיצורים אישיים.</p>
           <div className="external-shortcuts menu-shortcuts" aria-label="קיצורי אפליקציות חיצוניות בתפריט">
             {externalShortcuts.map((shortcut) => (
               <a href={shortcut.href} key={shortcut.label} rel="noreferrer" target="_blank">
@@ -3327,6 +3383,22 @@ export function App() {
             <button type="submit">הוסף</button>
           </form>
         </section>
+        <section className="menu-block install-menu" aria-label="התקנת קודי במסך הבית">
+          <strong>קודי במסך הבית</strong>
+          <p>
+            {installState === "installed"
+              ? "קודי כבר פעיל כקיצור אפליקציה."
+              : installPrompt
+                ? "הוסף את קודי כאייקון כמו אפליקציה בטלפון."
+                : "אם הדפדפן לא מציג התקנה, פתח את תפריט הדפדפן ובחר הוסף למסך הבית."}
+          </p>
+          <button disabled={installState === "installed"} onClick={installKodiShortcut} type="button">
+            <Download size={18} aria-hidden="true" />
+            {installState === "installed" ? "כבר מותקן" : "התקן את קודי"}
+          </button>
+        </section>
+        <details className="advanced-menu">
+          <summary>אפשרויות נוספות</summary>
           <section className="menu-block event-menu event-activity" aria-label="פעילות חיה בקבוצה">
           <strong>פעילות חיה</strong>
           <p>

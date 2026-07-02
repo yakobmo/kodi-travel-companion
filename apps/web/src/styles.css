@@ -1437,21 +1437,48 @@ input {
   padding-inline: 12px;
 }
 
+.place-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.place-filter-chips button {
+  min-height: 30px;
+  border: 1px solid #b7d8df;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: #f4fbfd;
+  color: #07536b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.place-filter-chips button.active-place-filter {
+  border-color: #087f9d;
+  background: #087f9d;
+  color: #ffffff;
+}
+
 .trip-place-list {
   display: grid;
   gap: 6px;
-  max-height: 260px;
+  max-height: 300px;
   overflow: auto;
   padding-left: 2px;
 }
 
 .trip-place-list button {
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  justify-content: initial;
   min-width: 0;
+  min-height: 44px;
   border: 1px solid #d7e3df;
   background: #f8faf9;
   color: #16211f;
   text-align: right;
+  padding: 8px 10px;
 }
 
 .trip-place-list button.selected-trip-place {
@@ -1471,6 +1498,17 @@ input {
   color: #53615e;
   font-size: 11px;
   font-weight: 800;
+  white-space: nowrap;
+}
+
+.empty-trip-place-list {
+  border: 1px dashed #b7d8df;
+  border-radius: 8px;
+  padding: 12px;
+  color: #53615e;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .map-surface > .map-placeholder > .map-provider-note,
