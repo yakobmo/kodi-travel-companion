@@ -791,9 +791,23 @@ function renderMessageText(text: string) {
 }
 
 function shouldSpeakKodiReply(text: string) {
-  return ["בקול", "תקריא", "תקריאי", "דבר", "דברי", "תספר בקול", "להקריא"].some((fragment) =>
-    text.includes(fragment)
-  );
+  const normalized = text.toLowerCase();
+
+  return [
+    "בקול",
+    "בקול רם",
+    "בדיבור",
+    "תקריא",
+    "תקריאי",
+    "תקריא לי",
+    "תקרא בקול",
+    "דבר",
+    "דברי",
+    "תספר בקול",
+    "להקריא",
+    "אני רוצה לשמוע",
+    "שמע"
+  ].some((fragment) => normalized.includes(fragment));
 }
 
 function isCurrentLocationQuestion(text: string) {
@@ -2666,6 +2680,16 @@ export function App() {
     }
 
     stopKodiSpeech();
+    speakKodiMessageWithBrowserVoice(speechText, messageId);
+  }
+
+  async function speakKodiMessageWithServerVoice(text: string, messageId?: string) {
+    const speechText = buildSpeechText(text);
+    if (!speechText) {
+      return;
+    }
+
+    stopKodiSpeech();
     setSpeechOutputState("speaking");
     setSpeakingMessageId(messageId ?? null);
 
@@ -3672,7 +3696,12 @@ export function App() {
                 {message.author === "קודי" ? (
                   <button
                     aria-label={speakingMessageId === (message.id ?? `${message.author}-${index}`) ? "עצור הקראה" : "קודי הקריא בקול"}
-                    className="speak-message-button"
+                    aria-pressed={speakingMessageId === (message.id ?? `${message.author}-${index}`)}
+                    className={
+                      speakingMessageId === (message.id ?? `${message.author}-${index}`)
+                        ? "speak-message-button speaking"
+                        : "speak-message-button"
+                    }
                     onClick={() =>
                       speakingMessageId === (message.id ?? `${message.author}-${index}`)
                         ? stopKodiSpeech()
@@ -3688,9 +3717,15 @@ export function App() {
                     type="button"
                   >
                     {speakingMessageId === (message.id ?? `${message.author}-${index}`) ? (
-                      <VolumeX size={16} aria-hidden="true" />
+                      <>
+                        <VolumeX size={16} aria-hidden="true" />
+                        <span>עוצר</span>
+                      </>
                     ) : (
-                      <Volume2 size={16} aria-hidden="true" />
+                      <>
+                        <Volume2 size={16} aria-hidden="true" />
+                        <span>הקרא</span>
+                      </>
                     )}
                   </button>
                 ) : null}
