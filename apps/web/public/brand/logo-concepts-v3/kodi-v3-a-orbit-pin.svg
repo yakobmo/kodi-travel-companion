@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi orbit pin logo">
+  <defs>
+    <linearGradient id="bg" x1="76" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0379a8"/>
+      <stop offset="1" stop-color="#003f66"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="165" y1="119" x2="348" y2="385" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#72f8e8"/>
+      <stop offset="1" stop-color="#13b2cb"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <ellipse cx="256" cy="255" rx="142" ry="82" fill="none" stroke="#ffffff" stroke-width="18" transform="rotate(-28 256 255)" opacity=".94"/>
+  <path d="M256 118c-55 0-100 43-100 97 0 78 100 179 100 179s100-101 100-179c0-54-45-97-100-97z" fill="url(#accent)"/>
+  <circle cx="256" cy="214" r="42" fill="#ffffff"/>
+  <circle cx="256" cy="214" r="18" fill="#034c70"/>
+  <circle cx="383" cy="172" r="16" fill="#ffffff"/>
+  <circle cx="383" cy="172" r="7" fill="#034c70"/>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi guiding arrow logo">
+  <defs>
+    <linearGradient id="bg" x1="76" y1="58" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#066c99"/>
+      <stop offset="1" stop-color="#003e62"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="147" y1="141" x2="373" y2="370" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".55" stop-color="#d8fbff"/>
+      <stop offset="1" stop-color="#4feedd"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#bg)"/>
+  <path d="M143 355l107-214c5-10 19-8 21 3l29 119 119 29c11 3 13 17 3 22L208 421c-10 5-21-6-16-16l44-88-88 44c-10 5-21-6-15-16z" fill="url(#arrow)"/>
+  <path d="M251 141l49 122 122 49" fill="none" stroke="#006384" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" opacity=".25"/>
+  <circle cx="256" cy="280" r="26" fill="#006384"/>
+  <circle cx="256" cy="280" r="10" fill="#ffffff"/>
+</svg>

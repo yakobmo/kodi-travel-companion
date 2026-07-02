@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi twin points logo">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0676a2"/>
+      <stop offset="1" stop-color="#003f66"/>
+    </linearGradient>
+    <linearGradient id="pinA" x1="129" y1="124" x2="254" y2="324" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dffbff"/>
+    </linearGradient>
+    <linearGradient id="pinB" x1="249" y1="151" x2="386" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#69f6e5"/>
+      <stop offset="1" stop-color="#11b2cb"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="88" fill="url(#bg)"/>
+  <path d="M180 121c-44 0-80 35-80 78 0 62 80 142 80 142s80-80 80-142c0-43-36-78-80-78z" fill="url(#pinA)"/>
+  <path d="M330 172c-51 0-92 40-92 90 0 71 92 163 92 163s92-92 92-163c0-50-41-90-92-90z" fill="url(#pinB)"/>
+  <circle cx="180" cy="198" r="29" fill="#075e86"/>
+  <circle cx="330" cy="262" r="34" fill="#ffffff"/>
+  <circle cx="330" cy="262" r="14" fill="#075e86"/>
+  <path d="M213 331c38-35 66-36 97-10" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity=".88"/>
+</svg>
