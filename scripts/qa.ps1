@@ -283,6 +283,13 @@ $webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
 if (
   -not $webAppSource.Contains("SpeechRecognition") -or
   -not $webAppSource.Contains("startVoiceInput") -or
+  -not $webAppSource.Contains("finishVoiceInput") -or
+  -not $webAppSource.Contains("voiceShouldSendRef") -or
+  -not $webAppSource.Contains("submitChatText(spokenText)") -or
+  -not $webAppSource.Contains("speechRecognitionRef.current.stop()") -or
+  -not $webAppSource.Contains("releasePointerCapture") -or
+  -not $webAppSource.Contains("onPointerDown") -or
+  -not $webAppSource.Contains("onPointerUp") -or
   -not $webAppSource.Contains("voice-button") -or
   -not $webAppSource.Contains("voice-recording-indicator") -or
   -not $webAppSource.Contains("recording-dot") -or
@@ -331,6 +338,7 @@ if (
   -not $webStylesSource.Contains("grid-template-columns: minmax(0, 1fr) 44px auto") -or
   -not $webStylesSource.Contains(".voice-recording-indicator") -or
   -not $webStylesSource.Contains(".recording-dot") -or
+  -not $webStylesSource.Contains("touch-action: none") -or
   -not $webStylesSource.Contains("@keyframes recording-pulse") -or
   -not $webStylesSource.Contains("@keyframes microphone-listening")
 ) {
@@ -842,7 +850,7 @@ if (
   throw "Web app must stream member locations with a polling fallback."
 }
 
-if (-not $appSource.Contains("׳¡׳ ׳›׳¨׳•׳ ׳—׳™ ׳₪׳¢׳™׳")) {
+if (-not $appSource.Contains('memberRealtimeState === "live"')) {
   throw "Web app must show a quiet live sync status for group member locations."
 }
 

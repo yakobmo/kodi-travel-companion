@@ -28,6 +28,7 @@ type BrowserSpeechRecognition = {
   onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
   abort: () => void;
   start: () => void;
+  stop: () => void;
 };
 
 type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
@@ -1062,10 +1063,19 @@ export function App() {
   const googleMapFitSignatureRef = useRef("");
   const locationWatchIdRef = useRef<number | null>(null);
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const voiceTranscriptRef = useRef("");
+  const voiceShouldSendRef = useRef(false);
   const speechAudioRef = useRef<HTMLAudioElement | null>(null);
   const speechAudioUrlRef = useRef<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      speechRecognitionRef.current?.abort();
+      speechRecognitionRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const standalone =
@@ -2474,16 +2484,30 @@ export function App() {
     }
 
     speechRecognitionRef.current?.abort();
+    voiceTranscriptRef.current = "";
+    voiceShouldSendRef.current = false;
     const recognition = new SpeechRecognitionCtor();
     speechRecognitionRef.current = recognition;
     recognition.lang = "he-IL";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => setSpeechState("listening");
-    recognition.onerror = () => setSpeechState("error");
+    recognition.onerror = () => {
+      voiceShouldSendRef.current = false;
+      setSpeechState("error");
+    };
     recognition.onend = () => {
       setSpeechState((currentState) => (currentState === "listening" ? "idle" : currentState));
       speechRecognitionRef.current = null;
+
+      const spokenText = voiceTranscriptRef.current.trim();
+      voiceTranscriptRef.current = "";
+      if (voiceShouldSendRef.current && spokenText) {
+        voiceShouldSendRef.current = false;
+        void submitChatText(spokenText);
+      } else {
+        voiceShouldSendRef.current = false;
+      }
     };
     recognition.onresult = (event) => {
       const spokenText = Array.from(event.results)
@@ -2492,10 +2516,32 @@ export function App() {
         .trim();
 
       if (spokenText) {
-        setDraft((currentDraft) => [currentDraft, spokenText].filter(Boolean).join(" ").trim());
+        voiceTranscriptRef.current = spokenText;
       }
     };
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setSpeechState("error");
+      speechRecognitionRef.current = null;
+    }
+  }
+
+  function finishVoiceInput() {
+    if (!speechRecognitionRef.current) {
+      return;
+    }
+
+    voiceShouldSendRef.current = true;
+    speechRecognitionRef.current.stop();
+  }
+
+  function cancelVoiceInput() {
+    voiceShouldSendRef.current = false;
+    voiceTranscriptRef.current = "";
+    speechRecognitionRef.current?.abort();
+    speechRecognitionRef.current = null;
+    setSpeechState("idle");
   }
 
   function stopKodiSpeech() {
@@ -2631,10 +2677,8 @@ export function App() {
     }
   }
 
-  async function sendMessageWithPersistence(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const text = draft.trim();
+  async function submitChatText(rawText: string) {
+    const text = rawText.trim();
     if (!text) {
       return;
     }
@@ -2680,6 +2724,11 @@ export function App() {
     setMessages((currentMessages) =>
       currentMessages.map((message) => (message.id === localUserMessage.id ? savedUserMessage : message))
     );
+  }
+
+  async function sendMessageWithPersistence(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitChatText(draft);
   }
 
   function addUserShortcut(event: FormEvent<HTMLFormElement>) {
@@ -3588,7 +3637,7 @@ export function App() {
           {speechState === "listening" ? (
             <div className="voice-recording-indicator" aria-live="assertive" role="status">
               <span className="recording-dot" aria-hidden="true" />
-              <span>קודי מקשיב עכשיו...</span>
+              <span>מקליט... שחרור שולח</span>
             </div>
           ) : null}
           <input
@@ -3598,15 +3647,38 @@ export function App() {
             value={draft}
           />
           <button
-            aria-label={speechState === "listening" ? "קודי מקשיב" : "דבר אל קודי"}
+            aria-label={speechState === "listening" ? "שחרור שולח הודעה קולית" : "לחץ והחזק כדי לדבר"}
             className={speechState === "listening" ? "voice-button listening" : "voice-button"}
-            onClick={startVoiceInput}
+            onContextMenu={(event) => event.preventDefault()}
+            onKeyDown={(event) => {
+              if ((event.key === " " || event.key === "Enter") && speechState !== "listening") {
+                event.preventDefault();
+                startVoiceInput();
+              }
+            }}
+            onKeyUp={(event) => {
+              if (event.key === " " || event.key === "Enter") {
+                event.preventDefault();
+                finishVoiceInput();
+              }
+            }}
+            onPointerCancel={cancelVoiceInput}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.currentTarget.setPointerCapture?.(event.pointerId);
+              startVoiceInput();
+            }}
+            onPointerUp={(event) => {
+              event.preventDefault();
+              event.currentTarget.releasePointerCapture?.(event.pointerId);
+              finishVoiceInput();
+            }}
             title={
               speechState === "unsupported"
                 ? "הדפדפן הזה לא תומך בדיבור"
                 : speechState === "error"
                   ? "לא הצלחתי להפעיל דיבור"
-                  : "דבר אל קודי"
+                  : "לחץ והחזק. שחרור שולח את ההודעה"
             }
             type="button"
           >
