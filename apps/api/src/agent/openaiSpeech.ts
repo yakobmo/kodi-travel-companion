@@ -21,7 +21,10 @@ function getOpenAiClient() {
 }
 
 function getOpenAiSpeechInstructions() {
-  return process.env.OPENAI_TTS_INSTRUCTIONS?.trim() || undefined;
+  return (
+    process.env.OPENAI_TTS_INSTRUCTIONS?.trim() ||
+    "Speak Hebrew clearly in a warm, friendly adult male Israeli guide voice. Keep the rhythm natural and conversational, pronounce Hebrew words carefully, and avoid a robotic or feminine tone."
+  );
 }
 
 function getOpenAiSpeechSpeed() {
@@ -47,7 +50,7 @@ export async function createKodiSpeechAudio(text: string): Promise<OpenAiSpeechR
   }
 
   const model = process.env.OPENAI_TTS_MODEL?.trim() || "gpt-4o-mini-tts";
-  const voice = process.env.OPENAI_TTS_VOICE?.trim() || "alloy";
+  const voice = process.env.OPENAI_TTS_VOICE?.trim() || "echo";
   const instructions = getOpenAiSpeechInstructions();
   const speed = getOpenAiSpeechSpeed();
 

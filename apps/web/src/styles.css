@@ -1709,6 +1709,13 @@ input {
   animation: speakButtonPulse 1.1s ease-in-out infinite;
 }
 
+.speak-message-button.preparing {
+  border-color: #36b9cf;
+  background: #e1f8fd;
+  color: #07536b;
+  animation: speakButtonPulse 1.1s ease-in-out infinite;
+}
+
 .speak-message-button:focus-visible {
   outline: 2px solid #16211f;
   outline-offset: 2px;

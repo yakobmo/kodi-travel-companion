@@ -1069,7 +1069,7 @@ export function App() {
   const [draft, setDraft] = useState("");
   const [speechState, setSpeechState] = useState<"idle" | "listening" | "unsupported" | "error">("idle");
   const [isKodiThinking, setIsKodiThinking] = useState(false);
-  const [speechOutputState, setSpeechOutputState] = useState<"idle" | "speaking" | "unsupported" | "error">("idle");
+  const [speechOutputState, setSpeechOutputState] = useState<"idle" | "preparing" | "speaking" | "unsupported" | "error">("idle");
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [userShortcuts, setUserShortcuts] = useState<UserShortcut[]>([]);
   const [shortcutLabelDraft, setShortcutLabelDraft] = useState("");
@@ -1105,6 +1105,10 @@ export function App() {
   const voiceShouldSendRef = useRef(false);
   const speechAudioRef = useRef<HTMLAudioElement | null>(null);
   const speechAudioUrlRef = useRef<string | null>(null);
+  const speechAudioUrlIsCachedRef = useRef(false);
+  const speechAudioCacheRef = useRef<Map<string, string>>(new Map());
+  const speechAudioPendingRef = useRef<Map<string, Promise<string | null>>>(new Map());
+  const speechRequestTokenRef = useRef(0);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -1112,6 +1116,16 @@ export function App() {
     return () => {
       speechRecognitionRef.current?.abort();
       speechRecognitionRef.current = null;
+      window.speechSynthesis?.cancel();
+      speechAudioRef.current?.pause();
+      speechAudioCacheRef.current.forEach((audioUrl) => URL.revokeObjectURL(audioUrl));
+      speechAudioCacheRef.current.clear();
+      speechAudioPendingRef.current.clear();
+      if (speechAudioUrlRef.current && !speechAudioUrlIsCachedRef.current) {
+        URL.revokeObjectURL(speechAudioUrlRef.current);
+      }
+      speechAudioUrlRef.current = null;
+      speechAudioUrlIsCachedRef.current = false;
     };
   }, []);
 
@@ -2622,15 +2636,118 @@ export function App() {
   }
 
   function stopKodiSpeech() {
+    speechRequestTokenRef.current += 1;
     window.speechSynthesis?.cancel();
     speechAudioRef.current?.pause();
     speechAudioRef.current = null;
-    if (speechAudioUrlRef.current) {
+    if (speechAudioUrlRef.current && !speechAudioUrlIsCachedRef.current) {
       URL.revokeObjectURL(speechAudioUrlRef.current);
-      speechAudioUrlRef.current = null;
     }
+    speechAudioUrlRef.current = null;
+    speechAudioUrlIsCachedRef.current = false;
     setSpeechOutputState("idle");
     setSpeakingMessageId(null);
+  }
+
+  async function getKodiSpeechAudioUrl(speechText: string) {
+    const cachedUrl = speechAudioCacheRef.current.get(speechText);
+    if (cachedUrl) {
+      return cachedUrl;
+    }
+
+    const pending = speechAudioPendingRef.current.get(speechText);
+    if (pending) {
+      return pending;
+    }
+
+    const request = (async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/agent/speech`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            text: speechText,
+            memberId: activeMember.id,
+            memberName: activeMember.name,
+            memberRole: activeMember.role
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Kodi speech API failed with ${response.status}`);
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        speechAudioCacheRef.current.set(speechText, audioUrl);
+
+        while (speechAudioCacheRef.current.size > 8) {
+          const oldestKey = speechAudioCacheRef.current.keys().next().value;
+          const oldestUrl = oldestKey ? speechAudioCacheRef.current.get(oldestKey) : undefined;
+          if (!oldestKey || !oldestUrl) {
+            break;
+          }
+          URL.revokeObjectURL(oldestUrl);
+          speechAudioCacheRef.current.delete(oldestKey);
+        }
+
+        return audioUrl;
+      } catch {
+        return null;
+      } finally {
+        speechAudioPendingRef.current.delete(speechText);
+      }
+    })();
+
+    speechAudioPendingRef.current.set(speechText, request);
+    return request;
+  }
+
+  function prefetchKodiSpeech(text: string) {
+    const speechText = buildSpeechText(text);
+    if (!speechText || speechAudioCacheRef.current.has(speechText) || speechAudioPendingRef.current.has(speechText)) {
+      return;
+    }
+
+    void getKodiSpeechAudioUrl(speechText);
+  }
+
+  async function playKodiSpeechAudioUrl(audioUrl: string, messageId?: string) {
+    window.speechSynthesis?.cancel();
+    speechAudioRef.current?.pause();
+    if (speechAudioUrlRef.current && !speechAudioUrlIsCachedRef.current) {
+      URL.revokeObjectURL(speechAudioUrlRef.current);
+    }
+
+    const audio = new Audio(audioUrl);
+    speechAudioRef.current = audio;
+    speechAudioUrlRef.current = audioUrl;
+    speechAudioUrlIsCachedRef.current = true;
+    setSpeechOutputState("speaking");
+    setSpeakingMessageId(messageId ?? null);
+
+    audio.onended = () => {
+      if (speechAudioUrlRef.current === audioUrl) {
+        speechAudioRef.current = null;
+        speechAudioUrlRef.current = null;
+        speechAudioUrlIsCachedRef.current = false;
+        setSpeechOutputState("idle");
+        setSpeakingMessageId(null);
+      }
+    };
+    audio.onerror = () => {
+      if (speechAudioUrlRef.current === audioUrl) {
+        speechAudioRef.current = null;
+        speechAudioUrlRef.current = null;
+        speechAudioUrlIsCachedRef.current = false;
+      }
+      setSpeechOutputState("error");
+      setSpeakingMessageId(null);
+    };
+
+    await audio.play();
   }
 
   function speakKodiMessageWithBrowserVoice(text: string, messageId?: string) {
@@ -2680,7 +2797,27 @@ export function App() {
     }
 
     stopKodiSpeech();
-    speakKodiMessageWithBrowserVoice(speechText, messageId);
+    const requestToken = speechRequestTokenRef.current;
+    setSpeechOutputState("preparing");
+    setSpeakingMessageId(messageId ?? null);
+
+    const audioUrl = await getKodiSpeechAudioUrl(speechText);
+    if (speechRequestTokenRef.current !== requestToken) {
+      return;
+    }
+
+    if (!audioUrl) {
+      setSpeechOutputState("error");
+      setSpeakingMessageId(null);
+      return;
+    }
+
+    try {
+      await playKodiSpeechAudioUrl(audioUrl, messageId);
+    } catch {
+      setSpeechOutputState("error");
+      setSpeakingMessageId(null);
+    }
   }
 
   async function speakKodiMessageWithServerVoice(text: string, messageId?: string) {
@@ -2799,6 +2936,7 @@ export function App() {
         };
 
         setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
+        prefetchKodiSpeech(reply);
         if (shouldSpeakKodiReply(text)) {
           speakKodiMessage(reply, localKodiMessage.id);
         }
@@ -3699,7 +3837,9 @@ export function App() {
                     aria-pressed={speakingMessageId === (message.id ?? `${message.author}-${index}`)}
                     className={
                       speakingMessageId === (message.id ?? `${message.author}-${index}`)
-                        ? "speak-message-button speaking"
+                        ? speechOutputState === "preparing"
+                          ? "speak-message-button preparing"
+                          : "speak-message-button speaking"
                         : "speak-message-button"
                     }
                     onClick={() =>
@@ -3716,7 +3856,12 @@ export function App() {
                     }
                     type="button"
                   >
-                    {speakingMessageId === (message.id ?? `${message.author}-${index}`) ? (
+                    {speakingMessageId === (message.id ?? `${message.author}-${index}`) && speechOutputState === "preparing" ? (
+                      <>
+                        <Volume2 size={16} aria-hidden="true" />
+                        <span>מכין</span>
+                      </>
+                    ) : speakingMessageId === (message.id ?? `${message.author}-${index}`) ? (
                       <>
                         <VolumeX size={16} aria-hidden="true" />
                         <span>עוצר</span>

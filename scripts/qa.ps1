@@ -222,8 +222,9 @@ if (
   -not $openAiSpeechSource.Contains("client.audio.speech.create") -or
   -not $openAiSpeechSource.Contains("gpt-4o-mini-tts") -or
   -not $openAiSpeechSource.Contains("OPENAI_TTS_VOICE") -or
-  -not $openAiSpeechSource.Contains('"alloy"') -or
+  -not $openAiSpeechSource.Contains('"echo"') -or
   -not $openAiSpeechSource.Contains("OPENAI_TTS_INSTRUCTIONS") -or
+  -not $openAiSpeechSource.Contains("adult male Israeli guide voice") -or
   -not $openAiSpeechSource.Contains("OPENAI_TTS_SPEED") -or
   -not $openAiSpeechSource.Contains("return 1.16") -or
   -not $openAiSpeechSource.Contains("response_format: `"mp3`"")
@@ -334,6 +335,9 @@ if (
   -not $webAppSource.Contains("speechOutputState") -or
   -not $webAppSource.Contains("/api/agent/speech") -or
   -not $webAppSource.Contains("new Audio(audioUrl)") -or
+  -not $webAppSource.Contains("speechAudioCacheRef") -or
+  -not $webAppSource.Contains("prefetchKodiSpeech") -or
+  -not $webAppSource.Contains('"preparing"') -or
   -not $webAppSource.Contains("speakKodiMessageWithBrowserVoice") -or
   -not $webAppSource.Contains("speak-message-button") -or
   -not $webAppSource.Contains('utterance.lang = "he-IL"') -or
