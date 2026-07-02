@@ -2054,7 +2054,7 @@ export function App() {
   ];
   const setupReady = readinessItems.every((item) => item.ready);
 
-  async function openPlaceNavigation(place: TripPlace, target: "waze" | "walking") {
+  async function openPlaceNavigation(place: TripPlace, target: "waze" | "maps" | "walking") {
     if (typeof place.lat !== "number" || typeof place.lng !== "number") {
       return;
     }
@@ -2079,7 +2079,8 @@ export function App() {
       }
 
       const links = (await response.json()) as NavigationLinksResponse;
-      window.open(target === "waze" ? links.waze.web : links.googleMapsWalking, "_blank", "noopener,noreferrer");
+      const href = target === "waze" ? links.waze.web : target === "walking" ? links.googleMapsWalking : links.googleMaps;
+      window.open(href, "_blank", "noopener,noreferrer");
       setNavigationState("idle");
     } catch {
       setNavigationState("error");
@@ -3443,7 +3444,7 @@ export function App() {
                       </div>
                     ) : null}
                     <div className="trip-place-actions" aria-label={`פעולות עבור ${place.name}`}>
-                      <button onClick={() => focusPlaceOnMap(place)} type="button">
+                      <button disabled={!hasCoordinates || navigationState === "opening"} onClick={() => openPlaceNavigation(place, "maps")} type="button">
                         <MapPin size={14} aria-hidden="true" />
                         מפה
                       </button>
