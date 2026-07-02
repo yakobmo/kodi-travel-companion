@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi logo option E">
+  <defs>
+    <linearGradient id="bg" x1="82" y1="60" x2="432" y2="452" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#056f99"/>
+      <stop offset="1" stop-color="#014667"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="296" y1="158" x2="384" y2="250" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2fe5d2"/>
+      <stop offset="1" stop-color="#069ec2"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="72" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="151" fill="none" stroke="#ffffff" stroke-width="18"/>
+  <path d="M256 104v38M256 370v38M104 256h38M370 256h38" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+  <path fill="#ffffff" d="M178 167c0-8 6-14 14-14h24c8 0 14 6 14 14v69l76-77c5-5 13-6 19-2l20 14c8 5 9 16 2 23l-65 67 75 80c7 8 2 21-9 21h-29c-6 0-11-2-15-7l-74-80v72c0 8-6 14-14 14h-24c-8 0-14-6-14-14V167z"/>
+  <path fill="url(#arrow)" d="M295 167c-8-2-13 7-7 13l41 25 19 43c3 7 14 6 15-2l28-94c2-8-6-14-13-10l-83 25z"/>
+  <path d="M428 402v18M419 411h18" stroke="#79efe4" stroke-width="5" stroke-linecap="round"/>
+</svg>

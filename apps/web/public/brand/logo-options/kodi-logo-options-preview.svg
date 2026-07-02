@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 380" role="img" aria-label="Kodi logo options preview">
+  <rect width="1320" height="380" rx="24" fill="#f5fbfd"/>
+  <text x="48" y="58" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#073f5f">Kodi AI Smart Guide - vector logo options</text>
+  <text x="48" y="92" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#517083">Stored as SVG vectors under apps/web/public/brand/logo-options</text>
+  <g transform="translate(44 125)">
+    <image href="../kodi-compass-k-source.png" x="0" y="0" width="170" height="170"/>
+    <text x="85" y="214" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#073f5f">SOURCE</text>
+  </g>
+  <g transform="translate(250 125)">
+    <image href="kodi-logo-option-a.svg" x="0" y="0" width="170" height="170"/>
+    <text x="85" y="214" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#073f5f">A</text>
+  </g>
+  <g transform="translate(455 125)">
+    <image href="kodi-logo-option-b.svg" x="0" y="0" width="170" height="170"/>
+    <text x="85" y="214" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#073f5f">B</text>
+  </g>
+  <g transform="translate(660 125)">
+    <image href="kodi-logo-option-c.svg" x="0" y="0" width="170" height="170"/>
+    <text x="85" y="214" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#073f5f">C</text>
+  </g>
+  <g transform="translate(865 125)">
+    <image href="kodi-logo-option-d.svg" x="0" y="0" width="170" height="170"/>
+    <text x="85" y="214" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#073f5f">D</text>
+  </g>
+  <g transform="translate(1070 125)">
+    <image href="kodi-logo-option-e.svg" x="0" y="0" width="170" height="170"/>
+    <text x="85" y="214" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#073f5f">E</text>
+  </g>
+</svg>
