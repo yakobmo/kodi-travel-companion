@@ -56,6 +56,19 @@ Active technical direction:
 
 ## Recurring Blockers And Fixes
 
+### 0. Chat History Must Load The Latest Slice
+
+Problem:
+
+Group chat storage can grow beyond the displayed window. If Supabase queries sort ascending and then apply `limit`, the app shows the oldest slice and reopening the app looks like the recent conversation disappeared.
+
+Decision:
+
+- For chat/history windows, fetch the newest rows first from storage.
+- Reverse them only after fetching, so the UI still renders natural chronological order.
+- Do not replace the visible chat with seed/demo data when a live message fetch fails; show an error state and preserve the current local conversation.
+- Kodi answers should be plain chat text, not Markdown. Strip leftover bold/decorative asterisks at the API boundary and at display time for already-stored messages.
+
 ### 1. Too Much Manual Copy/Paste
 
 Problem:

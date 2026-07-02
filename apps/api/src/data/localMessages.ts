@@ -48,6 +48,28 @@ function createMessageId(source: StoredDemoMessage["source"]) {
   return `msg_${source}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function cleanAgentMessageText(text: string) {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/(^|\s)\*{1,3}(?=\S)/g, "$1")
+    .replace(/(\S)\*{1,3}(?=\s|$|[.,!?;:)\]])/g, "$1")
+    .replace(/\*+\s*$/gm, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function normalizeMessageText(message: StoredDemoMessage): StoredDemoMessage {
+  if (message.source !== "agent") {
+    return message;
+  }
+
+  return {
+    ...message,
+    text: cleanAgentMessageText(message.text)
+  };
+}
+
 interface SupabaseGroupMessageRow {
   id: string;
   trip_group_id: string;
@@ -69,7 +91,7 @@ function mapSupabaseMessage(row: SupabaseGroupMessageRow): StoredDemoMessage {
     id: row.id,
     tripGroupId: DEMO_GROUP_ID,
     author: row.author,
-    text: row.text,
+    text: row.source === "agent" ? cleanAgentMessageText(row.text) : row.text,
     memberId,
     source: row.source,
     createdAt: row.created_at
@@ -90,7 +112,7 @@ async function loadSupabaseMessages(): Promise<StoredDemoMessage[] | null> {
     .from("group_messages")
     .select("id, trip_group_id, member_id, author, text, source, created_at")
     .eq("trip_group_id", DEMO_TRIP_GROUP_UUID)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(80);
 
   if (error) {
@@ -101,7 +123,10 @@ async function loadSupabaseMessages(): Promise<StoredDemoMessage[] | null> {
     return initialDemoMessages;
   }
 
-  return data.map((row) => mapSupabaseMessage(row as SupabaseGroupMessageRow)).filter((message) => !isRetiredSeedMessage(message));
+  return data
+    .map((row) => mapSupabaseMessage(row as SupabaseGroupMessageRow))
+    .filter((message) => !isRetiredSeedMessage(message))
+    .reverse();
 }
 
 async function insertSupabaseMessage(input: {
@@ -125,7 +150,7 @@ async function insertSupabaseMessage(input: {
       trip_group_id: DEMO_TRIP_GROUP_UUID,
       member_id: input.memberId ? (demoMemberUuidById[input.memberId] ?? null) : null,
       author: input.author,
-      text: input.text,
+      text: input.source === "agent" ? cleanAgentMessageText(input.text) : input.text,
       source: input.source
     })
     .select("id, trip_group_id, member_id, author, text, source, created_at")
@@ -157,7 +182,9 @@ async function resetSupabaseMessages() {
 }
 
 function getStoredOrInitialMessages() {
-  return (loadDemoStorage().messages ?? initialDemoMessages).filter((message) => !isRetiredSeedMessage(message));
+  return (loadDemoStorage().messages ?? initialDemoMessages)
+    .filter((message) => !isRetiredSeedMessage(message))
+    .map(normalizeMessageText);
 }
 
 export function loadDemoTripMessages(): StoredDemoMessage[] {
@@ -170,7 +197,9 @@ async function getStoredOrInitialMessagesAsync() {
     return supabaseMessages;
   }
 
-  return ((await loadDemoStorageAsync()).messages ?? initialDemoMessages).filter((message) => !isRetiredSeedMessage(message));
+  return ((await loadDemoStorageAsync()).messages ?? initialDemoMessages)
+    .filter((message) => !isRetiredSeedMessage(message))
+    .map(normalizeMessageText);
 }
 
 export async function loadDemoTripMessagesAsync(): Promise<StoredDemoMessage[]> {
@@ -203,7 +232,7 @@ export function appendDemoTripMessage(input: {
     id: createMessageId(source),
     tripGroupId: DEMO_GROUP_ID,
     author: input.author,
-    text: input.text,
+    text: source === "agent" ? cleanAgentMessageText(input.text) : input.text,
     memberId: input.memberId,
     source,
     createdAt: new Date().toISOString()
@@ -237,7 +266,7 @@ export async function appendDemoTripMessageAsync(input: {
     id: createMessageId(source),
     tripGroupId: DEMO_GROUP_ID,
     author: input.author,
-    text: input.text,
+    text: source === "agent" ? cleanAgentMessageText(input.text) : input.text,
     memberId: input.memberId,
     source,
     createdAt: new Date().toISOString()

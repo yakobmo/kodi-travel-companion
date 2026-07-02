@@ -83,12 +83,23 @@ function extractJsonObject(text: string) {
   };
 }
 
+function cleanKodiReplyText(text: string) {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/(^|\s)\*{1,3}(?=\S)/g, "$1")
+    .replace(/(\S)\*{1,3}(?=\s|$|[.,!?;:)\]])/g, "$1")
+    .replace(/\*+\s*$/gm, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 function toValidReply(parsed: {
   text?: unknown;
   intent?: unknown;
   requiresAdminApproval?: unknown;
 }): AgentMessageResponse {
-  const text = typeof parsed.text === "string" ? parsed.text.trim() : "";
+  const text = typeof parsed.text === "string" ? cleanKodiReplyText(parsed.text) : "";
   const intent = allowedIntents.includes(parsed.intent as AgentMessageResponse["intent"])
     ? (parsed.intent as AgentMessageResponse["intent"])
     : "general";
@@ -131,6 +142,7 @@ function buildInstructions() {
     "For budget questions, give a practical estimate with assumptions, split by food, attractions, parking/tolls, emergencies, and cash/card. Ask for family size or travel style only if the estimate would otherwise be misleading.",
     "For accessibility questions, distinguish between what Google Routes/map context can show, what web search suggests, and what still needs local confirmation.",
     "Answer in natural Hebrew only, with a helpful and confident tone.",
+    "Write plain chat text only. Do not use Markdown, bold markers, headings, decorative asterisks, or bullet syntax. Prefer short natural paragraphs with normal punctuation.",
     "Default to useful, specific answers. If uncertain, state the uncertainty briefly and continue with the best provisional recommendation.",
     "If the request is ambiguous, ask one short clarification, but still provide a useful provisional direction when possible.",
     "Operational changes such as setting a destination, changing a route, or writing to Google require owner/admin approval.",

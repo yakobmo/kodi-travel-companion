@@ -757,17 +757,28 @@ function getMessageLinkClass(url: string) {
   return "message-link";
 }
 
+function cleanChatDisplayText(text: string) {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/(^|\s)\*{1,3}(?=\S)/g, "$1")
+    .replace(/(\S)\*{1,3}(?=\s|$|[.,!?;:)\]])/g, "$1")
+    .replace(/\*+\s*$/gm, "")
+    .trim();
+}
+
 function renderMessageText(text: string) {
   const parts: ReactNode[] = [];
   let lastIndex = 0;
+  const cleanText = cleanChatDisplayText(text);
 
-  for (const match of text.matchAll(messageUrlPattern)) {
+  for (const match of cleanText.matchAll(messageUrlPattern)) {
     const rawMatch = match[0];
     const matchIndex = match.index ?? 0;
     const { suffix, url } = splitTrailingUrlPunctuation(rawMatch);
 
     if (matchIndex > lastIndex) {
-      parts.push(text.slice(lastIndex, matchIndex));
+      parts.push(cleanText.slice(lastIndex, matchIndex));
     }
 
     parts.push(
@@ -783,11 +794,11 @@ function renderMessageText(text: string) {
     lastIndex = matchIndex + rawMatch.length;
   }
 
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
+  if (lastIndex < cleanText.length) {
+    parts.push(cleanText.slice(lastIndex));
   }
 
-  return parts.length > 0 ? parts : text;
+  return parts.length > 0 ? parts : cleanText;
 }
 
 function shouldSpeakKodiReply(text: string) {
@@ -1454,7 +1465,7 @@ export function App() {
         }
       } catch {
         if (!ignore) {
-          setMessages(sanitizeChatMessages(demoMessages));
+          setChatRealtimeState("error");
         }
       }
     }
