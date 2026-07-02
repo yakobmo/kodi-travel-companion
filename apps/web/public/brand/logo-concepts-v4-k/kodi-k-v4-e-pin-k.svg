@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi K pin logo">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#047aa6"/>
+      <stop offset="1" stop-color="#003f66"/>
+    </linearGradient>
+    <linearGradient id="pin" x1="147" y1="112" x2="361" y2="410" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#73f8e8"/>
+      <stop offset="1" stop-color="#12b1ca"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <path d="M256 86c-83 0-150 65-150 146 0 114 150 244 150 244s150-130 150-244c0-81-67-146-150-146z" fill="url(#pin)"/>
+  <circle cx="256" cy="230" r="96" fill="#ffffff"/>
+  <path fill="#064e73" d="M203 168c0-6 5-11 11-11h20c6 0 11 5 11 11v52l57-58c4-4 10-5 15-1l18 12c7 4 8 13 2 19l-49 50 55 59c6 6 1 17-7 17h-24c-5 0-9-2-12-6l-55-62v57c0 6-5 11-11 11h-20c-6 0-11-5-11-11V168z"/>
+  <path d="M359 374v18M350 383h18" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+</svg>

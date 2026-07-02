@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi K map logo">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0479a4"/>
+      <stop offset="1" stop-color="#003f63"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="296" y1="152" x2="390" y2="253" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#74f8e8"/>
+      <stop offset="1" stop-color="#12b2c9"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="86" fill="url(#bg)"/>
+  <path d="M120 142c0-17 16-30 33-25l67 20c23 7 47 7 70 0l67-20c17-5 35 8 35 25v229c0 17-16 30-33 25l-67-20c-23-7-47-7-70 0l-67 20c-17 5-35-8-35-25V142z" fill="#ffffff"/>
+  <path d="M218 138v239M293 138v239" stroke="#074c70" stroke-width="12" opacity=".14"/>
+  <path fill="#074c70" d="M161 153c0-8 6-14 14-14h25c8 0 14 6 14 14v73l77-84c5-6 14-7 21-2l22 15c8 6 9 17 2 24l-64 66 72 84c7 8 1 21-9 21h-30c-6 0-11-3-15-7l-76-90v84c0 8-6 14-14 14h-25c-8 0-14-6-14-14V153z"/>
+  <path fill="url(#accent)" d="M304 158c-7-3-13 6-8 12l38 24 18 43c3 7 14 6 16-2l29-90c2-7-5-14-12-10l-81 23z"/>
+</svg>

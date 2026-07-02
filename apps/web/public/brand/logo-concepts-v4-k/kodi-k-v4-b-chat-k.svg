@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kodi K chat logo">
+  <defs>
+    <linearGradient id="bg" x1="74" y1="56" x2="438" y2="458" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#05739d"/>
+      <stop offset="1" stop-color="#003f63"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="321" y1="124" x2="396" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#70f8e7"/>
+      <stop offset="1" stop-color="#14b1c9"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="92" fill="url(#bg)"/>
+  <path d="M104 144c0-38 31-69 69-69h166c38 0 69 31 69 69v126c0 38-31 69-69 69h-63l-80 69c-12 10-31 2-31-14v-64c-35-4-61-34-61-69V144z" fill="#ffffff"/>
+  <path fill="#064d73" d="M171 132c0-7 6-13 13-13h23c7 0 13 6 13 13v75l76-82c5-5 13-6 19-2l22 15c8 5 9 16 2 23l-65 66 72 78c7 8 2 21-9 21h-29c-6 0-11-2-15-7l-73-81v76c0 7-6 13-13 13h-23c-7 0-13-6-13-13V132z"/>
+  <path fill="url(#accent)" d="M329 127c-7-3-13 6-7 12l33 25 16 39c3 7 13 6 15-2l28-82c2-7-5-13-12-10l-73 18z"/>
+</svg>
