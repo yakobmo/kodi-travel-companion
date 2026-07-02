@@ -832,6 +832,13 @@ function formatDistanceKm(distanceKm: number | null) {
   return distanceKm < 1 ? `${Math.round(distanceKm * 1000)} מ׳` : `${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} ק״מ`;
 }
 
+function getPlaceCardSummary(place: TripPlace) {
+  const cleanedNote = place.note?.replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+  const summary = cleanedNote || place.address || "אין עדיין הסבר שמור לנקודה הזו.";
+
+  return summary.length > 120 ? `${summary.slice(0, 117).trim()}...` : summary;
+}
+
 function getApproximateRadiusCorners(center: { lat: number; lng: number }, radiusKm: number) {
   const latDelta = radiusKm / 111;
   const lngScale = Math.max(Math.cos((center.lat * Math.PI) / 180), 0.2);
@@ -904,6 +911,7 @@ export function App() {
   const [places, setPlaces] = useState<TripPlace[]>(demoPlaces);
   const [selectedPlaceId, setSelectedPlaceId] = useState(demoPlaces[0]?.id ?? "");
   const [placeListFilter, setPlaceListFilter] = useState<PlaceListFilter>("nearby");
+  const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "fallback">("loading");
   const [navigationState, setNavigationState] = useState<"idle" | "opening" | "error">("idle");
   const [messages, setMessages] = useState<ChatMessage[]>(demoMessages);
@@ -1921,8 +1929,8 @@ export function App() {
   ];
   const setupReady = readinessItems.every((item) => item.ready);
 
-  async function openSelectedPlaceInWaze() {
-    if (!selectedPlace || !canNavigate) {
+  async function openPlaceNavigation(place: TripPlace, target: "waze" | "walking") {
+    if (typeof place.lat !== "number" || typeof place.lng !== "number") {
       return;
     }
 
@@ -1935,9 +1943,9 @@ export function App() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          lat: selectedPlace.lat,
-          lng: selectedPlace.lng,
-          label: selectedPlace.name
+          lat: place.lat,
+          lng: place.lng,
+          label: place.name
         })
       });
 
@@ -1946,11 +1954,19 @@ export function App() {
       }
 
       const links = (await response.json()) as NavigationLinksResponse;
-      window.open(links.waze.web, "_blank", "noopener,noreferrer");
+      window.open(target === "waze" ? links.waze.web : links.googleMapsWalking, "_blank", "noopener,noreferrer");
       setNavigationState("idle");
     } catch {
       setNavigationState("error");
     }
+  }
+
+  async function openSelectedPlaceInWaze() {
+    if (!selectedPlace || !canNavigate) {
+      return;
+    }
+
+    await openPlaceNavigation(selectedPlace, "waze");
   }
 
   async function openSelectedPlaceInGoogleMapsWalking() {
@@ -1958,31 +1974,19 @@ export function App() {
       return;
     }
 
-    setNavigationState("opening");
+    await openPlaceNavigation(selectedPlace, "walking");
+  }
 
-    try {
-      const response = await fetch(`${apiBaseUrl}/api/navigation/links`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          lat: selectedPlace.lat,
-          lng: selectedPlace.lng,
-          label: selectedPlace.name
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Navigation API failed with ${response.status}`);
-      }
-
-      const links = (await response.json()) as NavigationLinksResponse;
-      window.open(links.googleMapsWalking, "_blank", "noopener,noreferrer");
-      setNavigationState("idle");
-    } catch {
-      setNavigationState("error");
+  function focusPlaceOnMap(place: TripPlace) {
+    setSelectedPlaceId(place.id);
+    if (typeof place.lat === "number" && typeof place.lng === "number") {
+      setExpandedPlaceId((currentId) => (currentId === place.id ? currentId : null));
     }
+  }
+
+  function prepareKodiPlaceQuestion(place: TripPlace) {
+    setSelectedPlaceId(place.id);
+    setDraft(`קודי, ספר לי על ${place.name} ותעזור לי להבין אם זה מתאים לנו עכשיו`);
   }
 
   function openCurrentMapInGoogleMaps() {
@@ -3168,6 +3172,81 @@ export function App() {
             סגור
           </button>
         </div>
+        <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
+          <strong>נקודות הטיול</strong>
+          <p>
+            {placeListFilter === "nearby" && mapAnchorLocation
+              ? `${menuPlaces.length} נקודות מסודרות לפי קרבה למיקום הנוכחי`
+              : `${menuPlaces.length} מתוך ${places.length} נקודות בתוכנית הטיול`}
+          </p>
+          <div className="place-filter-chips" aria-label="סינון נקודות טיול">
+            {placeListFilters.map((filter) => (
+              <button
+                className={placeListFilter === filter.value ? "active-place-filter" : ""}
+                key={filter.value}
+                onClick={() => setPlaceListFilter(filter.value)}
+                type="button"
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <div className="trip-place-list">
+            {menuPlaces.length > 0 ? (
+              menuPlaces.map((place) => {
+                const hasCoordinates = typeof place.lat === "number" && typeof place.lng === "number";
+                const distanceLabel = formatDistanceKm(getPlaceDistanceKm(place, mapAnchorLocation));
+                const isExpanded = expandedPlaceId === place.id;
+                const isSelected = place.id === selectedPlace?.id;
+                const cleanNote = place.note?.replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+                const shouldShowNote = Boolean(cleanNote && cleanNote !== place.address);
+                return (
+                  <article className={isSelected ? "trip-place-card selected-trip-place" : "trip-place-card"} key={place.id}>
+                    <button className="trip-place-main" onClick={() => focusPlaceOnMap(place)} type="button">
+                      <span>{place.name}</span>
+                      <small>
+                        {getPlaceTypeLabel(place.type)}
+                        {distanceLabel ? ` · ${distanceLabel}` : ""}
+                        {hasCoordinates ? " · במפה" : " · ברשימה"}
+                      </small>
+                    </button>
+                    <p>{getPlaceCardSummary(place)}</p>
+                    {isExpanded ? (
+                      <div className="trip-place-details">
+                        {shouldShowNote ? <span>{cleanNote}</span> : null}
+                        {place.address ? <span>{place.address}</span> : null}
+                        <span>{hasCoordinates ? "יש מיקום שמור במפה" : "אין מיקום שמור במפה"}</span>
+                      </div>
+                    ) : null}
+                    <div className="trip-place-actions" aria-label={`פעולות עבור ${place.name}`}>
+                      <button onClick={() => focusPlaceOnMap(place)} type="button">
+                        <MapPin size={14} aria-hidden="true" />
+                        מפה
+                      </button>
+                      <button disabled={!hasCoordinates || navigationState === "opening"} onClick={() => openPlaceNavigation(place, "waze")} type="button">
+                        <Navigation size={14} aria-hidden="true" />
+                        Waze
+                      </button>
+                      <button
+                        className={isExpanded ? "active-place-detail" : ""}
+                        onClick={() => setExpandedPlaceId(isExpanded ? null : place.id)}
+                        type="button"
+                      >
+                        פרטים
+                      </button>
+                      <button onClick={() => prepareKodiPlaceQuestion(place)} type="button">
+                        <Sparkles size={14} aria-hidden="true" />
+                        קודי
+                      </button>
+                    </div>
+                  </article>
+                );
+              })
+            ) : (
+              <div className="empty-trip-place-list">אין נקודות במסנן הזה.</div>
+            )}
+          </div>
+        </section>
         {selectedPlace ? (
           <section className="menu-block selected-place-menu" aria-label="פעולות לנקודה נבחרת">
             <span>{getPlaceTypeLabel(selectedPlace.type)}</span>
@@ -3278,51 +3357,6 @@ export function App() {
             {navigationState === "error" ? <small>לא הצלחתי ליצור קישור ניווט כרגע.</small> : null}
           </section>
         ) : null}
-        <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
-          <strong>נקודות הטיול</strong>
-          <p>
-            {placeListFilter === "nearby" && mapAnchorLocation
-              ? `${menuPlaces.length} נקודות מסודרות לפי קרבה למיקום הנוכחי`
-              : `${menuPlaces.length} מתוך ${places.length} נקודות בתוכנית הטיול`}
-          </p>
-          <div className="place-filter-chips" aria-label="סינון נקודות טיול">
-            {placeListFilters.map((filter) => (
-              <button
-                className={placeListFilter === filter.value ? "active-place-filter" : ""}
-                key={filter.value}
-                onClick={() => setPlaceListFilter(filter.value)}
-                type="button"
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-          <div className="trip-place-list">
-            {menuPlaces.length > 0 ? (
-              menuPlaces.map((place) => {
-                const hasCoordinates = typeof place.lat === "number" && typeof place.lng === "number";
-                const distanceLabel = formatDistanceKm(getPlaceDistanceKm(place, mapAnchorLocation));
-                return (
-                  <button
-                    className={place.id === selectedPlace?.id ? "selected-trip-place" : ""}
-                    key={place.id}
-                    onClick={() => setSelectedPlaceId(place.id)}
-                    type="button"
-                  >
-                    <span>{place.name}</span>
-                    <small>
-                      {getPlaceTypeLabel(place.type)}
-                      {distanceLabel ? ` · ${distanceLabel}` : ""}
-                      {hasCoordinates ? " · במפה" : " · ברשימה"}
-                    </small>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="empty-trip-place-list">אין נקודות במסנן הזה.</div>
-            )}
-          </div>
-        </section>
         <section className="menu-block invite-menu" data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
           <strong>הזמנת משתתפים</strong>
           <p>שלחו קישור כמו בקבוצת וואטסאפ. מי שמקבל נכנס, כותב שם, מאשר מיקום ומצטרף.</p>
