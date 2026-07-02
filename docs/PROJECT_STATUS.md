@@ -318,6 +318,7 @@ Current Supabase state:
 - Kodi route-follow-up correction added on `2026-07-02`: route safety/timing follow-ups about bridges, darkness, risk, or mountains are now bundled with the preceding user travel question before agent reasoning. This prevents Kodi from treating "will we reach the bridge before dark?" as a new isolated question after the user already established "Athens airport -> first hotel / Marathia".
 - Public smoke passed on `2026-07-02` for the Kodi response-time and route-follow-up correction: the Athens airport -> Hotel Marathia / Rio-Antirrio bridge follow-up returned `source=openai`, `openAiStatus=ready`, `openAiModel=gpt-5.4-mini`, `fallbackUsed=false`, runtime about 9.7 seconds, and preserved the intended route context instead of falling back to a rigid clarification or treating the bridge as an unrelated isolated query.
 - Kodi speech pace correction added on `2026-07-02`: OpenAI TTS now defaults to `OPENAI_TTS_SPEED=1.16` when not explicitly configured, browser fallback speech uses rate `1.14`, and `/api/agent/speech` exposes `X-Kodi-Voice-Speed` for public smoke checks. This keeps Kodi's voice warmer and less sluggish without making Hebrew playback feel rushed.
+- Public smoke passed on `2026-07-02` for the Kodi speech pace correction: Render serves web bundle `index-C103Z4RT.js`, `/api/agent/speech` returned `200 OK`, `audio/mpeg`, `X-Kodi-Voice-Model: gpt-4o-mini-tts`, `X-Kodi-Voice: alloy`, and `X-Kodi-Voice-Speed: 1.16`.
 
 Resume from the Kodi build protocol with no new product discovery.
 
