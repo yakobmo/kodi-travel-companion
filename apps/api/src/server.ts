@@ -185,6 +185,11 @@ function includesAnyTerm(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
 
+function isKodiPresencePing(message: string) {
+  const normalized = message.replace(/[?!.,\s]/g, "").toLowerCase();
+  return ["קודי", "kodi", "codex", "קודקס"].includes(normalized);
+}
+
 function shouldUseExternalPlacesSearch(message: string) {
   const normalizedMessage = message.toLowerCase();
 
@@ -1782,6 +1787,41 @@ app.post("/api/agent/message", async (req, res) => {
     tripGroupId: tripState.trip.groupId,
     members: tripState.members
   });
+  const permissionPolicy =
+    context && typeof context === "object"
+      ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
+          .permissionPolicy
+      : undefined;
+
+  if (isKodiPresencePing(message)) {
+    res.json({
+      author: "קודי",
+      text: "אני כאן. תגידו לי מה צריך עכשיו: ניווט, נקודה במסלול, מקום קרוב, הסבר על מה שרואים, או סידור מחדש של המסלול.",
+      intent: "general",
+      requiresAdminApproval: false,
+      source: "fast_presence",
+      agentRuntime: {
+        openAiStatus: "skipped_presence_ping",
+        openAiModel: undefined,
+        fallbackUsed: false,
+        fastLane: true,
+        latencyMs: Date.now() - agentStartedAt
+      },
+      contextSummary: buildAgentContextSummary({
+        tripGroupId,
+        member: {
+          id: normalizedMember.id,
+          displayName: normalizedMember.displayName,
+          role: normalizedMember.role
+        },
+        recentMessages,
+        tripState,
+        permissionPolicy
+      })
+    });
+    return;
+  }
+
   const focusedReferenceMessage = buildFocusedReferenceMessage(message, recentMessages);
   const timelineReference = resolveTimelineReferenceForMessage(focusedReferenceMessage, tripState);
   const fastTripAnswer = buildFastTripAnswer({
@@ -1790,12 +1830,6 @@ app.post("/api/agent/message", async (req, res) => {
     timelineReference
   });
   if (fastTripAnswer) {
-    const permissionPolicy =
-      context && typeof context === "object"
-        ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
-            .permissionPolicy
-        : undefined;
-
     res.json({
       ...fastTripAnswer,
       agentRuntime: {
@@ -1888,11 +1922,6 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
-  const permissionPolicy =
-    context && typeof context === "object"
-      ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
-          .permissionPolicy
-      : undefined;
   const rulesReply = buildKodiReplyFromContext({
     ...req.body,
     message: focusedReferenceMessage,

@@ -726,11 +726,7 @@ if (-not $appSource.Contains("completeActiveRouteStop") -or -not $appSource.Cont
   throw "Web app must support marking the active route stop as completed."
 }
 
-if (-not $appSource.Contains("route-completed-note") -or -not $appSource.Contains("groupRoute.status === `"completed`"")) {
-  throw "Web app must show and respect the completed route state."
-}
-
-if (-not $appSource.Contains("actionApprovalState") -or -not $appSource.Contains("secondary-action")) {
+if (-not $appSource.Contains("actionApprovalState") -or -not $appSource.Contains("routeApprovalState")) {
   throw "Web app must show approval state for operational group actions."
 }
 

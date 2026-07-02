@@ -279,6 +279,46 @@ function sanitizeChatMessages(chatMessages: ChatMessage[]) {
   });
 }
 
+function getMessageKey(message: ChatMessage) {
+  if (message.id) {
+    return message.id;
+  }
+
+  return `${message.source ?? "local"}:${message.author}:${message.createdAt ?? ""}:${message.text}`;
+}
+
+function getMessageFingerprint(message: ChatMessage) {
+  return `${message.source ?? "unknown"}:${message.author}:${message.memberId ?? ""}:${message.text}`;
+}
+
+function mergeChatMessages(currentMessages: ChatMessage[], incomingMessages: ChatMessage[]) {
+  const cleanIncomingMessages = sanitizeChatMessages(incomingMessages);
+  const incomingFingerprints = new Set(cleanIncomingMessages.map(getMessageFingerprint));
+  const merged = new Map<string, ChatMessage>();
+
+  currentMessages.forEach((message) => {
+    if (message.id?.startsWith("local-") && incomingFingerprints.has(getMessageFingerprint(message))) {
+      return;
+    }
+
+    merged.set(getMessageKey(message), message);
+  });
+
+  cleanIncomingMessages.forEach((message) => {
+    merged.set(getMessageKey(message), message);
+  });
+
+  return [...merged.values()].sort((first, second) => {
+    const firstTime = first.createdAt ? Date.parse(first.createdAt) : Number.MAX_SAFE_INTEGER;
+    const secondTime = second.createdAt ? Date.parse(second.createdAt) : Number.MAX_SAFE_INTEGER;
+    if (Number.isNaN(firstTime) || Number.isNaN(secondTime)) {
+      return 0;
+    }
+
+    return firstTime - secondTime;
+  });
+}
+
 function normalizeTripMembers(members: DemoMember[], managerName = "מנהל הטיול"): DemoMember[] {
   const visibleMembers = members.filter((member) => !retiredDemoMemberIds.has(member.id));
   const ownerIndex = visibleMembers.findIndex((member) => member.role === "owner" || member.id === "mom");
@@ -790,6 +830,12 @@ function getKodiHebrewVoice() {
 }
 
 function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPlace) {
+  const lastText = messages.at(-1)?.text.trim() ?? "";
+  const normalizedLastText = lastText.replace(/[?!.,\s]/g, "").toLowerCase();
+  if (["קודי", "kodi", "codex", "קודקס"].includes(normalizedLastText)) {
+    return "אני כאן. תגידו לי מה צריך עכשיו: ניווט, נקודה במסלול, מקום קרוב, הסבר על מה שרואים, או סידור מחדש של המסלול.";
+  }
+
   const recentText = messages
     .slice(-4)
     .map((message) => message.text)
@@ -1342,7 +1388,7 @@ export function App() {
 
         const data = (await response.json()) as TripMessagesResponse;
         if (!ignore) {
-          setMessages(sanitizeChatMessages(data.messages));
+          setMessages((currentMessages) => mergeChatMessages(currentMessages, data.messages));
         }
       } catch {
         if (!ignore) {
@@ -1392,7 +1438,7 @@ export function App() {
           return;
         }
 
-        setMessages(sanitizeChatMessages(data.messages));
+        setMessages((currentMessages) => mergeChatMessages(currentMessages, data.messages));
         setChatRealtimeState("live");
       } catch {
         if (!ignore) {
@@ -1416,7 +1462,7 @@ export function App() {
         try {
           const data = JSON.parse(event.data) as TripMessagesResponse;
           if (!ignore && Array.isArray(data.messages)) {
-            setMessages(sanitizeChatMessages(data.messages));
+            setMessages((currentMessages) => mergeChatMessages(currentMessages, data.messages));
             setChatRealtimeState("live");
           }
         } catch {

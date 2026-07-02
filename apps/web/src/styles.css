@@ -13,6 +13,13 @@ body {
   direction: rtl;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
 button,
 input {
   font: inherit;
@@ -1068,6 +1075,7 @@ input {
 }
 
 .chat-sheet {
+  position: relative;
   min-height: 0;
   height: 100%;
   display: flex;
@@ -1735,6 +1743,9 @@ input {
 }
 
 .composer {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
   flex: 0 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px auto;
