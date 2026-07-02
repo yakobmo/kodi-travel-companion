@@ -139,6 +139,11 @@ function shouldEnableWebSearch(input: OpenAiKodiReplyInput) {
   }
 
   const text = `${input.message} ${input.recentMessages?.slice(-6).map((message) => message.text).join(" ") ?? ""}`.toLowerCase();
+
+  if (shouldPreferFastPlacesAnswer(input, text)) {
+    return false;
+  }
+
   return [
     "weather",
     "sunset",
@@ -202,8 +207,40 @@ function shouldEnableWebSearch(input: OpenAiKodiReplyInput) {
   ].some((term) => text.includes(term));
 }
 
+function shouldPreferFastPlacesAnswer(input: OpenAiKodiReplyInput, text: string) {
+  if (input.externalPlacesSearch?.status !== "ready" || input.externalPlacesSearch.places.length === 0) {
+    return false;
+  }
+
+  return [
+    "boat",
+    "rent",
+    "restaurant",
+    "beach",
+    "pizza",
+    "ice cream",
+    "fuel",
+    "סירה",
+    "סירות",
+    "השכר",
+    "טברנה",
+    "מסעדה",
+    "סושי",
+    "פיצה",
+    "גלידה",
+    "חוף",
+    "דלק",
+    "שירותים",
+    "ראפטינג"
+  ].some((term) => text.includes(term));
+}
+
 function shouldUseReasoningModel(input: OpenAiKodiReplyInput) {
   const text = `${input.message} ${input.recentMessages?.slice(-6).map((message) => message.text).join(" ") ?? ""}`.toLowerCase();
+
+  if (shouldPreferFastPlacesAnswer(input, text)) {
+    return false;
+  }
 
   return shouldEnableWebSearch(input) || [
     "budget",
