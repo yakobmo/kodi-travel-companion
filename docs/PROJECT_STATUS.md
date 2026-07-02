@@ -27,6 +27,8 @@ Location architecture correction: product-wise, Kodi is connected to the Google 
 
 Trip-order correction: the default current trip target is derived from the ordered Google Maps trip points, not from a stale stored group destination. Group destination/route controls must be explicit admin actions and must not appear as a default block in the hamburger.
 
+Trip-list UX correction: the hamburger trip list is intentionally coarse. It defaults to `המסלול שלנו` and exposes only `קרוב אלינו`, `הכל`, `מקומות לינה`, and `אטרקציות`; finer grouping should be handled conversationally by Kodi instead of adding more visible filters.
+
 ## Current Core
 
 Implemented locally:

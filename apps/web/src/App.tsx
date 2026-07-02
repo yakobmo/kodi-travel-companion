@@ -41,7 +41,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
-type PlaceListFilter = "nearby" | "all" | PlaceType;
+type PlaceListFilter = "route" | "nearby" | "all" | "lodging" | "attractions";
 type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
 const DEFAULT_NEARBY_MAP_RADIUS_KM = 40;
 const DEFAULT_VISIBLE_PLACE_LIMIT = 40;
@@ -606,14 +606,11 @@ function getPlaceTypeLabel(type: PlaceType) {
 }
 
 const placeListFilters: Array<{ value: PlaceListFilter; label: string }> = [
-  { value: "nearby", label: "קרוב אליי" },
+  { value: "route", label: "המסלול שלנו" },
+  { value: "nearby", label: "קרוב אלינו" },
   { value: "all", label: "הכל" },
-  { value: "lodging", label: "לינות" },
-  { value: "water", label: "מים" },
-  { value: "attraction", label: "אטרקציות" },
-  { value: "food", label: "אוכל" },
-  { value: "transport", label: "תחבורה" },
-  { value: "stop", label: "עצירות" }
+  { value: "lodging", label: "מקומות לינה" },
+  { value: "attractions", label: "אטרקציות" }
 ];
 
 function buildExternalAppShortcuts(place?: TripPlace) {
@@ -928,7 +925,7 @@ export function App() {
   });
   const [places, setPlaces] = useState<TripPlace[]>(demoPlaces);
   const [selectedPlaceId, setSelectedPlaceId] = useState(demoPlaces[0]?.id ?? "");
-  const [placeListFilter, setPlaceListFilter] = useState<PlaceListFilter>("nearby");
+  const [placeListFilter, setPlaceListFilter] = useState<PlaceListFilter>("route");
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "fallback">("loading");
   const [navigationState, setNavigationState] = useState<"idle" | "opening" | "error">("idle");
@@ -1720,6 +1717,7 @@ export function App() {
     const getSourceOrder = (place: TripPlace) =>
       typeof place.sourceIndex === "number" ? place.sourceIndex : Number.MAX_SAFE_INTEGER;
     const hasCoordinates = (place: TripPlace) => typeof place.lat === "number" && typeof place.lng === "number";
+    const isAttractionLike = (place: TripPlace) => !["lodging", "transport"].includes(place.type);
     const compareByTripOrder = (first: TripPlace, second: TripPlace) =>
       getSourceOrder(first) - getSourceOrder(second) || first.name.localeCompare(second.name, "he");
 
@@ -1735,9 +1733,11 @@ export function App() {
     }
 
     const filteredPlaces =
-      placeListFilter === "all" || placeListFilter === "nearby"
-        ? places
-        : places.filter((place) => place.type === placeListFilter);
+      placeListFilter === "lodging"
+        ? places.filter((place) => place.type === "lodging")
+        : placeListFilter === "attractions"
+          ? places.filter(isAttractionLike)
+          : places;
 
     return [...filteredPlaces].sort((first, second) => {
       const firstHasCoordinates = hasCoordinates(first);
@@ -3193,9 +3193,13 @@ export function App() {
         <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
           <strong>נקודות הטיול</strong>
           <p>
-            {placeListFilter === "nearby" && mapAnchorLocation
-              ? `${menuPlaces.length} נקודות מסודרות לפי קרבה למיקום הנוכחי`
-              : `${menuPlaces.length} מתוך ${places.length} נקודות בתוכנית הטיול`}
+            {placeListFilter === "route"
+              ? `${menuPlaces.length} נקודות לפי סדר המסלול`
+              : placeListFilter === "nearby" && mapAnchorLocation
+                ? `${menuPlaces.length} נקודות מסודרות לפי קרבה למיקום הנוכחי`
+                : placeListFilter === "nearby"
+                  ? `${menuPlaces.length} נקודות מסודרות לפי סדר המסלול עד שיאושר מיקום`
+                  : `${menuPlaces.length} מתוך ${places.length} נקודות בתוכנית הטיול`}
           </p>
           <div className="place-filter-chips" aria-label="סינון נקודות טיול">
             {placeListFilters.map((filter) => (
