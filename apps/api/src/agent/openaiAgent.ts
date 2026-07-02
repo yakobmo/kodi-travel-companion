@@ -40,10 +40,10 @@ function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
   if (!Number.isFinite(value) || value <= 0) {
-    return 18_000;
+    return 12_000;
   }
 
-  return Math.min(Math.max(Math.round(value), 6_000), 25_000);
+  return Math.min(Math.max(Math.round(value), 5_000), 18_000);
 }
 
 function isOpenAiTimeout(error: unknown) {
@@ -118,6 +118,7 @@ function buildInstructions() {
     "When a list has source order from Google Maps, preserve that order as the planned-trip order. When the user asks about now/near me, sort by live/current location proximity. When the user asks by day or region, use lodging timeline and geographic clustering. When the user asks what is worth doing, rank by fit, distance, timing, children, energy, weather/opening constraints, and explain rejected alternatives briefly.",
     "If a place type is missing or suspicious, infer cautiously from name, address, tags, notes, and neighboring items, and say the uncertainty briefly instead of treating the item as an attraction.",
     "Treat fallbackRulesReply only as safety grounding. Do not copy its wording or expose implementation limitations unless the user explicitly asks about system status.",
+    "Never say that a capability will work only after a future full/live connection when the app already gave you usable trip, map, route, place, or location context. Use what you have, state uncertainty briefly, and answer.",
     "Never open with formulaic phrases like 'I heard the trip manager', 'from the conversation I identify', or 'if the manager approves'. Use the person's name only when it feels natural.",
     "Do not end ordinary informational answers with permission/admin boilerplate. Mention admin approval only when the user explicitly asks Kodi to change the shared destination, edit the map, create a group route, or perform another operational write action.",
     "Kodi may help manage 'our route': propose adding places, removing places, and reordering trip points according to the real trip flow. Treat those as route/map edit actions that require owner/admin approval before becoming shared group state.",
@@ -146,6 +147,56 @@ function shouldEnableWebSearch(input: OpenAiKodiReplyInput) {
   const text = `${input.message} ${input.recentMessages?.slice(-6).map((message) => message.text).join(" ") ?? ""}`.toLowerCase();
 
   if (shouldPreferFastPlacesAnswer(input, text)) {
+    return false;
+  }
+
+  const shouldFetchFreshData = [
+    "check",
+    "search",
+    "verify",
+    "current",
+    "updated",
+    "latest",
+    "weather",
+    "sunset",
+    "exchange",
+    "atm",
+    "open",
+    "hours",
+    "price",
+    "prices",
+    "flight",
+    "safety",
+    "accessible",
+    "road",
+    "parking",
+    "toll",
+    "forecast",
+    "תבדוק",
+    "בדוק",
+    "תחפש",
+    "חפש",
+    "תאמת",
+    "עדכני",
+    "מעודכן",
+    "מזג",
+    "אוויר",
+    "שקיעה",
+    "צ'יינג",
+    "צ׳יינג",
+    "כספומט",
+    "פתוח",
+    "שעות",
+    "מחיר",
+    "עלות",
+    "בטיחות",
+    "נגיש לרכב",
+    "כביש",
+    "חניה",
+    "אגרה"
+  ].some((term) => text.includes(term));
+
+  if (!shouldFetchFreshData) {
     return false;
   }
 
@@ -241,6 +292,10 @@ function shouldPreferFastPlacesAnswer(input: OpenAiKodiReplyInput, text: string)
 }
 
 function shouldUseReasoningModel(input: OpenAiKodiReplyInput) {
+  if (process.env.KODI_REASONING_MODEL_ENABLED !== "true") {
+    return false;
+  }
+
   const text = `${input.message} ${input.recentMessages?.slice(-6).map((message) => message.text).join(" ") ?? ""}`.toLowerCase();
 
   if (shouldPreferFastPlacesAnswer(input, text)) {
@@ -268,7 +323,7 @@ function shouldUseReasoningModel(input: OpenAiKodiReplyInput) {
 
 function getAgentModel(input: OpenAiKodiReplyInput) {
   const fastModel = process.env.OPENAI_AGENT_FAST_MODEL?.trim() || "gpt-5.4-mini";
-  const reasoningModel = process.env.OPENAI_AGENT_REASONING_MODEL?.trim() || process.env.OPENAI_AGENT_MODEL?.trim() || "gpt-5.5";
+  const reasoningModel = process.env.OPENAI_AGENT_REASONING_MODEL?.trim() || process.env.OPENAI_AGENT_MODEL?.trim() || fastModel;
 
   return shouldUseReasoningModel(input) ? reasoningModel : fastModel;
 }
@@ -337,6 +392,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       openAiClient.responses.create({
         model,
         instructions: buildInstructions(),
+        max_output_tokens: 900,
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: JSON.stringify({
           member: input.member,

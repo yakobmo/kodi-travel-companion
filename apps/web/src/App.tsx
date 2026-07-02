@@ -862,6 +862,29 @@ function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPla
   return "אני כאן. אפשר לשאול אותי על המסלול, מקום בדרך, עלויות, אוכל, ניווט, מזג אוויר או מה כדאי לעשות עכשיו.";
 }
 
+function shouldAttachSelectedPlaceToAgent(text: string) {
+  const normalized = text.trim().toLowerCase();
+
+  return [
+    "הנקודה",
+    "המקום",
+    "הזה",
+    "הזו",
+    "אותו",
+    "אותה",
+    "שבחרתי",
+    "שמסומן",
+    "במפה",
+    "וויז",
+    "waze",
+    "google maps",
+    "פתח",
+    "נווט",
+    "ניווט",
+    "מפה"
+  ].some((term) => normalized.includes(term));
+}
+
 function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
   const explicitCall = /\b(kodi|codex)\b/i.test(text) || text.includes("קודי") || text.includes("קודקס");
   if (explicitCall) {
@@ -2422,7 +2445,7 @@ export function App() {
             ageGroup: activeMember.ageGroup
           },
           message: text,
-          recentMessages: nextMessages.slice(-8),
+          recentMessages: nextMessages.slice(-24),
           context: {
             permissionPolicy: {
               operationalChangesRequireAdmin: true,
@@ -2432,7 +2455,7 @@ export function App() {
               ? { lat: agentCurrentLocation.lat, lng: agentCurrentLocation.lng }
               : undefined
           },
-          selectedPlace
+          selectedPlace: shouldAttachSelectedPlaceToAgent(text) ? selectedPlace : undefined
         })
       });
 
