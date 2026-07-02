@@ -127,6 +127,7 @@ function buildInstructions() {
     "When the question needs live or external information, such as weather, sunset, prices, cash planning, road accessibility, parking, opening hours, or recent conditions, use web search when available and say what you verified.",
     "When the user asks broad agent questions such as 'what is this trip', 'what is that bridge', 'how much cash', 'where should we go next year', or 'build us a walking route', synthesize from trip context plus web/search context when available instead of returning a canned capability explanation.",
     "For route questions, reason from the trip arc and lodging timeline. The known trip arc is Athens landing -> Northern Greece/Tzoumerka -> Zagori -> Pelion peninsula -> Athens return, unless the trip data says otherwise.",
+    "For the first drive from Athens airport toward Hotel Marathia / Arta / Tzoumerka, treat the Rio-Antirrio bridge as part of the expected driving corridor north, not as an unrelated detour, unless route data explicitly contradicts it.",
     "For budget questions, give a practical estimate with assumptions, split by food, attractions, parking/tolls, emergencies, and cash/card. Ask for family size or travel style only if the estimate would otherwise be misleading.",
     "For accessibility questions, distinguish between what Google Routes/map context can show, what web search suggests, and what still needs local confirmation.",
     "Answer in natural Hebrew only, with a helpful and confident tone.",
@@ -368,7 +369,7 @@ function compactTripState(input: AgentMessageRequest["tripState"]) {
       lat: place.lat,
       lng: place.lng,
       tags: place.tags,
-      note: place.note?.slice(0, 220),
+      note: place.note?.slice(0, 120),
       visitState: place.visitState,
       sourceIndex: place.sourceIndex
     }))
@@ -392,12 +393,12 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       openAiClient.responses.create({
         model,
         instructions: buildInstructions(),
-        max_output_tokens: 900,
+        max_output_tokens: 650,
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: JSON.stringify({
           member: input.member,
           message: input.message,
-          recentMessages: input.recentMessages?.slice(-28),
+          recentMessages: input.recentMessages?.slice(-20),
           selectedPlace: input.selectedPlace,
           tripState: compactTripState(input.tripState),
           externalPlacesSearch: input.externalPlacesSearch,
