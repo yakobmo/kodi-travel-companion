@@ -120,7 +120,11 @@ function buildFocusedReferenceMessage(message: string, recentMessages: unknown[]
       normalized.includes(term)
     );
 
-  if (!needsPreviousQuestion) {
+  const isRouteFollowUp = ["גשר", "אונטריו", "אנטיריו", "ריו", "חושך", "לפני החושך", "מסוכנת", "מסוכן", "הרים"].some(
+    (term) => normalized.includes(term)
+  );
+
+  if (!needsPreviousQuestion && !isRouteFollowUp) {
     return trimmed;
   }
 
