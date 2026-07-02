@@ -58,6 +58,10 @@ function sanitizeGroupRoute(
     return null;
   }
 
+  if (groupRoute.title.includes("QA live route") || groupRoute.title.includes("Averof 12")) {
+    return null;
+  }
+
   const stops = groupRoute.stops.filter((stop) => validPlaceIds.has(stop.placeId));
   if (stops.length < 2) {
     return null;
