@@ -759,6 +759,24 @@ if (-not $appSource.Contains("buildKodiFallbackReply")) {
   throw "Web app must keep a local Kodi fallback for demo resilience."
 }
 
+$agentTemplateLeaks = @(
+  "שמעתי את",
+  "מהשיחה אני מזהה",
+  "מהשיחה האחרונה קלטתי",
+  "אבקש אישור מנהל",
+  "אם מנהל מאשר",
+  "היעד הקבוצתי כרגע",
+  "מכנה משותף"
+)
+
+$appFallbackSource = [regex]::Match($appSource, "function buildKodiFallbackReply[\s\S]*?function shouldWakeKodi").Value
+
+foreach ($leak in $agentTemplateLeaks) {
+  if ($appFallbackSource.Contains($leak) -or $kodiSourceEarly.Contains($leak)) {
+    throw "Kodi agent/fallback must not leak rigid template phrasing: $leak"
+  }
+}
+
 if (-not $appSource.Contains("kodi-presence")) {
   throw "Web app must show Kodi as a background presence, not a separate CTA."
 }

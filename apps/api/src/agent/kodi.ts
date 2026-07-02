@@ -411,15 +411,7 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
   const selected = input.selectedPlace?.name ?? "המלון הקרוב";
   const locationSummary = buildVisibleLocationSummary(input.tripState);
   const conversationSummary = summarizeRecentConversation(input.recentMessages, message, input.tripState);
-  const needsText =
-    conversationSummary.mentionedNeeds.length > 0
-      ? conversationSummary.mentionedNeeds.join(", ")
-      : "העדפה כללית לטיול נוח";
-  const speakersText =
-    conversationSummary.speakerNames.length > 0 ? conversationSummary.speakerNames.join(", ") : memberName;
-  const destinationText = conversationSummary.currentDestinationName
-    ? ` היעד הקבוצתי הנוכחי הוא ${conversationSummary.currentDestinationName}, ולכן לא אשנה אותו בלי אישור מנהל.`
-    : "";
+  const needsText = conversationSummary.mentionedNeeds.length > 0 ? conversationSummary.mentionedNeeds.join(", ") : "";
   const externalPlacesContext = buildExternalPlacesContext(input.externalPlacesSearch);
   const routeEstimateContext = buildRouteEstimateContext(input.routeEstimate);
 
@@ -456,8 +448,8 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       requiresAdminApproval: false,
       source: "rules",
       text:
-        `${memberName}, ${routeEstimateContext} ` +
-        "אם מנהל מאשר, אפשר לפתוח את אותה נקודה ב-Waze או Google Maps. מבחינתי Waze הוא רק קישור ניווט לנקודה, לא מקור הידע של הטיול."
+        `${routeEstimateContext} ` +
+        "אפשר לפתוח את הנקודה ב-Waze או Google Maps כשאתם רוצים להתחיל ניווט."
     };
   }
 
@@ -486,8 +478,7 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
         `${memberName}, הבנתי: כרגע עובדים במצב כאן ועכשיו, לא לפי מסלול יוון. ` +
         "אני מתייחס למיקום החי שלכם כנקודת העוגן ומחפש סביבכם, כשהמסלול המתוכנן נשאר רק ברקע. " +
         `${externalPlacesContext} ` +
-        "כש-Google Places פעיל, אני אמור להביא מקומות אמיתיים סביב המיקום הנוכחי, להשוות ביניהם, להסביר למה אחד עדיף, ואז לאפשר לפתוח אותו ב-Google Maps או Waze. " +
-        "אם תרצו להוסיף מקום שמצאתי למפה, אבקש אישור מנהל ואז אוסיף אותו לשכבת הטיול של קודי."
+        "אם יש כמה אפשרויות טובות, אבחר את זו שהכי מתאימה למרחק, זמן, ילדים ונוחות, ואז אפשר לפתוח אותה ב-Google Maps או Waze."
     };
   }
 
@@ -521,11 +512,11 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       source: "rules",
       text:
         `ההמלצה שלי כרגע היא ${best.place.name}. בחרתי אותה כי היא מתאימה לבקשת ${recommendation.requestedFocus}. ` +
-        `מהשיחה האחרונה קלטתי את הצרכים האלה: ${needsText}. ` +
+        `${needsText ? `העדפתי לשקלל גם: ${needsText}. ` : ""}` +
         `הנימוקים המרכזיים: ${reasonsText || "זו הנקודה החזקה ביותר לפי הנתונים השמורים"}. ` +
         `${cleanNote ? `הערה שמורה: ${cleanNote}. ` : "היא קיימת במפת הטיול השמורה. "}` +
         "אני לא קובע עדיין זמן נסיעה, עומס, שעות פתיחה או מרחק הליכה אמיתי בלי Google Routes/Places." +
-        `${destinationText}${externalPlacesContext}${caveatsText}${alternativesText} אם מנהל מאשר, אוכל לפתוח ניווט או להפוך אותה ליעד הקבוצתי הבא.`
+        `${externalPlacesContext}${caveatsText}${alternativesText}`
     };
   }
 
@@ -549,7 +540,40 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       source: "rules",
       text:
         "אני יכול לבנות מסלול חדש, אבל קודם צריך לאפיין אותו. כמה זמן יש לכם, האם זה ברגל או ברכב, מה דרגת הקושי הרצויה, " +
-        `מי בקבוצה עכשיו, ומה מעניין אתכם: מים, אוכל, היסטוריה, ילדים או משהו רגוע ליד המלון? מהשיחה קלטתי כרגע: ${needsText}.${destinationText} אחרי זה אציע מסלול ואבקש אישור מנהל לפני שינוי יעד קבוצתי.`
+        `ומה מעניין אתכם: מים, אוכל, היסטוריה, ילדים או משהו רגוע ליד המלון?${needsText ? ` אני גם לוקח בחשבון: ${needsText}.` : ""} אחרי זה אציע מסלול ברור עם נקודות במפה.`
+    };
+  }
+
+  if (
+    input.externalPlacesSearch?.status === "ready" &&
+    input.externalPlacesSearch.places.length > 0 &&
+    includesAny(message, [
+      "סירה",
+      "סירות",
+      "השכר",
+      "טברנה",
+      "מסעדה",
+      "סושי",
+      "פיצה",
+      "גלידה",
+      "חוף",
+      "דלק",
+      "שירותים",
+      "בית חבד",
+      "בית חב\"ד",
+      "ראפטינג",
+      "קיר טיפוס"
+    ])
+  ) {
+    return {
+      author: "קודי",
+      intent: "place_recommendation",
+      requiresAdminApproval: false,
+      source: "rules",
+      text:
+        `כן, יש באזור אפשרויות רלוונטיות. ${externalPlacesContext} ` +
+        "הייתי בודק קודם את המרחק מהמלון/המיקום שלכם, זמינות, ביקורות עדכניות ותנאי דרך או ים אם זה פעילות חוץ. " +
+        "אם זו פעילות כמו סירה, כדאי לוודא מזג אוויר, ביטוח, רישיון נדרש, שעות החזרה ועלות סופית לפני שסוגרים."
     };
   }
 
@@ -568,8 +592,8 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       source: "rules",
       text:
         `אני מסתכל על מצב הטיול. כרגע אני רואה מיקום משותף של: ${visibleNames}.${hiddenText} ` +
-        `מהשיחה האחרונה קלטתי גם את הצרכים האלה: ${needsText}.${destinationText} ` +
-        "אפשר להשתמש בזה כדי להציע נקודת מפגש, אבל שינוי יעד קבוצתי עדיין דורש אישור מנהל."
+        `${needsText ? `אני גם לוקח בחשבון: ${needsText}. ` : ""}` +
+        "אפשר להשתמש בזה כדי להציע נקודת מפגש נוחה."
     };
   }
 
@@ -580,8 +604,9 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       requiresAdminApproval: true,
       source: "rules",
       text:
-        `שמעתי את ${speakersText}. מהשיחה אני מזהה: ${needsText}. הייתי מחפש נקודה קלה ליד ${selected}, ` +
-        `עם מינימום הליכה ובלי לדחוף את כולם לכיוון שלא מתאים לילדים.${destinationText}${externalPlacesContext} אני יכול להציע מקום, ואז אבקש אישור מנהל לפני שינוי יעד קבוצתי.`
+        `אפשר לחפש נקודה קלה ליד ${selected}, עם מינימום הליכה ובלי לדחוף את כולם לכיוון שלא מתאים לילדים. ` +
+        `${needsText ? `הכיוון שאני לוקח בחשבון: ${needsText}. ` : ""}` +
+        externalPlacesContext
     };
   }
 
@@ -591,6 +616,6 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     requiresAdminApproval: false,
     source: "rules",
     text:
-      `אני כאן בשיחה. קראתי את ההודעות האחרונות של ${speakersText}, ואני מזהה כרגע: ${needsText}.${destinationText} אם תרצו אעזור למצוא מכנה משותף ולהפוך את זה להחלטה פשוטה: המלצה, הסבר וניווט.`
+      "אני כאן. תשאלו אותי חופשי על המסלול, מקום בדרך, עלויות, אוכל, ניווט, מזג אוויר או מה כדאי לעשות עכשיו."
   };
 }

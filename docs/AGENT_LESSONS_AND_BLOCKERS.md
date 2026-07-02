@@ -364,3 +364,25 @@ Decision:
 QA/automation:
 
 - `scripts/qa.ps1` now fails if current-location questions are forced into rules-only replies by the old `!shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed` gate.
+
+### 15. Template Language Must Not Leak Into Kodi Conversation
+
+What happened:
+
+Kodi answered a natural question about boat rentals in Pelion with rigid fallback phrasing: "I heard the trip manager", "from the conversation I identify", and a generic admin-approval ending. That made Kodi sound like a constrained form bot instead of an intelligent travel companion.
+
+Why it happened:
+
+Fallback rules were written as product scaffolding and permission reminders, then their language leaked into normal chat. The OpenAI prompt also received that fallback as grounding without a strong enough instruction not to imitate it.
+
+Decision:
+
+- Kodi must answer ordinary questions directly and naturally.
+- Admin approval is mentioned only for explicit operational write actions: changing group destination, editing the map, creating a shared route, or similar actions.
+- Fallback replies may be brief and useful, but must not contain meeting-summary boilerplate or permission endings.
+- Trip context such as a stale selected destination must not override a user question about a different region or day.
+
+QA/automation:
+
+- `scripts/qa.ps1` now checks the API fallback and web fallback for banned rigid phrases.
+- `scripts/smoke-local.mjs` now asserts Kodi replies avoid the old template language instead of waiting for it.

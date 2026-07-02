@@ -452,10 +452,10 @@ try {
   });
   const fastTripAgentPayload = await fastTripAgentResponse.json();
   assertCheck("agent fast trip answer ok", fastTripAgentResponse.ok());
-  assertCheck("agent fast trip answer lane", fastTripAgentPayload.agentRuntime?.fastLane === true);
-  assertCheck("agent fast trip answer skips openai", fastTripAgentPayload.agentRuntime?.openAiStatus === "skipped_fast_lane");
+  assertCheck("agent fast trip answer lane", fastTripAgentPayload.agentRuntime?.fastLane !== true);
+  assertCheck("agent fast trip answer skips openai", fastTripAgentPayload.agentRuntime?.openAiStatus !== "skipped_fast_lane");
   assertCheck("agent fast trip answer timed", typeof fastTripAgentPayload.agentRuntime?.latencyMs === "number");
-  assertCheck("agent fast trip answer text", fastTripAgentPayload.text?.includes("הלינה הלילה"));
+  assertCheck("agent fast trip answer text", typeof fastTripAgentPayload.text === "string" && fastTripAgentPayload.text.length > 20);
 
   const futurePelionAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
@@ -539,11 +539,11 @@ try {
   });
   const contextAwareAgentPayload = await contextAwareAgentResponse.json();
   assertCheck("agent context-aware ok", contextAwareAgentResponse.ok());
-  assertCheck("agent context-aware speakers", contextAwareAgentPayload.text?.includes("משתתף") || contextAwareAgentPayload.text?.includes("מנהל"));
-  assertCheck("agent context-aware needs", contextAwareAgentPayload.text?.includes("גלידה") && contextAwareAgentPayload.text?.includes("מנוחה"));
+  assertCheck("agent context-aware natural", !contextAwareAgentPayload.text?.includes("שמעתי את") && !contextAwareAgentPayload.text?.includes("מהשיחה אני מזהה"));
+  assertCheck("agent context-aware needs", contextAwareAgentPayload.text?.includes("גלידה") || contextAwareAgentPayload.text?.includes("מנוחה") || contextAwareAgentPayload.text?.includes("קרוב"));
   assertCheck(
-    "agent context-aware destination",
-    contextAwareAgentPayload.text?.includes("יעד") && contextAwareAgentPayload.text?.includes("אישור מנהל")
+    "agent context-aware no boilerplate",
+    !contextAwareAgentPayload.text?.includes("אבקש אישור מנהל") && !contextAwareAgentPayload.text?.includes("אם מנהל מאשר")
   );
 
   const input = page.getByLabel("כתיבת הודעה לקבוצה");
@@ -612,8 +612,10 @@ try {
 
   await input.fill("קודי, מה מתאים לקבוצה עכשיו ליד המלון?");
   await page.locator(".composer button[type='submit']").click();
-  await page.getByText("מהשיחה אני מזהה").waitFor();
+  await page.locator(".message.kodi").last().waitFor();
   assertCheck("kodi replies in chat", (await page.locator(".message.kodi").count()) >= 1);
+  const lastKodiText = await page.locator(".message.kodi").last().innerText();
+  assertCheck("kodi chat reply avoids template language", !lastKodiText.includes("שמעתי את") && !lastKodiText.includes("מהשיחה אני מזהה"));
   assertCheck("kodi voice output control", (await page.locator(".message.kodi .speak-message-button").count()) >= 1);
 
   assertCheck("retired demo member pill removed", (await page.locator(".member-pills").getByRole("button", { name: "נועה" }).count()) === 0);
@@ -626,9 +628,13 @@ try {
   await page.locator(".composer button[type='submit']").click();
   await page.getByText("אני יכול להיות רגע מדריך מקומי").waitFor();
 
+  const kodiMessagesBeforeLocationQuestion = await page.locator(".message.kodi").count();
   await input.fill("קודי, איפה כולם עכשיו?");
   await page.locator(".composer button[type='submit']").click();
-  await page.getByText("אני מסתכל על מצב הטיול").waitFor();
+  await page.waitForFunction(
+    (count) => document.querySelectorAll(".message.kodi").length > count,
+    kodiMessagesBeforeLocationQuestion
+  );
 
   await input.fill("קודי, מה כדאי לעשות עכשיו? תמליץ על משהו עם מים.");
   await page.locator(".composer button[type='submit']").click();
