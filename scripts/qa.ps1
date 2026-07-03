@@ -200,6 +200,7 @@ if (
   -not $openAiAgentSource.Contains("shouldUseReasoningModel") -or
   -not $openAiAgentSource.Contains("fallbackRulesReply") -or
   -not $openAiAgentSource.Contains("Google Maps is the map engine") -or
+  -not $openAiAgentSource.Contains("route map, route diagram, trip sketch") -or
   -not $openAiAgentSource.Contains("elite Hebrew AI travel companion") -or
   -not $openAiAgentSource.Contains("web_search") -or
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
@@ -254,6 +255,21 @@ if ($serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message) && ope
 
 $reverseGeocodeSource = Get-Content (Join-Path $root "apps\api\src\google\reverseGeocode.ts") -Raw
 $kodiSourceEarly = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -Encoding utf8
+if (
+  -not $kodiSourceEarly.Contains("isTripRouteDiagramRequest") -or
+  -not $kodiSourceEarly.Contains("buildTripRouteDiagramAnswer") -or
+  -not $kodiSourceEarly.Contains("https://www.google.com/maps/dir/")
+) {
+  throw "Kodi fallback must build a useful route-map/diagram answer from trip points instead of dodging map-diagram requests."
+}
+
+if (
+  -not $serverSource.Contains("shouldUseDeterministicRouteDiagram") -or
+  -not $serverSource.Contains("!deterministicRouteDiagram")
+) {
+  throw "Kodi server flow must keep route-map/diagram requests deterministic so OpenAI cannot dodge or overwrite the built map answer."
+}
+
 if (
   -not $reverseGeocodeSource.Contains("maps.googleapis.com/maps/api/geocode/json") -or
   -not $reverseGeocodeSource.Contains("latlng") -or

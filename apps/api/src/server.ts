@@ -191,6 +191,28 @@ function includesAnyTerm(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
 
+function shouldUseDeterministicRouteDiagram(message: string) {
+  const normalizedMessage = message.toLowerCase();
+
+  return (
+    includesAnyTerm(normalizedMessage, [
+      "תרשים",
+      "שרטוט",
+      "ציור",
+      "סכמה",
+      "מפת מסלול",
+      "מפה של מסלול",
+      "תראה לי מסלול",
+      "תראה את המסלול",
+      "צייר לי",
+      "route map",
+      "route diagram",
+      "trip sketch"
+    ]) &&
+    includesAnyTerm(normalizedMessage, ["מסלול", "טיול", "מפה", "יוון", "trip", "route", "map"])
+  );
+}
+
 function isKodiPresencePing(message: string) {
   const normalized = message.replace(/[?!.,\s]/g, "").toLowerCase();
   return ["קודי", "kodi", "codex", "קודקס"].includes(normalized);
@@ -2014,8 +2036,9 @@ app.post("/api/agent/message", async (req, res) => {
       role: normalizedMember.role
     }
   });
+  const deterministicRouteDiagram = shouldUseDeterministicRouteDiagram(focusedReferenceMessage);
   const openAiReply =
-    openAiUsageGate.allowed && openAiUsageGate.providerConfigured
+    openAiUsageGate.allowed && openAiUsageGate.providerConfigured && !deterministicRouteDiagram
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
           message: focusedReferenceMessage,
@@ -2028,7 +2051,7 @@ app.post("/api/agent/message", async (req, res) => {
           rulesReply
         })
       : undefined;
-  if (openAiUsageGate.allowed && openAiUsageGate.providerConfigured && openAiReply?.status === "ready") {
+  if (openAiUsageGate.allowed && openAiUsageGate.providerConfigured && !deterministicRouteDiagram && openAiReply?.status === "ready") {
     await safeRecordUsageGateEvent({
       usageGate: openAiUsageGate,
       actorName: String(normalizedMember.displayName),

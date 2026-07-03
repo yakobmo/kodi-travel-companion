@@ -188,6 +188,95 @@ function isWholeTripOverviewQuestion(message: string) {
   );
 }
 
+function isTripRouteDiagramRequest(message: string) {
+  const normalized = message.toLowerCase();
+
+  return (
+    includesAny(normalized, [
+      "תרשים",
+      "שרטוט",
+      "ציור",
+      "סכמה",
+      "מפת מסלול",
+      "מפה של מסלול",
+      "תראה לי מסלול",
+      "תראה את המסלול",
+      "צייר לי",
+      "diagram",
+      "route map",
+      "map diagram"
+    ]) &&
+    includesAny(normalized, ["מסלול", "טיול", "מפה", "יוון", "trip", "route", "map"])
+  );
+}
+
+function placeRegionText(place: TripPlace) {
+  const text = `${place.name} ${place.address ?? ""} ${place.tags.join(" ")} ${place.note ?? ""}`.toLowerCase();
+  if (includesAny(text, ["athens", "אתונה", "averof"])) return "אתונה";
+  if (includesAny(text, ["arta", "chanopoulo", "marathia", "tzoumerka", "צומרקה", "ארטה"])) return "צומרקה / ארטה";
+  if (includesAny(text, ["zagori", "papingo", "voidomatis", "vikos", "זגור", "פפיגו", "ויקוס"])) return "זגוריה";
+  if (includesAny(text, ["pelion", "mouresi", "tsagarada", "pilion", "פיליון", "מורסי", "צגראדה"])) return "חצי האי פיליון";
+  if (includesAny(text, ["rio", "antirrio", "antirio", "גשר"])) return "דרך צפונה / גשר ריו-אנטיריו";
+  return "נקודות בדרך";
+}
+
+function buildTripRouteDiagramAnswer(memberName: string, tripState?: TripState) {
+  const places = [...(tripState?.places ?? [])].sort((a, b) => (a.sourceIndex ?? 9999) - (b.sourceIndex ?? 9999));
+  const findAnchor = (terms: string[], preferredTypes: TripPlace["type"][] = ["lodging", "transport", "stop", "attraction"]) => {
+    for (const term of terms) {
+      const matched = places.find((place) => {
+        const haystack = `${place.name} ${place.address ?? ""} ${place.tags.join(" ")} ${place.note ?? ""}`.toLowerCase();
+        return preferredTypes.includes(place.type) && haystack.includes(term.toLowerCase());
+      });
+      if (matched) {
+        return matched;
+      }
+    }
+
+    return undefined;
+  };
+  const anchors = [
+    findAnchor(["athens", "ath", "נמל התעופה", "אתונה"], ["transport", "stop", "lodging"]),
+    findAnchor(["rio-antirrio", "rio antirrio", "antirrio", "antirio"], ["attraction", "stop", "transport"]),
+    findAnchor(["marathia", "chanopoulo", "מאר", "arta", "ארטה"], ["lodging", "stop"]),
+    findAnchor(["tzoumerka", "pramanta", "orizontes", "צומרקה", "פרמנטה"], ["lodging", "attraction", "stop"]),
+    findAnchor(["zagori", "aristi", "papingo", "vikos", "זגור", "פפיגו", "ויקוס"], ["lodging", "attraction", "water", "stop"]),
+    findAnchor(["pelion", "mouresi", "tsagarada", "damouchari", "chorefto", "פיליון", "מורסי"], [
+      "lodging",
+      "attraction",
+      "water",
+      "stop"
+    ]),
+    findAnchor(["athens", "אתונה", "airport"], ["lodging", "transport", "stop"])
+  ].filter((place, index, list): place is TripPlace => Boolean(place) && list.findIndex((item) => item?.id === place?.id) === index);
+
+  if (anchors.length === 0) {
+    return `${memberName}, אין לי כרגע מספיק נקודות מסודרות כדי לצייר תרשים מסלול אמין. שלח לי קישור מפת Google Maps או בחר רשימת נקודות, ואז אבנה מיד תרשים לפי הסדר.`;
+  }
+
+  const routeLine = "אתונה נחיתה -> גשר ריו-אנטיריו / מעבר צפונה -> ארטה / צומרקה -> זגוריה -> חצי האי פיליון -> אתונה סיום";
+  const anchorsText = anchors
+    .map((place, index) => `${index + 1}. ${place.name}${place.address ? ` - ${place.address}` : ""}`)
+    .join("\n");
+
+  const coordinateAnchors = anchors.filter((place) => typeof place.lat === "number" && typeof place.lng === "number").slice(0, 9);
+  const mapsLink =
+    coordinateAnchors.length >= 2
+      ? `https://www.google.com/maps/dir/${coordinateAnchors
+          .map((place) => `${place.lat},${place.lng}`)
+          .map(encodeURIComponent)
+          .join("/")}`
+      : undefined;
+
+  return [
+    `${memberName}, כן. הנה תרשים מסלול בסיסי לפי סדר הנקודות שאני רואה ממפת הטיול, בלי להמציא שלבים שאין לי.`,
+    routeLine || "אתונה -> צפון יוון -> זגוריה -> פיליון -> אתונה",
+    `עוגני המסלול מתוך המפה:\n${anchorsText}`,
+    mapsLink ? `קישור פתיחה ב-Google Maps לתרשים נסיעה ראשוני: ${mapsLink}` : "אין לי מספיק קואורדינטות רציפות כדי לבנות קישור Google Maps מלא, אבל התרשים מעל מבוסס על סדר נקודות הטיול.",
+    "אם תרצה, השלב הבא שלי הוא להפוך את זה למסלול לפי ימים: לינה, נסיעה, עצירות מומלצות, ומה כדאי לדחות."
+  ].join("\n\n");
+}
+
 function buildWholeTripOverviewAnswer(memberName: string, tripState?: TripState) {
   const places = tripState?.places ?? [];
   const placesCount = places.length;
@@ -460,6 +549,16 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
   const needsText = conversationSummary.mentionedNeeds.length > 0 ? conversationSummary.mentionedNeeds.join(", ") : "";
   const externalPlacesContext = buildExternalPlacesContext(input.externalPlacesSearch);
   const routeEstimateContext = buildRouteEstimateContext(input.routeEstimate);
+
+  if (isTripRouteDiagramRequest(message)) {
+    return {
+      author: "קודי",
+      intent: "route_creation",
+      requiresAdminApproval: false,
+      source: "rules",
+      text: buildTripRouteDiagramAnswer(memberName, input.tripState)
+    };
+  }
 
   if (isWholeTripOverviewQuestion(message)) {
     return {
