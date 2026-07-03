@@ -15,6 +15,7 @@ import { buildDemoGoogleSourcePreview, getGoogleSourceReadiness } from "./google
 import {
   addDemoTripMemberAsync,
   loadDemoTripMembersAsync,
+  normalizeTripMemberDisplayName,
   removeDemoTripMemberAsync,
   resetDemoTripMembersAsync,
   updateDemoMemberLocationAsync
@@ -1104,6 +1105,21 @@ app.post("/api/trips/demo/members", async (req, res) => {
     : "adult";
   const numericAge = Number(age);
   const safeAge = Number.isInteger(numericAge) && numericAge >= 0 && numericAge <= 120 ? numericAge : undefined;
+  const currentMembers = await loadDemoTripMembersAsync();
+  const existingMember = currentMembers.find(
+    (item) => normalizeTripMemberDisplayName(item.member.displayName) === normalizeTripMemberDisplayName(displayName)
+  );
+
+  if (existingMember) {
+    res.json({
+      tripGroupId: "group_family_greece_demo",
+      member: existingMember,
+      existingMember: true,
+      members: currentMembers
+    });
+    return;
+  }
+
   const member = await addDemoTripMemberAsync({
     displayName: displayName.trim(),
     ageGroup: safeAgeGroup,

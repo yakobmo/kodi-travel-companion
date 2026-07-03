@@ -437,9 +437,11 @@ if (
   -not $apiServerSource.Contains("app.post(`"/api/trips/demo/members`"") -or
   -not $apiServerSource.Contains("app.delete(`"/api/trips/demo/members/:memberId`"") -or
   -not $apiServerSource.Contains("addDemoTripMemberAsync") -or
-  -not $apiServerSource.Contains("removeDemoTripMemberAsync")
+  -not $apiServerSource.Contains("removeDemoTripMemberAsync") -or
+  -not $apiServerSource.Contains("normalizeTripMemberDisplayName") -or
+  -not $apiServerSource.Contains("existingMember: true")
 ) {
-  throw "API must expose server-backed trip member join and leave/remove actions."
+  throw "API must expose server-backed trip member join and leave/remove actions, while treating repeated joins by the same display name as idempotent."
 }
 
 if (
@@ -1390,6 +1392,15 @@ foreach ($inventedMemberName in @("אמא", "אבא", "נועה", "סבתא")) {
   if ($localMembersSource.Contains("displayName: `"$inventedMemberName`"") -or $demoRelationalIdsSource.Contains("displayName: `"$inventedMemberName`"")) {
     throw "Default members must use neutral role labels, not invented family names: $inventedMemberName"
   }
+}
+
+if (
+  -not $localMembersSource.Contains("normalizeTripMemberDisplayName") -or
+  -not $localMembersSource.Contains("findMemberByDisplayName") -or
+  -not $localMembersSource.Contains("return structuredClone(existingMember)") -or
+  -not $localMembersSource.Contains("loadSupabaseTripMembers")
+) {
+  throw "Trip member joins must be idempotent by normalized display name across Supabase and local fallback storage."
 }
 
 $localDestinationSource = Get-Content (Join-Path $root "apps\api\src\data\localGroupDestination.ts") -Raw

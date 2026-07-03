@@ -172,6 +172,15 @@ function isOwnerLike(member: TripMemberLocationView | undefined) {
   return member?.member.role === "owner" || member?.member.role === "admin" || member?.member.canManageMembers === true;
 }
 
+export function normalizeTripMemberDisplayName(displayName: string) {
+  return displayName.trim().replace(/\s+/g, " ").toLocaleLowerCase("he-IL");
+}
+
+function findMemberByDisplayName(members: TripMemberLocationView[], displayName: string) {
+  const normalizedDisplayName = normalizeTripMemberDisplayName(displayName);
+  return members.find((item) => normalizeTripMemberDisplayName(item.member.displayName) === normalizedDisplayName);
+}
+
 function ageToAgeGroup(age?: number | null): AgeGroup | undefined {
   if (typeof age !== "number" || !Number.isFinite(age)) {
     return undefined;
@@ -436,6 +445,12 @@ async function addSupabaseTripMember(input: {
     return null;
   }
 
+  const existingMembers = await loadSupabaseTripMembers();
+  const existingMember = existingMembers ? findMemberByDisplayName(existingMembers, input.displayName) : undefined;
+  if (existingMember) {
+    return structuredClone(existingMember);
+  }
+
   const memberUuid = randomUUID();
   const role = input.role ?? "member";
   const { data, error } = await supabase
@@ -556,6 +571,12 @@ export async function addDemoTripMemberAsync(input: {
     return structuredClone(supabaseMember);
   }
 
+  const members = await loadDemoTripMembersAsync();
+  const existingMember = findMemberByDisplayName(members, input.displayName);
+  if (existingMember) {
+    return structuredClone(existingMember);
+  }
+
   const memberId = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const now = new Date().toISOString();
   const role = input.role ?? "member";
@@ -581,7 +602,6 @@ export async function addDemoTripMemberAsync(input: {
     displayLabel: "מיקום לא משותף"
   };
 
-  const members = await loadDemoTripMembersAsync();
   await saveDemoStorageAsync({ members: [...members, member] });
   return structuredClone(member);
 }
