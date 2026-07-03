@@ -79,6 +79,15 @@ let agentTripStateCache:
     }
   | undefined;
 
+function isGoogleMapsViewingLink(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return normalized.includes("maps.app.goo.gl") || normalized.includes("google.com/maps");
+}
+
+function canManageTripMapSource(member: Awaited<ReturnType<typeof loadDemoTripMembersAsync>>[number] | undefined) {
+  return member?.member.role === "owner" || member?.member.role === "admin" || member?.member.canManagePlaces === true;
+}
+
 async function buildAgentTripStateSnapshot() {
   const now = Date.now();
   if (agentTripStateCache && agentTripStateCacheMs > 0 && now - agentTripStateCache.loadedAt <= agentTripStateCacheMs) {
@@ -1776,6 +1785,74 @@ app.post("/api/trips/demo/setup", async (req, res) => {
     summary: `Trip setup saved for ${tripName.trim()}.`
   });
   res.json(setupState);
+});
+
+app.post("/api/trips/demo/google-source/switch", async (req, res) => {
+  const { actorMemberId, tripName, googleLink } = req.body ?? {};
+
+  if (typeof actorMemberId !== "string" || actorMemberId.trim().length < 1) {
+    res.status(400).json({ error: "actorMemberId is required" });
+    return;
+  }
+
+  if (typeof tripName !== "string" || tripName.trim().length < 2) {
+    res.status(400).json({ error: "tripName is required" });
+    return;
+  }
+
+  if (typeof googleLink !== "string" || !isGoogleMapsViewingLink(googleLink)) {
+    res.status(400).json({ error: "valid Google Maps viewing link is required" });
+    return;
+  }
+
+  const members = await loadDemoTripMembersAsync();
+  const actor = members.find((item) => item.member.id === actorMemberId.trim());
+  if (!canManageTripMapSource(actor)) {
+    res.status(403).json({ error: "member is not allowed to switch the trip map source" });
+    return;
+  }
+
+  const currentSetupState = await buildDemoTripSetupStateAsync();
+  const currentSetup = currentSetupState.setupSummary;
+  const setupState = await saveDemoTripSetupStateAsync({
+    tripName: tripName.trim(),
+    firstMemberName: currentSetup?.firstMemberName || actor?.member.displayName || "מנהל הטיול",
+    firstMemberAge: currentSetup?.firstMemberAge,
+    googleLink: googleLink.trim(),
+    aiPlanConfirmed: currentSetup?.savedAt ? currentSetupState.readiness.hasAiPlanExplained : true,
+    locationConsentExplained: currentSetup?.savedAt ? currentSetupState.readiness.hasLocationConsentExplained : true
+  });
+
+  await safeRecordTripEvent({
+    eventType: "setup_updated",
+    actorMemberId: actor?.member.id,
+    actorName: actor?.member.displayName,
+    summary: `Trip Google Maps source switched to ${tripName.trim()}.`
+  });
+
+  res.json({
+    ok: true,
+    tripGroupId: setupState.tripGroupId,
+    setupState,
+    googleSourceSwitch: {
+      tripName: tripName.trim(),
+      googleLink: googleLink.trim(),
+      state: setupState.googleSource.state,
+      importedPlacesCount: setupState.googleSource.importedPlacesCount,
+      permissions: {
+        actorMemberId: actor?.member.id,
+        actorRole: actor?.member.role,
+        canManagePlaces: actor?.member.canManagePlaces === true
+      },
+      pointsSync: {
+        sourceRegistered: true,
+        automaticPrivateMapImport: false,
+        requiresGoogleOAuth: true,
+        message:
+          "The active Google Maps source was changed. Full private-map point import still requires Google OAuth or an approved Google data source."
+      }
+    }
+  });
 });
 
 app.delete("/api/trips/demo/setup", async (_req, res) => {

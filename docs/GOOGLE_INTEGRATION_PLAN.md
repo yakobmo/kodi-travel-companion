@@ -134,6 +134,8 @@ Near-term edit model:
 User asks -> Kodi reasons/searches -> Kodi proposes map edit -> owner/admin approves -> backend writes Kodi trip layer -> Google Maps view updates -> optional Google Maps/Waze link opens
 ```
 
+Active trip-map source switching now follows the same permission rule. The owner/admin can register a different Google Maps viewing link as the group's active trip source through the app, and the backend records the source only after checking the actor's stored role/permissions. This changes the active source metadata and Kodi's context. It does not by itself import every private Google Maps/My Maps point from the owner's account; that still requires Google OAuth or a supported Google data source.
+
 Future Google write-back model:
 
 ```text

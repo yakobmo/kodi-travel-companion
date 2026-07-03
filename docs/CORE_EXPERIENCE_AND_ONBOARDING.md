@@ -198,7 +198,7 @@ I found these Google Maps lists/maps. Which trip should I sync?
 
 Then the user selects the real trip source, such as "טיול צפון יוון".
 
-The hamburger may expose a trip-maps management area where the owner names a different trip map and provides a Google Maps share link, for example switching from Northern Greece to Austria. In the current stage, Kodi can prepare and guide the switch request, but the app must not claim that it has scanned all private Google Maps folders until Google OAuth is implemented.
+The hamburger exposes a trip-maps management area where the owner/admin names a different trip map and provides a Google Maps share link, for example switching from Northern Greece to Austria. This is a real backend action: the app saves the new active Google Maps source only after checking server-side manager permissions. The app must still not claim that it has scanned all private Google Maps folders or imported a fresh private point list until Google OAuth or another approved Google source import is implemented.
 
 Future OAuth-backed behavior:
 

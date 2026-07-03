@@ -9,6 +9,7 @@ import {
 } from "./demoStorage.js";
 import { DEMO_TRIP_GROUP_UUID } from "./demoRelationalIds.js";
 import { ensureDemoRelationalBase } from "./demoRelationalSeed.js";
+import { DEMO_GOOGLE_SOURCE_URL } from "./localPlaces.js";
 
 function getSavedDemoSetup(): StoredDemoSetup | null {
   return loadDemoStorage().setup;
@@ -26,6 +27,10 @@ async function getSavedDemoSetupAsync(): Promise<StoredDemoSetup | null> {
 function isGoogleMapsViewingLink(value: string) {
   const normalized = value.trim().toLowerCase();
   return normalized.includes("maps.app.goo.gl") || normalized.includes("google.com/maps");
+}
+
+function isCurrentImportedGoogleSource(value: string | undefined) {
+  return value?.trim() === DEMO_GOOGLE_SOURCE_URL;
 }
 
 function getSetupReadiness(setup: StoredDemoSetup | null): TripSetupState["readiness"] {
@@ -64,7 +69,7 @@ export function buildDemoTripSetupState(): TripSetupState {
 function buildDemoTripSetupStateFromSavedSetup(savedDemoSetup: StoredDemoSetup | null): TripSetupState {
   const readiness = getSetupReadiness(savedDemoSetup);
   const setupCompleted = areAllReadinessItemsDone(readiness);
-  const importedPlacesCount = readiness.hasGoogleSource ? 108 : 0;
+  const importedPlacesCount = readiness.hasGoogleSource && isCurrentImportedGoogleSource(savedDemoSetup?.googleLink) ? 108 : 0;
 
   return {
     tripGroupId: "group_family_greece_demo",
@@ -83,7 +88,10 @@ function buildDemoTripSetupStateFromSavedSetup(savedDemoSetup: StoredDemoSetup |
     googleSource: {
       state: readiness.hasGoogleSource ? "demo_link_ready" : "not_connected",
       sourceType: "google_maps_place_list",
-      displayName: "Google Maps Place List viewing link",
+      displayName:
+        readiness.hasGoogleSource && importedPlacesCount === 0
+          ? "Google Maps viewing link registered; point import pending"
+          : "Google Maps Place List viewing link",
       importedPlacesCount,
       lastCheckedAt: readiness.hasGoogleSource ? "2026-06-23T05:30:00.000Z" : undefined
     },

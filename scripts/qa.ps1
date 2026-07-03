@@ -345,7 +345,9 @@ if (
   -not $webAppSource.Contains("danger-menu-action") -or
   -not $webAppSource.Contains("trip-map-source-menu") -or
   -not $webAppSource.Contains("requestTripMapSwitch") -or
-  -not $webAppSource.Contains("mapSwitchDraft")
+  -not $webAppSource.Contains("mapSwitchDraft") -or
+  -not $webAppSource.Contains("/api/trips/demo/google-source/switch") -or
+  -not $webAppSource.Contains("mapSwitchState")
 ) {
   throw "Web hamburger must support simple invite join, member removal/leave, and trip map source switching."
 }
@@ -1292,6 +1294,15 @@ if (-not $serverSource.Contains("/api/trips/demo/setup")) {
 
 if (-not $serverSource.Contains('app.post("/api/trips/demo/setup"')) {
   throw "API server is missing the demo setup save endpoint."
+}
+
+if (
+  -not $serverSource.Contains('app.post("/api/trips/demo/google-source/switch"') -or
+  -not $serverSource.Contains("canManageTripMapSource") -or
+  -not $serverSource.Contains("actorMemberId") -or
+  -not $serverSource.Contains("valid Google Maps viewing link is required")
+) {
+  throw "API server must expose an admin-gated Google Maps source switch endpoint."
 }
 
 if (-not $serverSource.Contains("buildDemoTripSetupState")) {

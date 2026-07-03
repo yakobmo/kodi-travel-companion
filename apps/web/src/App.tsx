@@ -478,6 +478,24 @@ interface TripSetupStateResponse {
   kodiWelcomeMessage: string;
 }
 
+interface TripMapSourceSwitchResponse {
+  ok: boolean;
+  tripGroupId: string;
+  setupState: TripSetupStateResponse;
+  googleSourceSwitch: {
+    tripName: string;
+    googleLink: string;
+    state: string;
+    importedPlacesCount: number;
+    pointsSync: {
+      sourceRegistered: boolean;
+      automaticPrivateMapImport: boolean;
+      requiresGoogleOAuth: boolean;
+      message: string;
+    };
+  };
+}
+
 interface GoogleSourcePreviewResponse {
   tripGroupId: string;
   adapter: {
@@ -1107,6 +1125,8 @@ export function App() {
   const [inviteCopyState, setInviteCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [inviteShareState, setInviteShareState] = useState<"idle" | "sharing" | "shared" | "copied" | "error">("idle");
   const [memberActionState, setMemberActionState] = useState<"idle" | "working" | "done" | "error">("idle");
+  const [mapSwitchState, setMapSwitchState] = useState<"idle" | "working" | "done" | "error">("idle");
+  const [mapSwitchMessage, setMapSwitchMessage] = useState("");
   const [mapSwitchDraft, setMapSwitchDraft] = useState({
     name: "",
     googleLink: ""
@@ -3298,24 +3318,69 @@ export function App() {
     void removeTripMember(activeMember.id);
   }
 
-  function requestTripMapSwitch() {
+  async function requestTripMapSwitch() {
     const nextName = mapSwitchDraft.name.trim();
     const nextLink = mapSwitchDraft.googleLink.trim();
     if (!nextName && !nextLink) {
       return;
     }
 
-    setSetupDraft((draft) => ({
-      ...draft,
-      tripName: nextName || draft.tripName,
-      googleLink: nextLink || draft.googleLink
-    }));
-    setDraft(
-      `קודי, החלף את מפת הטיול ל${nextName ? ` ${nextName}` : "מפה אחרת"}${
-        nextLink ? `. קישור Google Maps: ${nextLink}` : ""
-      }. תבדוק מה צריך כדי לסנכרן את נקודות הטיול החדשות.`
-    );
-    setSecondaryMenuOpen(false);
+    const effectiveTripName = nextName || setupDraft.tripName || setupState?.setupSummary?.tripName || "טיול חדש";
+    const effectiveGoogleLink = nextLink || setupDraft.googleLink || setupState?.setupSummary?.googleLink || "";
+
+    if (!/maps\.app\.goo\.gl|google\.com\/maps/i.test(effectiveGoogleLink)) {
+      setMapSwitchState("error");
+      setMapSwitchMessage("כדי להחליף מפה ונקודות צריך קישור צפייה תקין של Google Maps.");
+      return;
+    }
+
+    setMapSwitchState("working");
+    setMapSwitchMessage("");
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/trips/demo/google-source/switch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          actorMemberId: activeMember.id,
+          tripName: effectiveTripName,
+          googleLink: effectiveGoogleLink
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Map source switch failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as TripMapSourceSwitchResponse;
+      setSetupState(payload.setupState);
+      setSetupDraft((draft) => ({
+        ...draft,
+        tripName: payload.googleSourceSwitch.tripName,
+        googleLink: payload.googleSourceSwitch.googleLink
+      }));
+      setMapSwitchDraft({ name: "", googleLink: "" });
+      setMapSwitchState("done");
+      setMapSwitchMessage(
+        `מפת הטיול הפעילה הוחלפה ל-${payload.googleSourceSwitch.tripName}. מקור Google נשמר; ייבוא מלא של נקודות פרטיות דורש OAuth.`
+      );
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        {
+          id: `local-map-source-${Date.now()}`,
+          author: "קודי",
+          text: `עדכנתי את מקור מפת הטיול ל-${payload.googleSourceSwitch.tripName}. עכשיו אשתמש בשם ובקישור הזה כהקשר הטיול הפעיל. כדי למשוך אוטומטית את כל נקודות המפה הפרטית מגוגל נצטרך לחבר OAuth/ייבוא נקודות בשלב הבא.`,
+          source: "agent",
+          createdAt: new Date().toISOString()
+        }
+      ]);
+      setSecondaryMenuOpen(false);
+    } catch {
+      setMapSwitchState("error");
+      setMapSwitchMessage("לא הצלחתי להחליף את מקור המפה. ודא שאתה מנהל ושיש קישור Google Maps תקין.");
+    }
   }
 
   function enablePersonalGps() {
@@ -3949,7 +4014,7 @@ export function App() {
         </section>
         <section className="menu-block trip-map-source-menu" aria-label="מפות הטיול שלי">
           <strong>מפות הטיול שלי</strong>
-          <p>כאן מחליפים מקור טיול: צפון יוון, אוסטריה או כל מפה אחרת שיצרת ב-Google Maps.</p>
+          <p>מנהל הטיול יכול להחליף את מקור המפה הפעיל. משתתפים רגילים לא משנים את נקודות הטיול.</p>
           <div className="trip-map-source-current">
             <span>פעיל עכשיו</span>
             <strong>{setupDraft.tripName || "צפון יוון"}</strong>
@@ -3968,10 +4033,16 @@ export function App() {
             placeholder="https://maps.app.goo.gl/..."
             value={mapSwitchDraft.googleLink}
           />
-          <button onClick={requestTripMapSwitch} type="button">
-            בקש מקודי להחליף מפה
+          <button
+            disabled={mapSwitchState === "working" || !(activeMember.role === "owner" || activeMember.role === "admin")}
+            onClick={requestTripMapSwitch}
+            type="button"
+          >
+            {mapSwitchState === "working" ? "מחליף מקור..." : "החלף מפת טיול"}
           </button>
-          <small>בשלב הנוכחי קודי מכין את החלפת המקור. סנכרון מלא מכל המפות בחשבון Google דורש חיבור Google OAuth.</small>
+          {mapSwitchMessage ? <small>{mapSwitchMessage}</small> : null}
+          {activeMember.role === "owner" || activeMember.role === "admin" ? null : <small>רק מנהל טיול יכול להחליף מפה לכל הקבוצה.</small>}
+          <small>הקישור נשמר כמקור הפעיל. ייבוא אוטומטי של נקודות ממפות פרטיות דורש חיבור Google OAuth.</small>
         </section>
         <section className="menu-block location-menu">
           <strong>מיקום בטלפון</strong>
