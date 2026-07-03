@@ -239,7 +239,7 @@ if (
   throw "OpenAI speech bridge must use the OpenAI-style default voice path, configurable model/voice/speed, and the faster Kodi default speech pace."
 }
 
-$serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
+$serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw -Encoding UTF8
 if (
   -not $serverSource.Contains("shouldUseHereAndNowContext") -or
   -not $serverSource.Contains("getRequestCurrentLocation") -or
@@ -303,7 +303,7 @@ if ($openAiAgentSource.Contains("dangerouslyAllowBrowser")) {
   throw "OpenAI agent bridge must never allow browser-side OpenAI credentials."
 }
 
-$webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
+$webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encoding UTF8
 if (
   -not $webAppSource.Contains("SpeechRecognition") -or
   -not $webAppSource.Contains("startVoiceInput") -or
@@ -358,7 +358,7 @@ if (
   throw "Web hamburger must support simple invite join, member removal/leave, and trip map source switching."
 }
 
-$apiServerSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
+$apiServerSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw -Encoding UTF8
 if (
   -not $apiServerSource.Contains("app.post(`"/api/trips/demo/members`"") -or
   -not $apiServerSource.Contains("app.delete(`"/api/trips/demo/members/:memberId`"") -or
@@ -366,6 +366,18 @@ if (
   -not $apiServerSource.Contains("removeDemoTripMemberAsync")
 ) {
   throw "API must expose server-backed trip member join and leave/remove actions."
+}
+
+if (
+  -not $apiServerSource.Contains("buildKodiMemberWelcomeMessage") -or
+  -not $apiServerSource.Contains("welcomeMessage") -or
+  -not $apiServerSource.Contains("appendDemoTripMessageAsync") -or
+  -not $apiServerSource.Contains("source: `"agent`"") -or
+  -not $apiServerSource.Contains("ברוך הבא") -or
+  -not $webAppSource.Contains("welcomeMessage?: ChatMessage") -or
+  -not $webAppSource.Contains("mergeChatMessages(currentMessages, [welcomeMessage])")
+) {
+  throw "New trip members must receive a server-backed Kodi welcome message in the group chat."
 }
 
 if (
@@ -596,7 +608,7 @@ if (-not $demoTripSource.Contains("locationSharing")) {
   throw "Web demo trip is missing location sharing consent state."
 }
 
-$appSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
+$appSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encoding UTF8
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
@@ -1046,7 +1058,7 @@ if (-not $domainTypesSource.Contains("TripEvent") -or -not $domainTypesSource.Co
   throw "Domain model is missing the group event log model."
 }
 
-$serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
+$serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw -Encoding UTF8
 if (-not $serverSource.Contains("/api/agent/message")) {
   throw "API server is missing the Kodi agent endpoint."
 }

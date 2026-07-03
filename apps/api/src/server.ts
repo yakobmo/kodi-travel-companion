@@ -88,6 +88,12 @@ function canManageTripMapSource(member: Awaited<ReturnType<typeof loadDemoTripMe
   return member?.member.role === "owner" || member?.member.role === "admin" || member?.member.canManagePlaces === true;
 }
 
+async function buildKodiMemberWelcomeMessage(memberName: string) {
+  const setupState = await buildDemoTripSetupStateAsync();
+  const tripName = setupState.setupSummary?.tripName?.trim() || "הטיול";
+  return `ברוך הבא ${memberName} לקבוצת הטיול ל${tripName} 🙂 שמחים שאתה איתנו. אני קודי, סוכן הטיול של הקבוצה, כאן כדי לעזור במסלול, במפה, בנקודות עניין, בניווט ובהמלצות בדרך.`;
+}
+
 async function buildAgentTripStateSnapshot() {
   const now = Date.now();
   if (agentTripStateCache && agentTripStateCacheMs > 0 && now - agentTripStateCache.loadedAt <= agentTripStateCacheMs) {
@@ -981,9 +987,17 @@ app.post("/api/trips/demo/members", async (req, res) => {
     summary: `${member.member.displayName} joined the trip group.`
   });
 
+  const welcomeMessage = await appendDemoTripMessageAsync({
+    author: "קודי",
+    text: await buildKodiMemberWelcomeMessage(member.member.displayName),
+    memberId: member.member.id,
+    source: "agent"
+  });
+
   res.json({
     tripGroupId: "group_family_greece_demo",
     member,
+    welcomeMessage,
     members: await loadDemoTripMembersAsync()
   });
 });

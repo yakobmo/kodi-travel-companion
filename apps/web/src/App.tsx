@@ -3233,6 +3233,7 @@ export function App() {
     const safeAge = Number.isInteger(numericAge) && numericAge >= 0 && numericAge <= 120 ? numericAge : undefined;
 
     let joinedMember = nextMember;
+    let welcomeMessage: ChatMessage | null = null;
     try {
       const response = await fetch(`${apiBaseUrl}/api/trips/demo/members`, {
         method: "POST",
@@ -3253,27 +3254,29 @@ export function App() {
       const payload = (await response.json()) as {
         member: TripMemberLocationResponse["members"][number];
         members: TripMemberLocationResponse["members"];
+        welcomeMessage?: ChatMessage;
       };
       joinedMember = mapMemberLocations([payload.member])[0] ?? nextMember;
+      welcomeMessage = payload.welcomeMessage ?? null;
       setMembers(normalizeTripMembers(mapMemberLocations(payload.members), setupDraft.memberName));
     } catch {
       setMembers((currentMembers) => [...currentMembers, nextMember]);
+      welcomeMessage = {
+        id: `local-join-${Date.now()}`,
+        author: "קודי",
+        text: `ברוך הבא ${name} לקבוצת הטיול 🙂 אני קודי, סוכן הטיול של הקבוצה, כאן כדי לעזור במסלול, במפה ובהמלצות בדרך.`,
+        source: "agent",
+        createdAt: new Date().toISOString()
+      };
       setMemberActionState("error");
     }
 
     setActiveMemberId(joinedMember.id);
     setShowJoinFlow(false);
     setShowActivation(false);
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      {
-        id: `local-join-${Date.now()}`,
-        author: "קודי",
-        text: `${name} הצטרף/ה לקבוצת הטיול. מיקום אישי במפה יוצג רק אחרי אישור מיקום מהמכשיר שלו/שלה.`,
-        source: "system",
-        createdAt: new Date().toISOString()
-      }
-    ]);
+    if (welcomeMessage) {
+      setMessages((currentMessages) => mergeChatMessages(currentMessages, [welcomeMessage]));
+    }
     setMemberActionState("done");
   }
 

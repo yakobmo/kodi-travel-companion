@@ -145,7 +145,8 @@ This should feel similar to joining a WhatsApp group:
 6. The participant sees a join screen, not the manager setup flow.
 7. The participant enters a name and optionally age or age group.
 8. The participant joins the shared Kodi conversation.
-9. Location sharing is requested separately and only on that participant's device.
+9. Kodi posts a short welcome message in the group chat, addressing the participant by name and explaining that Kodi is the group's travel agent.
+10. Location sharing is requested separately and only on that participant's device.
 
 WhatsApp is the UX model and a sharing channel, not the product source of truth. Kodi's app remains the place that owns the trip group, map state, permissions, agent context, and operational actions.
 
