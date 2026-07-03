@@ -40,6 +40,7 @@ export type TripEventType =
   | "route_progressed"
   | "member_joined"
   | "member_left"
+  | "notification_enabled"
   | "setup_updated"
   | "system";
 

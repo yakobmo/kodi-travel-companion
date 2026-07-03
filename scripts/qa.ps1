@@ -141,6 +141,19 @@ if (
   throw "Chat push notifications must be documented across product UX, Web Push architecture, Supabase tables, deployment, and architecture links before implementation."
 }
 
+$pushSchemaSource = Get-Content (Join-Path $root "supabase\schema.sql") -Raw -Encoding UTF8
+if (
+  -not $pushSchemaSource.Contains("create table if not exists public.push_subscriptions") -or
+  -not $pushSchemaSource.Contains("create table if not exists public.notification_preferences") -or
+  -not $pushSchemaSource.Contains("create table if not exists public.notification_deliveries") -or
+  -not $pushSchemaSource.Contains("alter table public.push_subscriptions enable row level security") -or
+  -not $pushSchemaSource.Contains("'notification_enabled'") -or
+  -not $pushSchemaSource.Contains("push_subscriptions_member_idx") -or
+  -not $pushSchemaSource.Contains("notification_deliveries_trip_created_idx")
+) {
+  throw "Supabase schema must include the planned push notification subscription, preference, and delivery tables with RLS."
+}
+
 $webIndexSource = Get-Content (Join-Path $root "apps\web\index.html") -Raw
 $webManifestSource = Get-Content (Join-Path $root "apps\web\public\manifest.webmanifest") -Raw
 $webMainSource = Get-Content (Join-Path $root "apps\web\src\main.tsx") -Raw
@@ -159,6 +172,9 @@ if (
   -not $webMainSource.Contains("import.meta.env.PROD") -or
   -not $webServiceWorkerSource.Contains("CACHE_NAME") -or
   -not $webServiceWorkerSource.Contains("fetch") -or
+  -not $webServiceWorkerSource.Contains("push") -or
+  -not $webServiceWorkerSource.Contains("showNotification") -or
+  -not $webServiceWorkerSource.Contains("notificationclick") -or
   -not $webServiceWorkerSource.Contains('request.mode === "navigate"') -or
   -not $webServiceWorkerSource.Contains("text/html") -or
   $webServiceWorkerSource.Contains('const APP_SHELL = ["/"')
@@ -404,6 +420,18 @@ if (
   throw "Web hamburger must support simple invite join, member removal/leave, and trip map source switching."
 }
 
+if (
+  -not $webAppSource.Contains("/api/trips/demo/notifications/config") -or
+  -not $webAppSource.Contains("/api/trips/demo/notifications/subscriptions") -or
+  -not $webAppSource.Contains("enableMessageNotifications") -or
+  -not $webAppSource.Contains("Notification.requestPermission") -or
+  -not $webAppSource.Contains("registration.pushManager.subscribe") -or
+  -not $webAppSource.Contains("notifications-menu") -or
+  -not $webAppSource.Contains("התראות הודעות")
+) {
+  throw "Web app must expose an opt-in message notification control backed by browser Push subscription registration."
+}
+
 $apiServerSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw -Encoding UTF8
 if (
   -not $apiServerSource.Contains("app.post(`"/api/trips/demo/members`"") -or
@@ -412,6 +440,18 @@ if (
   -not $apiServerSource.Contains("removeDemoTripMemberAsync")
 ) {
   throw "API must expose server-backed trip member join and leave/remove actions."
+}
+
+if (
+  -not $apiServerSource.Contains("app.get(`"/api/trips/demo/notifications/config`"") -or
+  -not $apiServerSource.Contains("app.post(`"/api/trips/demo/notifications/subscriptions`"") -or
+  -not $apiServerSource.Contains("VAPID_PUBLIC_KEY") -or
+  -not $apiServerSource.Contains("web_push_not_configured") -or
+  -not $apiServerSource.Contains('eventType: "notification_enabled"') -or
+  -not $apiServerSource.Contains("isPushSubscriptionPayload") -or
+  -not $apiServerSource.Contains("demoPushSubscriptions")
+) {
+  throw "API must expose guarded Web Push readiness and subscription registration endpoints."
 }
 
 if (

@@ -61,12 +61,19 @@ begin
     'destination_set',
     'route_created',
     'route_progressed',
+    'member_joined',
+    'member_left',
+    'notification_enabled',
     'setup_updated',
     'system'
   );
 exception
   when duplicate_object then null;
 end $$;
+
+alter type public.trip_event_type add value if not exists 'member_joined';
+alter type public.trip_event_type add value if not exists 'member_left';
+alter type public.trip_event_type add value if not exists 'notification_enabled';
 
 create table if not exists public.trip_groups (
   id uuid primary key default gen_random_uuid(),
@@ -196,6 +203,42 @@ create table if not exists public.group_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
+  member_id uuid not null references public.trip_members(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  revoked_at timestamptz
+);
+
+create table if not exists public.notification_preferences (
+  trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
+  member_id uuid not null references public.trip_members(id) on delete cascade,
+  chat_messages_enabled boolean not null default false,
+  kodi_mentions_enabled boolean not null default true,
+  quiet_hours_start time,
+  quiet_hours_end time,
+  updated_at timestamptz not null default now(),
+  primary key (trip_group_id, member_id)
+);
+
+create table if not exists public.notification_deliveries (
+  id uuid primary key default gen_random_uuid(),
+  trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
+  message_id uuid references public.group_messages(id) on delete cascade,
+  recipient_member_id uuid not null references public.trip_members(id) on delete cascade,
+  subscription_id uuid references public.push_subscriptions(id) on delete set null,
+  status text not null check (status in ('pending', 'sent', 'failed', 'revoked', 'skipped')),
+  provider_error text,
+  created_at timestamptz not null default now(),
+  sent_at timestamptz
+);
+
 create table if not exists public.demo_storage_states (
   storage_key text primary key,
   state jsonb not null,
@@ -213,6 +256,8 @@ create index if not exists live_locations_trip_group_id_idx on public.live_locat
 create index if not exists group_routes_trip_group_id_idx on public.group_routes(trip_group_id);
 create index if not exists group_route_stops_route_order_idx on public.group_route_stops(route_id, stop_order);
 create index if not exists group_events_trip_created_idx on public.group_events(trip_group_id, created_at desc);
+create index if not exists push_subscriptions_member_idx on public.push_subscriptions(member_id) where revoked_at is null;
+create index if not exists notification_deliveries_trip_created_idx on public.notification_deliveries(trip_group_id, created_at desc);
 create index if not exists demo_storage_states_updated_at_idx on public.demo_storage_states(updated_at desc);
 
 do $$
@@ -285,6 +330,9 @@ alter table public.group_destinations enable row level security;
 alter table public.group_routes enable row level security;
 alter table public.group_route_stops enable row level security;
 alter table public.group_events enable row level security;
+alter table public.push_subscriptions enable row level security;
+alter table public.notification_preferences enable row level security;
+alter table public.notification_deliveries enable row level security;
 alter table public.demo_storage_states enable row level security;
 
 grant usage on schema public to service_role;

@@ -1,4 +1,5 @@
 import {
+  Bell,
   CheckCircle2,
   Download,
   ExternalLink,
@@ -103,6 +104,14 @@ interface NavigationLinksResponse {
   };
   googleMaps: string;
   googleMapsWalking: string;
+}
+
+interface NotificationConfigResponse {
+  tripGroupId: string;
+  webPushConfigured: boolean;
+  publicKey: string;
+  subscriptionCount: number;
+  status: "ready" | "not_configured";
 }
 
 interface AgentActionAuthorizationResponse {
@@ -214,6 +223,13 @@ function getLocalSetupCompleted() {
   }
 
   return window.localStorage.getItem(LOCAL_SETUP_COMPLETE_KEY) === "true";
+}
+
+function urlBase64ToUint8Array(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = `${value}${padding}`.replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map((character) => character.charCodeAt(0)));
 }
 
 function rememberLocalSetupCompleted() {
@@ -1182,6 +1198,11 @@ export function App() {
   const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installState, setInstallState] = useState<"idle" | "ready" | "installed" | "unavailable">("idle");
+  const [notificationConfig, setNotificationConfig] = useState<NotificationConfigResponse | null>(null);
+  const [notificationState, setNotificationState] = useState<
+    "idle" | "checking" | "unsupported" | "not_configured" | "permission_needed" | "requesting" | "active" | "blocked" | "error"
+  >("idle");
+  const [notificationMessage, setNotificationMessage] = useState("");
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState(buildTimeGoogleMapsApiKey);
   const [mapsConfigLoaded, setMapsConfigLoaded] = useState(Boolean(buildTimeGoogleMapsApiKey));
   const googleMapElementRef = useRef<HTMLDivElement | null>(null);
@@ -1208,6 +1229,62 @@ export function App() {
   useEffect(() => {
     voiceConversationActiveRef.current = voiceConversationActive;
   }, [voiceConversationActive]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNotificationConfig() {
+      if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+        if (!cancelled) {
+          setNotificationState("unsupported");
+          setNotificationMessage("המכשיר או הדפדפן לא תומכים בהתראות Web Push.");
+        }
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        if (!cancelled) {
+          setNotificationState("blocked");
+          setNotificationMessage("ההתראות חסומות בהגדרות הדפדפן במכשיר הזה.");
+        }
+        return;
+      }
+
+      setNotificationState("checking");
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/trips/demo/notifications/config`);
+        if (!response.ok) {
+          throw new Error(`Notification config failed with ${response.status}`);
+        }
+
+        const config = (await response.json()) as NotificationConfigResponse;
+        if (cancelled) {
+          return;
+        }
+
+        setNotificationConfig(config);
+        if (!config.webPushConfigured) {
+          setNotificationState("not_configured");
+          setNotificationMessage("השרת עדיין לא מוגדר לשליחת התראות רקע. צריך VAPID ב-Render לפני הפעלה מלאה.");
+          return;
+        }
+
+        setNotificationState("permission_needed");
+        setNotificationMessage("אפשר להפעיל התראות הודעות למכשיר הזה.");
+      } catch {
+        if (!cancelled) {
+          setNotificationState("error");
+          setNotificationMessage("לא הצלחתי לבדוק כרגע את מצב ההתראות.");
+        }
+      }
+    }
+
+    void loadNotificationConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl]);
 
   useEffect(() => {
     isKodiThinkingRef.current = isKodiThinking;
@@ -3212,6 +3289,68 @@ export function App() {
     setInstallState(choice.outcome === "accepted" ? "installed" : "unavailable");
   }
 
+  async function enableMessageNotifications() {
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setNotificationState("unsupported");
+      setNotificationMessage("המכשיר או הדפדפן לא תומכים בהתראות Web Push.");
+      return;
+    }
+
+    if (!notificationConfig?.webPushConfigured || !notificationConfig.publicKey) {
+      setNotificationState("not_configured");
+      setNotificationMessage("השרת עדיין לא מוגדר לשליחת התראות רקע. צריך VAPID ב-Render לפני הפעלה מלאה.");
+      return;
+    }
+
+    setNotificationState("requesting");
+    setNotificationMessage("מבקש הרשאת התראות במכשיר הזה...");
+
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "denied") {
+        setNotificationState("blocked");
+        setNotificationMessage("ההתראות נחסמו במכשיר הזה. אפשר לשנות זאת בהגדרות הדפדפן.");
+        return;
+      }
+
+      if (permission !== "granted") {
+        setNotificationState("permission_needed");
+        setNotificationMessage("לא הופעלה הרשאת התראות. אפשר לנסות שוב כשתרצה.");
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const existingSubscription = await registration.pushManager.getSubscription();
+      const subscription =
+        existingSubscription ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(notificationConfig.publicKey)
+        }));
+
+      const response = await fetch(`${apiBaseUrl}/api/trips/demo/notifications/subscriptions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          memberId: activeMember.id,
+          subscription: subscription.toJSON()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Push subscription failed with ${response.status}`);
+      }
+
+      setNotificationState("active");
+      setNotificationMessage("התראות הודעות פעילות במכשיר הזה.");
+    } catch {
+      setNotificationState("error");
+      setNotificationMessage("לא הצלחתי להפעיל התראות במכשיר הזה כרגע.");
+    }
+  }
+
   async function joinTripFromInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -3987,6 +4126,34 @@ export function App() {
           {inviteShareState === "error" ? <small>לא הצלחתי לשתף. אפשר להעתיק קישור.</small> : null}
           {inviteCopyState === "copied" ? <small>הקישור הועתק</small> : null}
           {inviteCopyState === "error" ? <small>לא הצלחתי להעתיק. אפשר לסמן ולהעתיק ידנית.</small> : null}
+        </section>
+        <section className="menu-block notifications-menu" aria-label="התראות הודעות">
+          <strong>התראות הודעות</strong>
+          <p>{notificationMessage || "קבלו התראה לנייד כשיש הודעה חדשה בקבוצת הטיול."}</p>
+          <button
+            disabled={
+              notificationState === "requesting" ||
+              notificationState === "checking" ||
+              notificationState === "active" ||
+              notificationState === "unsupported" ||
+              notificationState === "blocked" ||
+              notificationState === "not_configured"
+            }
+            onClick={enableMessageNotifications}
+            type="button"
+          >
+            <Bell size={16} aria-hidden="true" />
+            {notificationState === "active"
+              ? "התראות פעילות"
+              : notificationState === "requesting"
+                ? "מפעיל..."
+                : "הפעל התראות"}
+          </button>
+          <small>
+            {notificationState === "active"
+              ? "הודעות חדשות יוכלו להגיע גם כשהאפליקציה ברקע, בהתאם לתמיכת המכשיר."
+              : "ההתראות הן בהרשאה אישית לכל מכשיר. לא נשלח תוכן מיקום רגיש למסך הנעילה."}
+          </small>
         </section>
         <section className="menu-block members-menu" aria-label="ניהול חברי הקבוצה">
           <strong>חברי הקבוצה</strong>

@@ -1386,7 +1386,8 @@ input {
 
 .install-menu,
 .location-menu,
-.invite-menu {
+.invite-menu,
+.notifications-menu {
   border-color: #c7edf5;
 }
 

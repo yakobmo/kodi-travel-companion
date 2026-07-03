@@ -57,3 +57,53 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
   );
 });
+
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "קבוצת הטיול",
+    body: "יש הודעה חדשה בקבוצה.",
+    url: "/"
+  };
+
+  try {
+    if (event.data) {
+      payload = { ...payload, ...event.data.json() };
+    }
+  } catch {
+    payload = {
+      title: "קבוצת הטיול",
+      body: event.data?.text() || "יש הודעה חדשה בקבוצה.",
+      url: "/"
+    };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icons/kodi-192.png",
+      badge: "/icons/kodi-192.png",
+      data: {
+        url: payload.url || "/"
+      },
+      tag: "kodi-trip-message"
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || "/", self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existingClient = clients.find((client) => client.url.startsWith(self.location.origin));
+      if (existingClient) {
+        existingClient.focus();
+        existingClient.navigate(targetUrl);
+        return;
+      }
+
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});

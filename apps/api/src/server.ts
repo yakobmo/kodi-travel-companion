@@ -79,6 +79,21 @@ let agentTripStateCache:
     }
   | undefined;
 
+type StoredPushSubscription = {
+  tripGroupId: string;
+  memberId: string;
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  userAgent?: string;
+  createdAt: string;
+  lastSeenAt: string;
+};
+
+const demoPushSubscriptions = new Map<string, StoredPushSubscription>();
+
 function isGoogleMapsViewingLink(value: string) {
   const normalized = value.trim().toLowerCase();
   return normalized.includes("maps.app.goo.gl") || normalized.includes("google.com/maps");
@@ -86,6 +101,26 @@ function isGoogleMapsViewingLink(value: string) {
 
 function canManageTripMapSource(member: Awaited<ReturnType<typeof loadDemoTripMembersAsync>>[number] | undefined) {
   return member?.member.role === "owner" || member?.member.role === "admin" || member?.member.canManagePlaces === true;
+}
+
+function getWebPushPublicKey() {
+  return process.env.VAPID_PUBLIC_KEY?.trim() || "";
+}
+
+function isPushSubscriptionPayload(value: unknown): value is { endpoint: string; keys: { p256dh: string; auth: string } } {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } };
+  return (
+    typeof candidate.endpoint === "string" &&
+    candidate.endpoint.startsWith("https://") &&
+    typeof candidate.keys?.p256dh === "string" &&
+    candidate.keys.p256dh.length > 0 &&
+    typeof candidate.keys?.auth === "string" &&
+    candidate.keys.auth.length > 0
+  );
 }
 
 async function buildKodiMemberWelcomeMessage(memberName: string) {
@@ -980,7 +1015,7 @@ app.post("/api/trips/demo/members", async (req, res) => {
   });
 
   await safeRecordTripEvent({
-    eventType: "member_joined",
+    eventType: "notification_enabled",
     actorMemberId: member.member.id,
     actorName: member.member.displayName,
     relatedEntityId: member.member.id,
@@ -1093,6 +1128,76 @@ app.get("/api/trips/demo/messages", async (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
     messages: await loadDemoTripMessagesAsync()
+  });
+});
+
+app.get("/api/trips/demo/notifications/config", (_req, res) => {
+  const publicKey = getWebPushPublicKey();
+  res.json({
+    tripGroupId: "group_family_greece_demo",
+    webPushConfigured: publicKey.length > 0,
+    publicKey,
+    subscriptionCount: demoPushSubscriptions.size,
+    status: publicKey.length > 0 ? "ready" : "not_configured"
+  });
+});
+
+app.post("/api/trips/demo/notifications/subscriptions", async (req, res) => {
+  const publicKey = getWebPushPublicKey();
+  const { memberId, subscription } = req.body ?? {};
+
+  if (publicKey.length === 0) {
+    res.status(409).json({
+      error: "web_push_not_configured",
+      message: "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are required before Kodi can register real push notifications."
+    });
+    return;
+  }
+
+  if (typeof memberId !== "string" || memberId.trim().length < 1) {
+    res.status(400).json({ error: "memberId is required" });
+    return;
+  }
+
+  const members = await loadDemoTripMembersAsync();
+  const member = members.find((candidate) => candidate.member.id === memberId);
+  if (!member) {
+    res.status(404).json({ error: "member_not_found" });
+    return;
+  }
+
+  if (!isPushSubscriptionPayload(subscription)) {
+    res.status(400).json({ error: "valid push subscription is required" });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  demoPushSubscriptions.set(subscription.endpoint, {
+    tripGroupId: "group_family_greece_demo",
+    memberId,
+    endpoint: subscription.endpoint,
+    keys: {
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth
+    },
+    userAgent: req.get("user-agent") ?? undefined,
+    createdAt: demoPushSubscriptions.get(subscription.endpoint)?.createdAt ?? now,
+    lastSeenAt: now
+  });
+
+  await safeRecordTripEvent({
+    eventType: "member_joined",
+    actorMemberId: member.member.id,
+    actorName: member.member.displayName,
+    relatedEntityId: member.member.id,
+    summary: `${member.member.displayName} enabled message notifications on this device.`
+  });
+
+  res.json({
+    tripGroupId: "group_family_greece_demo",
+    status: "subscribed",
+    memberId,
+    subscriptionCount: demoPushSubscriptions.size
   });
 });
 
