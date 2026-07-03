@@ -1863,7 +1863,7 @@ input {
   z-index: 3;
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px auto;
+  grid-template-columns: 44px minmax(0, 1fr) 44px auto;
   gap: 8px;
   padding: 14px;
   border-top: 1px solid #cfe6ef;
@@ -1871,13 +1871,13 @@ input {
   background: #ffffff;
 }
 
-.voice-conversation-toggle {
-  grid-column: 1 / -1;
+.composer .voice-conversation-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 42px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
   border: 1px solid #9bd9e8;
   border-radius: 8px;
   background: #e6f7fb;
@@ -1886,7 +1886,11 @@ input {
   cursor: pointer;
 }
 
-.voice-conversation-toggle[aria-pressed="true"] {
+.composer .voice-conversation-toggle span {
+  display: none;
+}
+
+.composer .voice-conversation-toggle[aria-pressed="true"] {
   background: #087f9d;
   color: #ffffff;
   box-shadow: 0 0 0 4px rgba(8, 127, 157, 0.16);
@@ -2175,7 +2179,7 @@ input {
   }
 
   .composer {
-    grid-template-columns: minmax(0, 1fr) 44px 54px;
+    grid-template-columns: 44px minmax(0, 1fr) 44px 54px;
     padding: 10px;
     padding-bottom: max(10px, env(safe-area-inset-bottom));
   }

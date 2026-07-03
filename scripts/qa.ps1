@@ -381,7 +381,9 @@ if (
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $webStylesSource.Contains(".composer .voice-button") -or
-  -not $webStylesSource.Contains("grid-template-columns: minmax(0, 1fr) 44px auto") -or
+  -not $webStylesSource.Contains("grid-template-columns: 44px minmax(0, 1fr) 44px auto") -or
+  -not $webStylesSource.Contains(".composer .voice-conversation-toggle") -or
+  $webStylesSource.Contains(".voice-conversation-toggle {`n  grid-column: 1 / -1;") -or
   -not $webStylesSource.Contains(".voice-recording-indicator") -or
   -not $webStylesSource.Contains(".recording-dot") -or
   -not $webStylesSource.Contains("touch-action: none") -or
