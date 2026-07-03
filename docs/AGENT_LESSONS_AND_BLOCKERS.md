@@ -421,3 +421,25 @@ Decision:
 QA/automation:
 
 - `scripts/qa.ps1` checks that the web join flow calls `/api/trips/demo/members`, that remove/leave actions exist, and that the API exposes member create/delete endpoints.
+
+### 17. Installed PWA Entry Must Not Depend On Local Browser State
+
+What happened:
+
+Opening Kodi from the home-screen icon could show a version without the group chat/composer. The installed app path behaved differently from the normal browser path.
+
+Why it happened:
+
+The app initially decided whether to show onboarding from local `localStorage`, while the real setup state already lived on the backend. A fresh installed/PWA context may not have the local flag even when the trip is already configured. The service worker also cached the root HTML shell, which made stale installed-app launches more likely after deploys.
+
+Decision:
+
+- Backend setup state is the source of truth for entering the core map/chat experience.
+- The installed app must show the chat/composer when backend setup is complete, even if local storage is empty.
+- The service worker must not cache `/` or HTML navigation responses as the app shell.
+- PWA updates should request a service-worker update on load and refresh once when the active worker changes.
+
+QA/automation:
+
+- `scripts/qa.ps1` now checks for service-worker update handling, navigation network-first behavior, and rejects caching `/` as the app shell.
+- Manual/local smoke should include a clean-storage mobile entry and verify `.composer input` is visible.

@@ -106,10 +106,16 @@ if (
   -not $webManifestSource.Contains('"short_name"') -or
   -not $webManifestSource.Contains('"display": "standalone"') -or
   -not $webManifestSource.Contains('"purpose": "any maskable"') -or
-  -not $webMainSource.Contains('navigator.serviceWorker.register("/sw.js")') -or
+  -not $webMainSource.Contains('navigator.serviceWorker') -or
+  -not $webMainSource.Contains('register("/sw.js")') -or
+  -not $webMainSource.Contains("registration.update()") -or
+  -not $webMainSource.Contains("controllerchange") -or
   -not $webMainSource.Contains("import.meta.env.PROD") -or
   -not $webServiceWorkerSource.Contains("CACHE_NAME") -or
-  -not $webServiceWorkerSource.Contains("fetch")
+  -not $webServiceWorkerSource.Contains("fetch") -or
+  -not $webServiceWorkerSource.Contains('request.mode === "navigate"') -or
+  -not $webServiceWorkerSource.Contains("text/html") -or
+  $webServiceWorkerSource.Contains('const APP_SHELL = ["/"')
 ) {
   throw "Web app must expose a production PWA install path with manifest, icons, and service worker."
 }

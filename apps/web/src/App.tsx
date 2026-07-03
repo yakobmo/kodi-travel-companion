@@ -1394,7 +1394,8 @@ export function App() {
               googleLink: savedSetup.googleLink
             }));
           }
-          if (data.setupCompleted && !initialJoinToken && getLocalSetupCompleted()) {
+          if (data.setupCompleted && !initialJoinToken) {
+            rememberLocalSetupCompleted();
             setShowActivation(false);
           }
         }
