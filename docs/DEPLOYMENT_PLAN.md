@@ -101,4 +101,16 @@ Message notifications deployment rule:
 - Store push subscriptions in Supabase relational tables, not local browser state only.
 - Treat notification permission as participant opt-in per device.
 
+Generate production VAPID keys locally with:
+
+`pnpm notifications:vapid`
+
+Then add the printed values to the `kodi-travel-companion` Render service environment:
+
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT`
+
+After Render rebuilds, `/api/trips/demo/notifications/config` should return `ready` instead of `not_configured`.
+
 No secret should be committed to Git.

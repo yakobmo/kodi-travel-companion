@@ -468,6 +468,18 @@ if (
   throw "API must send Web Push notifications for new chat messages, exclude the sender, and record delivery outcomes."
 }
 
+$vapidScriptSource = Get-Content (Join-Path $root "scripts\generate-vapid-keys.mjs") -Raw -Encoding UTF8
+$deploymentPlanSource = Get-Content (Join-Path $root "docs\DEPLOYMENT_PLAN.md") -Raw -Encoding UTF8
+if (
+  -not $packageSource.Contains('"notifications:vapid"') -or
+  -not $vapidScriptSource.Contains("generateVAPIDKeys") -or
+  -not $vapidScriptSource.Contains("VAPID_PRIVATE_KEY") -or
+  -not $deploymentPlanSource.Contains("pnpm notifications:vapid") -or
+  -not $deploymentPlanSource.Contains("No secret should be committed to Git")
+) {
+  throw "Notification VAPID setup must have a repeatable generation script and Render deployment documentation."
+}
+
 $apiNotificationsSource = Get-Content (Join-Path $root "apps\api\src\data\localNotifications.ts") -Raw -Encoding UTF8
 if (
   -not $apiNotificationsSource.Contains("push_subscriptions") -or

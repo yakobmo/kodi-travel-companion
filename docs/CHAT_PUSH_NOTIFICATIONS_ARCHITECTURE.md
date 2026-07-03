@@ -214,6 +214,8 @@ Implementation note:
 - Each send attempt should create a `notification_deliveries` audit row with `sent`, `failed`, or `revoked`.
 - Expired subscriptions returned by the push provider as 404/410 should be revoked automatically.
 - A server is considered push-ready only when both `VAPID_PUBLIC_KEY` and backend-only `VAPID_PRIVATE_KEY` are configured.
+- `pnpm notifications:vapid` generates a fresh Render variable block for `VAPID_PUBLIC_KEY`, backend-only `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT`.
+- Generated VAPID values are secrets and must remain outside Git.
 
 ### V3 - Messaging-App Polish
 

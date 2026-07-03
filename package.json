@@ -17,6 +17,7 @@
     "smoke:local": "node scripts/smoke-local.mjs",
     "smoke:google-places-live": "node scripts/smoke-google-places-live.mjs",
     "smoke:google-routes-live": "node scripts/smoke-google-routes-live.mjs",
+    "notifications:vapid": "node scripts/generate-vapid-keys.mjs",
     "db:apply-schema": "node scripts/apply-supabase-schema.mjs",
     "db:apply-grants": "node scripts/apply-supabase-grants.mjs"
   },
