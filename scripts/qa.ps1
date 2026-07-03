@@ -503,8 +503,10 @@ if (
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $webStylesSource.Contains(".composer .voice-button") -or
-  -not $webStylesSource.Contains("grid-template-columns: 44px minmax(0, 1fr) 44px auto") -or
+  -not $webStylesSource.Contains("grid-template-columns: minmax(88px, auto) minmax(0, 1fr) 44px auto") -or
   -not $webStylesSource.Contains(".composer .voice-conversation-toggle") -or
+  -not $webStylesSource.Contains("white-space: nowrap") -or
+  -not $webStylesSource.Contains(".composer .voice-conversation-toggle span") -or
   $webStylesSource.Contains(".voice-conversation-toggle {`n  grid-column: 1 / -1;") -or
   -not $webStylesSource.Contains(".voice-recording-indicator") -or
   -not $webStylesSource.Contains(".recording-dot") -or
@@ -1065,14 +1067,15 @@ if (
 if (
   -not $appSource.Contains("DEFAULT_NEARBY_MAP_RADIUS_KM = 40") -or
   -not $appSource.Contains("DEFAULT_VISIBLE_PLACE_LIMIT = 40") -or
-  -not $appSource.Contains("getApproximateRadiusCorners") -or
-  -not $appSource.Contains("visiblePlaces.filter((place) => typeof place.lat === `"number`"") -or
+  -not $appSource.Contains("const mapPlaces = useMemo(() =>") -or
+  -not $appSource.Contains("filter((place) => typeof place.lat === `"number`" && typeof place.lng === `"number`")") -or
+  -not $appSource.Contains("[places]") -or
   -not $appSource.Contains("openCurrentMapInGoogleMaps") -or
   -not $appSource.Contains("open-google-maps-button") -or
   -not $styleSource.Contains("grid-template-rows: clamp(170px, 32dvh, 260px) minmax(0, 1fr)") -or
   -not $styleSource.Contains(".open-google-maps-button")
 ) {
-  throw "Mobile core UX must prioritize chat, default the map to a 40 km local context, and expose a direct Google Maps handoff."
+  throw "Mobile core UX must prioritize chat, keep all coordinate-backed trip points on the map, and expose a direct Google Maps handoff."
 }
 
 if ($styleSource.Contains(".map-placeholder span")) {

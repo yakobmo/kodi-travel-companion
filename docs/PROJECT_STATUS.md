@@ -38,6 +38,10 @@ Public smoke passed on 2026-07-02 after the hamburger map-link correction: Rende
 
 Route-management direction: each trip point can be removed from the visible route on the current device. Kodi should be allowed, with manager approval, to help manage the route itself: suggest removals, add places, and reorder points according to the actual trip flow. The durable group-level version of those actions still needs a server-backed route editing endpoint before it becomes the shared source of truth.
 
+Voice/chat UX correction: the bottom composer follows a messaging-app mental model. The microphone is for push-to-talk voice messages: press and hold to record, release to send. Continuous voice conversation is a separate, explicitly labeled `שיחה קולית` control and must not appear as an unexplained radio/wifi-style icon or replace text input.
+
+Map-points correction: the top Google map must show all coordinate-backed trip points from the active trip map. Nearby sorting and coarse filters belong to the hamburger trip list, not to the main map layer.
+
 ## Current Core
 
 Implemented locally:

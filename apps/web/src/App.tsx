@@ -1077,17 +1077,6 @@ function getPlaceCardSummary(place: TripPlace) {
   return summary.length > 120 ? `${summary.slice(0, 117).trim()}...` : summary;
 }
 
-function getApproximateRadiusCorners(center: { lat: number; lng: number }, radiusKm: number) {
-  const latDelta = radiusKm / 111;
-  const lngScale = Math.max(Math.cos((center.lat * Math.PI) / 180), 0.2);
-  const lngDelta = radiusKm / (111 * lngScale);
-
-  return {
-    southWest: { lat: center.lat - latDelta, lng: center.lng - lngDelta },
-    northEast: { lat: center.lat + latDelta, lng: center.lng + lngDelta }
-  };
-}
-
 function getInitialJoinToken() {
   if (typeof window === "undefined") {
     return "";
@@ -2050,10 +2039,14 @@ export function App() {
       .sort((first, second) => priority[first.type] - priority[second.type])
       .slice(0, DEFAULT_VISIBLE_PLACE_LIMIT);
   }, [mapAnchorLocation, places]);
-  const mapPlaces = useMemo(
-    () => visiblePlaces.filter((place) => typeof place.lat === "number" && typeof place.lng === "number"),
-    [visiblePlaces]
-  );
+  const mapPlaces = useMemo(() => {
+    const getSourceOrder = (place: TripPlace) =>
+      typeof place.sourceIndex === "number" ? place.sourceIndex : Number.MAX_SAFE_INTEGER;
+
+    return [...places]
+      .filter((place) => typeof place.lat === "number" && typeof place.lng === "number")
+      .sort((first, second) => getSourceOrder(first) - getSourceOrder(second) || first.name.localeCompare(second.name, "he"));
+  }, [places]);
   const menuPlaces = useMemo(() => {
     const getSourceOrder = (place: TripPlace) =>
       typeof place.sourceIndex === "number" ? place.sourceIndex : Number.MAX_SAFE_INTEGER;
@@ -2216,15 +2209,7 @@ export function App() {
           );
         });
         if (hasBounds && (!existingMap || googleMapFitSignatureRef.current !== mapFitSignature)) {
-          if (mapAnchorLocation) {
-            const radiusCorners = getApproximateRadiusCorners(center, DEFAULT_NEARBY_MAP_RADIUS_KM);
-            const radiusBounds = new google.maps.LatLngBounds();
-            radiusBounds.extend(radiusCorners.southWest);
-            radiusBounds.extend(radiusCorners.northEast);
-            map.fitBounds(radiusBounds, 28);
-          } else {
-            map.fitBounds(bounds, 44);
-          }
+          map.fitBounds(bounds, 44);
           googleMapFitSignatureRef.current = mapFitSignature;
         }
         googleMapMarkersRef.current = nextMarkers;
@@ -3958,12 +3943,12 @@ export function App() {
             <p>{mapProviderStatus.detail}</p>
           </div>
           <div className="trip-map-layer" aria-label="שכבות מפת הטיול">
-            {visiblePlaces.map((place, index) => (
+            {mapPlaces.map((place, index) => (
               <button
                 className={`place-marker ${place.id === selectedPlace?.id ? "selected-place-marker" : ""}`}
                 key={place.id}
                 onClick={() => setSelectedPlaceId(place.id)}
-                style={getMapPosition(index, visiblePlaces.length)}
+                style={getMapPosition(index, mapPlaces.length)}
                 type="button"
               >
                 <MapPin size={14} aria-hidden="true" />
@@ -4447,8 +4432,7 @@ export function App() {
             }
             type="button"
           >
-            <Radio size={17} aria-hidden="true" />
-            <span>{voiceConversationActive ? "עצור שיחה" : "שיחה קולית"}</span>
+            <span>{voiceConversationActive ? "עצור קולית" : "שיחה קולית"}</span>
           </button>
           {speechState === "listening" ? (
             <div className="voice-recording-indicator" aria-live="assertive" role="status">
@@ -4483,6 +4467,12 @@ export function App() {
               event.preventDefault();
               event.currentTarget.setPointerCapture?.(event.pointerId);
               startVoiceInput();
+            }}
+            onPointerLeave={(event) => {
+              if (speechState === "listening") {
+                event.preventDefault();
+                finishVoiceInput();
+              }
             }}
             onPointerUp={(event) => {
               event.preventDefault();

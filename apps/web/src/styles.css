@@ -1865,7 +1865,7 @@ input {
   z-index: 3;
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 44px auto;
+  grid-template-columns: minmax(88px, auto) minmax(0, 1fr) 44px auto;
   gap: 8px;
   padding: 14px;
   border-top: 1px solid #cfe6ef;
@@ -1877,19 +1877,21 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
+  min-width: 88px;
   min-height: 44px;
-  padding: 0;
+  padding: 0 10px;
   border: 1px solid #9bd9e8;
   border-radius: 8px;
   background: #e6f7fb;
   color: #07536b;
   font-weight: 900;
+  font-size: 12px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
 .composer .voice-conversation-toggle span {
-  display: none;
+  display: inline;
 }
 
 .composer .voice-conversation-toggle[aria-pressed="true"] {
