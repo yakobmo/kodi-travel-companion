@@ -1127,6 +1127,7 @@ export function App() {
   const [speechState, setSpeechState] = useState<"idle" | "listening" | "unsupported" | "error">("idle");
   const [isKodiThinking, setIsKodiThinking] = useState(false);
   const [speechOutputState, setSpeechOutputState] = useState<"idle" | "preparing" | "speaking" | "unsupported" | "error">("idle");
+  const [voiceConversationActive, setVoiceConversationActive] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [userShortcuts, setUserShortcuts] = useState<UserShortcut[]>([]);
   const [shortcutLabelDraft, setShortcutLabelDraft] = useState("");
@@ -1160,6 +1161,10 @@ export function App() {
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const voiceTranscriptRef = useRef("");
   const voiceShouldSendRef = useRef(false);
+  const voiceInputModeRef = useRef<"push" | "conversation">("push");
+  const voiceConversationActiveRef = useRef(false);
+  const isKodiThinkingRef = useRef(false);
+  const speechOutputStateRef = useRef<"idle" | "preparing" | "speaking" | "unsupported" | "error">("idle");
   const speechAudioRef = useRef<HTMLAudioElement | null>(null);
   const speechAudioUrlRef = useRef<string | null>(null);
   const speechAudioUrlIsCachedRef = useRef(false);
@@ -1168,6 +1173,18 @@ export function App() {
   const speechRequestTokenRef = useRef(0);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    voiceConversationActiveRef.current = voiceConversationActive;
+  }, [voiceConversationActive]);
+
+  useEffect(() => {
+    isKodiThinkingRef.current = isKodiThinking;
+  }, [isKodiThinking]);
+
+  useEffect(() => {
+    speechOutputStateRef.current = speechOutputState;
+  }, [speechOutputState]);
 
   useEffect(() => {
     return () => {
@@ -2618,7 +2635,24 @@ export function App() {
     }
   }
 
-  function startVoiceInput() {
+  function scheduleVoiceConversationListening(delayMs = 650) {
+    if (!voiceConversationActiveRef.current) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (
+        voiceConversationActiveRef.current &&
+        !speechRecognitionRef.current &&
+        !isKodiThinkingRef.current &&
+        speechOutputStateRef.current === "idle"
+      ) {
+        startVoiceInput("conversation");
+      }
+    }, delayMs);
+  }
+
+  function startVoiceInput(mode: "push" | "conversation" = "push") {
     if (typeof window === "undefined") {
       return;
     }
@@ -2630,8 +2664,9 @@ export function App() {
     }
 
     speechRecognitionRef.current?.abort();
+    voiceInputModeRef.current = mode;
     voiceTranscriptRef.current = "";
-    voiceShouldSendRef.current = false;
+    voiceShouldSendRef.current = mode === "conversation";
     const recognition = new SpeechRecognitionCtor();
     speechRecognitionRef.current = recognition;
     recognition.lang = "he-IL";
@@ -2641,19 +2676,29 @@ export function App() {
     recognition.onerror = () => {
       voiceShouldSendRef.current = false;
       setSpeechState("error");
+      if (voiceInputModeRef.current === "conversation") {
+        scheduleVoiceConversationListening(1200);
+      }
     };
     recognition.onend = () => {
       setSpeechState((currentState) => (currentState === "listening" ? "idle" : currentState));
       speechRecognitionRef.current = null;
 
       const spokenText = voiceTranscriptRef.current.trim();
+      const voiceMode = voiceInputModeRef.current;
       voiceTranscriptRef.current = "";
       if (voiceShouldSendRef.current && spokenText) {
         voiceShouldSendRef.current = false;
         playChatTone("voice-sent");
-        void submitChatText(spokenText);
+        void submitChatText(spokenText, {
+          forceKodi: voiceMode === "conversation",
+          speakReply: voiceMode === "conversation" || shouldSpeakKodiReply(spokenText)
+        });
       } else {
         voiceShouldSendRef.current = false;
+        if (voiceMode === "conversation") {
+          scheduleVoiceConversationListening();
+        }
       }
     };
     recognition.onresult = (event) => {
@@ -2690,6 +2735,29 @@ export function App() {
     speechRecognitionRef.current?.abort();
     speechRecognitionRef.current = null;
     setSpeechState("idle");
+  }
+
+  function startVoiceConversation() {
+    setVoiceConversationActive(true);
+    voiceConversationActiveRef.current = true;
+    stopKodiSpeech();
+    startVoiceInput("conversation");
+  }
+
+  function stopVoiceConversation() {
+    setVoiceConversationActive(false);
+    voiceConversationActiveRef.current = false;
+    cancelVoiceInput();
+    stopKodiSpeech();
+  }
+
+  function toggleVoiceConversation() {
+    if (voiceConversationActiveRef.current) {
+      stopVoiceConversation();
+      return;
+    }
+
+    startVoiceConversation();
   }
 
   function stopKodiSpeech() {
@@ -2792,6 +2860,7 @@ export function App() {
         speechAudioUrlIsCachedRef.current = false;
         setSpeechOutputState("idle");
         setSpeakingMessageId(null);
+        scheduleVoiceConversationListening();
       }
     };
     audio.onerror = () => {
@@ -2838,6 +2907,7 @@ export function App() {
     utterance.onend = () => {
       setSpeechOutputState("idle");
       setSpeakingMessageId(null);
+      scheduleVoiceConversationListening();
     };
     utterance.onerror = () => {
       setSpeechOutputState("error");
@@ -2918,6 +2988,7 @@ export function App() {
           speechAudioRef.current = null;
           setSpeechOutputState("idle");
           setSpeakingMessageId(null);
+          scheduleVoiceConversationListening();
         }
       };
       audio.onerror = () => {
@@ -2958,7 +3029,13 @@ export function App() {
     }
   }
 
-  async function submitChatText(rawText: string) {
+  async function submitChatText(
+    rawText: string,
+    options: {
+      forceKodi?: boolean;
+      speakReply?: boolean;
+    } = {}
+  ) {
     const text = rawText.trim();
     if (!text) {
       return;
@@ -2973,7 +3050,7 @@ export function App() {
       createdAt: new Date().toISOString()
     };
     const nextMessages = [...messages, localUserMessage];
-    const shouldAskKodi = shouldWakeKodi(text, messages);
+    const shouldAskKodi = options.forceKodi || shouldWakeKodi(text, messages);
 
     setDraft("");
     setMessages(nextMessages);
@@ -2994,7 +3071,7 @@ export function App() {
 
         setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
         prefetchKodiSpeech(reply);
-        if (shouldSpeakKodiReply(text)) {
+        if (options.speakReply || shouldSpeakKodiReply(text)) {
           speakKodiMessage(reply, localKodiMessage.id);
         }
 
@@ -3950,7 +4027,28 @@ export function App() {
           <div ref={messagesEndRef} aria-hidden="true" />
         </div>
 
-        <form className={speechState === "listening" ? "composer voice-listening" : "composer"} onSubmit={sendMessageWithPersistence}>
+        <form
+          className={`${speechState === "listening" ? "composer voice-listening" : "composer"}${
+            voiceConversationActive ? " voice-conversation-active" : ""
+          }`}
+          onSubmit={sendMessageWithPersistence}
+        >
+          <button
+            aria-pressed={voiceConversationActive}
+            className="voice-conversation-toggle"
+            onClick={toggleVoiceConversation}
+            title={
+              speechState === "unsupported"
+                ? "הדפדפן הזה לא תומך בדיבור"
+                : voiceConversationActive
+                  ? "עצור שיחה קולית עם קודי"
+                  : "התחל שיחה קולית רציפה עם קודי"
+            }
+            type="button"
+          >
+            <Radio size={17} aria-hidden="true" />
+            <span>{voiceConversationActive ? "עצור שיחה" : "שיחה קולית"}</span>
+          </button>
           {speechState === "listening" ? (
             <div className="voice-recording-indicator" aria-live="assertive" role="status">
               <span className="recording-dot" aria-hidden="true" />

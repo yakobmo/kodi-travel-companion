@@ -1830,6 +1830,31 @@ input {
   background: #ffffff;
 }
 
+.voice-conversation-toggle {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid #9bd9e8;
+  border-radius: 8px;
+  background: #e6f7fb;
+  color: #07536b;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.voice-conversation-toggle[aria-pressed="true"] {
+  background: #087f9d;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(8, 127, 157, 0.16);
+}
+
+.voice-conversation-active {
+  background: #f2fbfd;
+}
+
 .voice-recording-indicator {
   grid-column: 1 / -1;
   display: inline-flex;

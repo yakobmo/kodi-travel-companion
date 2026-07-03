@@ -290,7 +290,12 @@ if (
   -not $webAppSource.Contains("playChatTone") -or
   -not $webAppSource.Contains('"record-start"') -or
   -not $webAppSource.Contains('"voice-sent"') -or
-  -not $webAppSource.Contains("submitChatText(spokenText)") -or
+  -not $webAppSource.Contains("submitChatText(spokenText,") -or
+  -not $webAppSource.Contains("voiceConversationActive") -or
+  -not $webAppSource.Contains("voice-conversation-toggle") -or
+  -not $webAppSource.Contains("scheduleVoiceConversationListening") -or
+  -not $webAppSource.Contains('forceKodi: voiceMode === "conversation"') -or
+  -not $webAppSource.Contains('speakReply: voiceMode === "conversation"') -or
   -not $webAppSource.Contains("speechRecognitionRef.current.stop()") -or
   -not $webAppSource.Contains("releasePointerCapture") -or
   -not $webAppSource.Contains("onPointerDown") -or
