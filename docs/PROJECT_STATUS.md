@@ -41,6 +41,7 @@ Route-management direction: each trip point can be removed from the visible rout
 Voice/chat UX correction: the bottom composer follows a messaging-app mental model. The microphone is for push-to-talk voice messages: press and hold to record, release to send. Continuous voice conversation is a separate, explicitly labeled `שיחה קולית` control and must not appear as an unexplained radio/wifi-style icon or replace text input.
 
 Map-points correction: the top Google map must show all coordinate-backed trip points from the active trip map. Nearby sorting and coarse filters belong to the hamburger trip list, not to the main map layer.
+Public smoke passed on 2026-07-03 after the voice/map UX correction: Render serves `index-hj1Oi-HQ.js`, `/api/health` returns OK, and `/api/config/maps` reports Google Maps configured without exposing secrets in source code.
 
 ## Current Core
 
