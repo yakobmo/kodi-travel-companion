@@ -126,10 +126,31 @@ Only after the core is running should the app offer:
 
 - adding participants
 - group location sharing
+- shared trip photos / camera upload
 - admin permissions
 - external app shortcuts
 - usage/billing visibility
 - Booking, Airbnb, Waze, and other outbound links
+
+## Shared Trip Photos
+
+Shared trip photos are a planned group feature, not part of the first visible setup burden.
+
+The desired experience:
+
+1. A joined member taps `מצלמה` or `הוסף תמונה`.
+2. The phone opens camera or photo picker.
+3. The photo is uploaded to the shared trip space.
+4. Approved group members can view it in `תמונות הטיול`.
+5. Kodi can later use the photo metadata as trip memory: who uploaded it, when, and where it was taken if location was approved.
+
+Product boundary:
+
+- Photos belong to the trip group, not to a public feed.
+- Participants do not need Supabase, Render, Google, or OpenAI credentials.
+- Camera/photo permissions are requested only when the participant chooses to add a photo.
+- Location metadata is optional and consent-based.
+- The first implementation should live behind the menu so it does not compete with the main chat/map surface.
 
 ## Participant Invitation Flow
 

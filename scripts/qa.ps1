@@ -14,6 +14,7 @@ $requiredFiles = @(
   "docs/GOOGLE_INTEGRATION_PLAN.md",
   "docs/CORE_EXPERIENCE_AND_ONBOARDING.md",
   "docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md",
+  "docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md",
   "scripts/apply-supabase-schema.mjs",
   "scripts/apply-supabase-schema.ps1",
   "scripts/apply-supabase-grants.mjs",
@@ -93,6 +94,27 @@ if (-not $packageSource.Contains("smoke:google-places-live")) {
 
 if (-not $packageSource.Contains("smoke:google-routes-live")) {
   throw "Root package.json must expose the live Google Routes smoke script."
+}
+
+$sharedMediaSource = Get-Content (Join-Path $root "docs\SHARED_TRIP_MEDIA_ARCHITECTURE.md") -Raw -Encoding UTF8
+$sharedMediaCoreSource = Get-Content (Join-Path $root "docs\CORE_EXPERIENCE_AND_ONBOARDING.md") -Raw -Encoding UTF8
+$sharedMediaSupabaseSource = Get-Content (Join-Path $root "docs\SUPABASE_SCHEMA.md") -Raw -Encoding UTF8
+$sharedMediaDeploymentSource = Get-Content (Join-Path $root "docs\DEPLOYMENT_PLAN.md") -Raw -Encoding UTF8
+$sharedMediaLinksSource = Get-Content (Join-Path $root "docs\ARCHITECTURE_LINKS.md") -Raw -Encoding UTF8
+if (
+  -not $sharedMediaSource.Contains("Supabase Storage") -or
+  -not $sharedMediaSource.Contains("trip-media") -or
+  -not $sharedMediaSource.Contains("trip_photos") -or
+  -not $sharedMediaSource.Contains("short-lived signed URLs") -or
+  -not $sharedMediaSource.Contains("V1 - Shared Upload And Gallery") -or
+  -not $sharedMediaSource.Contains("V2 - Trip Context") -or
+  -not $sharedMediaSource.Contains("V3 - Smart Trip Memory") -or
+  -not $sharedMediaCoreSource.Contains("Shared Trip Photos") -or
+  -not $sharedMediaSupabaseSource.Contains("Planned Media Storage Extension") -or
+  -not $sharedMediaDeploymentSource.Contains("Supabase Storage bucket for shared trip photos") -or
+  -not $sharedMediaLinksSource.Contains("docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md")
+) {
+  throw "Shared trip media must be documented across product UX, Supabase storage architecture, deployment, and architecture links before implementation."
 }
 
 $webIndexSource = Get-Content (Join-Path $root "apps\web\index.html") -Raw

@@ -21,6 +21,7 @@ The schema covers:
 - Active group destination.
 - Group routes and route stops.
 - Group event log for realtime activity.
+- Future shared trip photos metadata, paired with Supabase Storage for the actual image files.
 - A legacy JSONB bridge table kept only for backward compatibility until a later cleanup migration.
 
 ## Realtime Tables
@@ -49,6 +50,42 @@ RLS is enabled on all tables, but public policies are not opened in this first g
 The first production driver should access Supabase from the backend only, using server-side credentials in Render environment variables.
 
 Browser clients must not receive service-role credentials.
+
+## Planned Media Storage Extension
+
+Shared trip photos should use Supabase Storage for the image binaries and PostgreSQL for metadata.
+
+Planned bucket:
+
+```text
+trip-media
+```
+
+Planned object path:
+
+```text
+trip-groups/{tripGroupId}/photos/{photoId}.{extension}
+```
+
+Planned metadata table:
+
+```text
+trip_photos
+```
+
+Required metadata should include:
+
+- `trip_group_id`
+- `uploaded_by_member_id`
+- `storage_bucket`
+- `storage_path`
+- `captured_at`
+- `uploaded_at`
+- optional latitude/longitude only after consent
+- optional nearest trip place
+- `deleted_at` for soft deletion
+
+The browser should upload through a backend-controlled flow or signed upload flow that does not expose service-role credentials. Viewing should use backend-issued short-lived signed URLs.
 
 ## Next Implementation Gate
 

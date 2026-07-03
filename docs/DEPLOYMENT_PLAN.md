@@ -76,6 +76,7 @@ Deployment implications:
 The app can run locally as a product core, but production-grade deployment will later need:
 
 - Supabase project and database schema.
+- Supabase Storage bucket for shared trip photos.
 - Realtime channel setup.
 - Google Maps browser key with domain restrictions.
 - Google OAuth app.
@@ -83,5 +84,12 @@ The app can run locally as a product core, but production-grade deployment will 
 - Owner/trip usage-pool configuration.
 - Server-side usage logging and quota checks.
 - Render environment variables.
+
+Shared trip photos deployment rule:
+
+- Store photo files in Supabase Storage, not in the Render filesystem.
+- Keep the storage bucket group-private.
+- Serve photos through backend-authorized short-lived signed URLs.
+- Do not expose Supabase service-role credentials or raw storage administration access to participant browsers.
 
 No secret should be committed to Git.
