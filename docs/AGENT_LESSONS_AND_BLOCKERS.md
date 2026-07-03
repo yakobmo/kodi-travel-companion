@@ -443,3 +443,24 @@ QA/automation:
 
 - `scripts/qa.ps1` now checks for service-worker update handling, navigation network-first behavior, and rejects caching `/` as the app shell.
 - Manual/local smoke should include a clean-storage mobile entry and verify `.composer input` is visible.
+
+### 18. Render Environment Automation Needs A Real Render API Path
+
+What happened:
+
+Kodi needed production Web Push VAPID keys in Render. The app code and Supabase schema were ready, but Render environment variables still required the account owner's dashboard session because no `RENDER_API_KEY` or Render CLI was available locally.
+
+Why it happened:
+
+Generating secrets is automatable; inserting them into a third-party dashboard is not safely automatable without an authenticated API token. Clipboard automation can also fail on Windows desktop sessions, so it cannot be treated as guaranteed.
+
+Decision:
+
+- Do not promise full Render environment automation unless a Render API token or trusted CLI session exists.
+- Generate secrets locally into `.data`, which is ignored by Git.
+- Commit only repeatable scripts and documentation, never generated secret values.
+- Ask the user for one dashboard action only, with exact field names and value source.
+
+QA/automation:
+
+- `scripts/qa.ps1` checks that `pnpm notifications:vapid` exists, generates VAPID variables, and that deployment docs explain the Render setup without committing secrets.
