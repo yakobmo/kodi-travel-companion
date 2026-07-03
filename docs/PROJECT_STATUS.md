@@ -21,6 +21,8 @@ Product-heart decision: the primary experience is Kodi + map + trip points + at 
 
 Shared-media product decision: group trip photos are a planned extension after the core map/chat/Kodi flow is stable. Participants should eventually be able to take or upload photos through the app into a shared trip gallery, with Kodi able to use safe metadata such as uploader, time, approved location, and nearest trip point. This belongs behind the menu first and must not crowd the primary chat/map experience.
 
+Message-notification product decision: Kodi should eventually support WhatsApp/Telegram-style mobile notifications for new group messages. This requires true Web Push/PWA infrastructure, not only an in-app badge. Notifications are opt-in per participant device, exclude the sender, avoid sensitive lock-screen details, and depend on browser/device support.
+
 Product-language decision: Kodi should not present a trial mode to users. The product starts with a real trip account setup: manager account, Google trip source, manager location, invite link, and participant permissions. Any remaining legacy endpoint/model names are internal technical identifiers until a rename migration is completed.
 
 Map architecture correction: Google Maps is the product map engine. Kodi does not recreate Google Maps behaviors; it adds the agent/group/trip layer on top of Google Maps and uses fallback rendering only when a browser-visible Google Maps key is not configured.
@@ -181,6 +183,7 @@ Decision:
 - Google APIs for Maps, Places, Routes, and OAuth.
 - OpenAI API for Kodi's real AI reasoning.
 - Central backend usage pool per trip owner/group, instead of each member bringing a separate AI subscription.
+- Web Push for future mobile group-message notifications, backed by server-side subscription storage and VAPID keys.
 - Supabase Storage for future shared trip photo files, with PostgreSQL metadata and backend-issued signed access.
 
 Usage and billing decision:
@@ -196,6 +199,7 @@ Development-stage decision:
 - Near-term product target: multi-trip SaaS with authentication, trip ownership, invite-token API, persistent usage pools, owner-visible quotas, and billing/credits.
 - Scale target: hundreds or thousands of concurrent users only after queues, rate limits, provider-cost controls, caching, monitoring, and load testing are added.
 - End users never receive Render access or provider credentials; they only use the app, join trips, grant permissions, and optionally pay for a plan or trip package.
+- Mobile push notifications need `push_subscriptions`, `notification_preferences`, `notification_deliveries`, Service Worker push handling, and backend-only `VAPID_PRIVATE_KEY` before the app can claim WhatsApp-like background notifications.
 - Shared trip photos should be stored in Supabase Storage, not Render disk, with group-private access and metadata in a future `trip_photos` table.
 
 Do not deploy this app over any existing PB Trading Cockpit service.

@@ -126,6 +126,7 @@ Only after the core is running should the app offer:
 
 - adding participants
 - group location sharing
+- message notifications
 - shared trip photos / camera upload
 - admin permissions
 - external app shortcuts
@@ -151,6 +152,25 @@ Product boundary:
 - Camera/photo permissions are requested only when the participant chooses to add a photo.
 - Location metadata is optional and consent-based.
 - The first implementation should live behind the menu so it does not compete with the main chat/map surface.
+
+## Message Notifications
+
+Kodi should eventually feel like a normal group messaging app: when someone sends a new group message, the other participants can receive a mobile notification.
+
+The first user-facing prompt should appear only after the participant has joined the group:
+
+```text
+רוצה לקבל התראות כשיש הודעות חדשות בקבוצת הטיול?
+```
+
+Product boundary:
+
+- Notifications are opt-in per participant and per device.
+- The app cannot force notification permission.
+- The sender should not receive a notification for their own message.
+- Lock-screen text should stay short and avoid sensitive route/location details by default.
+- In the web/PWA version, real push notifications require browser/device support, Service Worker support, and backend push configuration.
+- If a device does not support Web Push, the app should say so plainly instead of pretending notifications are active.
 
 ## Participant Invitation Flow
 

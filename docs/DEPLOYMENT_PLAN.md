@@ -78,6 +78,7 @@ The app can run locally as a product core, but production-grade deployment will 
 - Supabase project and database schema.
 - Supabase Storage bucket for shared trip photos.
 - Realtime channel setup.
+- Web Push / VAPID keys for group message notifications.
 - Google Maps browser key with domain restrictions.
 - Google OAuth app.
 - OpenAI API key.
@@ -91,5 +92,13 @@ Shared trip photos deployment rule:
 - Keep the storage bucket group-private.
 - Serve photos through backend-authorized short-lived signed URLs.
 - Do not expose Supabase service-role credentials or raw storage administration access to participant browsers.
+
+Message notifications deployment rule:
+
+- Use Web Push first because Kodi already has a PWA foundation.
+- Keep `VAPID_PRIVATE_KEY` backend-only in Render.
+- Expose only `VAPID_PUBLIC_KEY` to the browser.
+- Store push subscriptions in Supabase relational tables, not local browser state only.
+- Treat notification permission as participant opt-in per device.
 
 No secret should be committed to Git.

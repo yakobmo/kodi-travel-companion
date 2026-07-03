@@ -15,6 +15,7 @@ $requiredFiles = @(
   "docs/CORE_EXPERIENCE_AND_ONBOARDING.md",
   "docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md",
   "docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md",
+  "docs/CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md",
   "scripts/apply-supabase-schema.mjs",
   "scripts/apply-supabase-schema.ps1",
   "scripts/apply-supabase-grants.mjs",
@@ -115,6 +116,29 @@ if (
   -not $sharedMediaLinksSource.Contains("docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md")
 ) {
   throw "Shared trip media must be documented across product UX, Supabase storage architecture, deployment, and architecture links before implementation."
+}
+
+$pushNotificationsSource = Get-Content (Join-Path $root "docs\CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md") -Raw -Encoding UTF8
+$pushNotificationsCoreSource = Get-Content (Join-Path $root "docs\CORE_EXPERIENCE_AND_ONBOARDING.md") -Raw -Encoding UTF8
+$pushNotificationsSupabaseSource = Get-Content (Join-Path $root "docs\SUPABASE_SCHEMA.md") -Raw -Encoding UTF8
+$pushNotificationsDeploymentSource = Get-Content (Join-Path $root "docs\DEPLOYMENT_PLAN.md") -Raw -Encoding UTF8
+$pushNotificationsLinksSource = Get-Content (Join-Path $root "docs\ARCHITECTURE_LINKS.md") -Raw -Encoding UTF8
+if (
+  -not $pushNotificationsSource.Contains("Web Push") -or
+  -not $pushNotificationsSource.Contains("Service Worker") -or
+  -not $pushNotificationsSource.Contains("Push API") -or
+  -not $pushNotificationsSource.Contains("push_subscriptions") -or
+  -not $pushNotificationsSource.Contains("notification_preferences") -or
+  -not $pushNotificationsSource.Contains("notification_deliveries") -or
+  -not $pushNotificationsSource.Contains("VAPID_PRIVATE_KEY") -or
+  -not $pushNotificationsSource.Contains("exclude the sender") -or
+  -not $pushNotificationsSource.Contains("V2 - Web Push MVP") -or
+  -not $pushNotificationsCoreSource.Contains("Message Notifications") -or
+  -not $pushNotificationsSupabaseSource.Contains("Planned Push Notification Extension") -or
+  -not $pushNotificationsDeploymentSource.Contains("Web Push / VAPID keys") -or
+  -not $pushNotificationsLinksSource.Contains("docs/CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md")
+) {
+  throw "Chat push notifications must be documented across product UX, Web Push architecture, Supabase tables, deployment, and architecture links before implementation."
 }
 
 $webIndexSource = Get-Content (Join-Path $root "apps\web\index.html") -Raw

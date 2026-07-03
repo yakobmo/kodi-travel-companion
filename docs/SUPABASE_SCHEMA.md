@@ -21,6 +21,7 @@ The schema covers:
 - Active group destination.
 - Group routes and route stops.
 - Group event log for realtime activity.
+- Future push notification subscriptions, preferences, and delivery audit rows.
 - Future shared trip photos metadata, paired with Supabase Storage for the actual image files.
 - A legacy JSONB bridge table kept only for backward compatibility until a later cleanup migration.
 
@@ -50,6 +51,26 @@ RLS is enabled on all tables, but public policies are not opened in this first g
 The first production driver should access Supabase from the backend only, using server-side credentials in Render environment variables.
 
 Browser clients must not receive service-role credentials.
+
+## Planned Push Notification Extension
+
+Chat push notifications should store browser/device subscriptions and notification preferences in PostgreSQL.
+
+Planned tables:
+
+```text
+push_subscriptions
+notification_preferences
+notification_deliveries
+```
+
+`push_subscriptions` stores one row per member device/browser subscription.
+
+`notification_preferences` stores member-level choices such as chat notifications enabled, Kodi mentions, quiet hours, and mute state.
+
+`notification_deliveries` records whether a notification was attempted, sent, failed, or revoked for a specific message and recipient.
+
+The backend should send notifications only after a `group_messages` insert and should exclude the message sender. Service-role credentials and push private keys remain backend-only.
 
 ## Planned Media Storage Extension
 
