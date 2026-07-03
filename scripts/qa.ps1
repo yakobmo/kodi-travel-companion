@@ -541,7 +541,12 @@ if (
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $webStylesSource.Contains(".composer .voice-button") -or
-  -not $webStylesSource.Contains("grid-template-columns: minmax(88px, auto) minmax(0, 1fr) 44px auto") -or
+  -not $webStylesSource.Contains('grid-template-areas:') -or
+  -not $webStylesSource.Contains('"send mic text"') -or
+  -not $webStylesSource.Contains("grid-area: text") -or
+  -not $webStylesSource.Contains("grid-area: mic") -or
+  -not $webStylesSource.Contains("grid-area: send") -or
+  -not $webStylesSource.Contains("grid-area: conversation") -or
   -not $webStylesSource.Contains(".composer .voice-conversation-toggle") -or
   -not $webStylesSource.Contains("white-space: nowrap") -or
   -not $webStylesSource.Contains(".composer .voice-conversation-toggle span") -or
