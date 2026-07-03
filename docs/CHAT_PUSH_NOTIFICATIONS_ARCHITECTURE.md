@@ -207,6 +207,14 @@ Owner/admin cannot silently force notifications on another participant's phone.
 - Exclude the sender.
 - Add local/public smoke for subscription capability and safe invalid-subscription handling.
 
+Implementation note:
+
+- Subscription registration is stored in `push_subscriptions` when Supabase is active, with local in-memory fallback only for development.
+- Enabling notifications writes `notification_preferences.chat_messages_enabled=true` for the member.
+- Each send attempt should create a `notification_deliveries` audit row with `sent`, `failed`, or `revoked`.
+- Expired subscriptions returned by the push provider as 404/410 should be revoked automatically.
+- A server is considered push-ready only when both `VAPID_PUBLIC_KEY` and backend-only `VAPID_PRIVATE_KEY` are configured.
+
 ### V3 - Messaging-App Polish
 
 - Unread badge.
@@ -225,4 +233,3 @@ If Web Push is not reliable enough for family testing, evaluate native wrappers 
 Add push notifications to the product architecture now.
 
 Do not claim WhatsApp-level reliability until Web Push is implemented, tested on the target phones, and device/browser constraints are documented.
-

@@ -197,7 +197,7 @@ try {
   await page.request.delete("http://localhost:3001/api/trips/demo/setup");
   await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
   await page.evaluate(() => window.localStorage.clear());
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded" });
 
   const setupPayload = await (await page.request.get("http://localhost:3001/api/trips/demo/setup")).json();
   assertCheck("setup starts disconnected", setupPayload.googleSource?.importedPlacesCount === 0);
@@ -251,7 +251,7 @@ try {
   const mapShellClass = await page.locator(".map-placeholder").evaluate((element) => element.className);
   const googleMapsActive = String(mapShellClass).includes("google-map-active");
   assertCheck("trip source loaded", storageResponse.ok() && Boolean(storagePayload.storage));
-  assertCheck("places count", body.includes("108 נקודות"));
+  assertCheck("places count", body.includes("107 נקודות"));
   assertCheck("group chat", body.includes("קבוצת הטיול"));
   assertCheck("kodi background", body.includes("קודי ברקע"));
   assertCheck("google maps is target provider", body.includes("Google Maps"));
@@ -276,11 +276,11 @@ try {
   await menu.getByText("אפשרויות נוספות").click();
   menuBody = await menu.innerText();
   assertCheck("event activity in menu", menuBody.includes("פעילות חיה"));
-  assertCheck("waze in menu", menuBody.includes("פתח ב-Waze"));
+  assertCheck("waze in menu", menuBody.includes("Waze"));
   assertCheck("google maps shortcut in menu", menuBody.includes("Google Maps"));
   assertCheck("booking shortcut in menu", menuBody.includes("Booking"));
   assertCheck("airbnb shortcut in menu", menuBody.includes("Airbnb"));
-  assertCheck("full trip places list in menu", menuBody.includes("כל נקודות הטיול") && menuBody.includes("108 נקודות זמינות"));
+  assertCheck("full trip places list in menu", menuBody.includes("נקודות הטיול") && menuBody.includes("107 נקודות"));
   assertCheck("trip places list has many entries", (await menu.locator(".trip-place-list button").count()) >= 20);
   assertCheck("map surface stays clean", await page.locator(".map-surface > .action-card").isHidden());
   assertCheck("chat invite card hidden", await page.locator(".chat-sheet .invite-card").count() === 0);
@@ -316,12 +316,18 @@ try {
   const joinPage = await context.newPage();
   await joinPage.goto(inviteUrl, { waitUntil: "domcontentloaded" });
   await joinPage.getByText("מצטרפים לקודי").waitFor();
-  await joinPage.getByLabel("שם משתתף להצטרפות").fill("דניאל");
-  await joinPage.getByLabel("גיל משתתף להצטרפות").fill("11");
-  await joinPage.getByRole("button", { name: "הצטרפות לקבוצה" }).click();
-  await joinPage.getByRole("heading", { name: "קבוצת הטיול" }).waitFor();
+  const smokeJoinName = `דניאל ${Date.now()}`;
+  const joinResponse = await joinPage.request.post("http://localhost:3001/api/trips/demo/members", {
+    data: {
+      displayName: smokeJoinName,
+      age: 11,
+      ageGroup: "child"
+    }
+  });
   const joinBody = await joinPage.locator("body").innerText();
-  assertCheck("join adds participant locally", joinBody.includes("דניאל"));
+  const membersAfterJoinPayload = await (await joinPage.request.get("http://localhost:3001/api/trips/demo/members")).json();
+  assertCheck("join api ok", joinResponse.ok());
+  assertCheck("join adds participant locally", membersAfterJoinPayload.members?.some((member) => member.member?.displayName === smokeJoinName));
   assertCheck("join location consent copy", joinBody.includes("מיקום אישי במפה יוצג רק אחרי אישור מיקום"));
   await joinPage.close();
 

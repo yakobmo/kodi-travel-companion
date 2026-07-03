@@ -2,6 +2,7 @@
   "name": "ai-travel-companion",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.7.0",
   "description": "Hebrew AI travel companion with Google Maps, group chat, and Waze navigation.",
   "workspaces": [
     "apps/api",
@@ -10,8 +11,8 @@
   "scripts": {
     "qa": "powershell -ExecutionPolicy Bypass -File scripts/qa.ps1",
     "dev": "echo \"Run apps separately after dependencies are installed\"",
-    "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
-    "start": "npm run start --workspace apps/api",
+    "build": "pnpm --filter @travel-companion/api build && pnpm --filter @travel-companion/web build",
+    "start": "pnpm --filter @travel-companion/api start",
     "icons:pwa": "powershell -ExecutionPolicy Bypass -File scripts/generate-pwa-icons.ps1",
     "smoke:local": "node scripts/smoke-local.mjs",
     "smoke:google-places-live": "node scripts/smoke-google-places-live.mjs",

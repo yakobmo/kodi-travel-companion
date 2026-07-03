@@ -446,12 +446,38 @@ if (
   -not $apiServerSource.Contains("app.get(`"/api/trips/demo/notifications/config`"") -or
   -not $apiServerSource.Contains("app.post(`"/api/trips/demo/notifications/subscriptions`"") -or
   -not $apiServerSource.Contains("VAPID_PUBLIC_KEY") -or
+  -not $apiServerSource.Contains("VAPID_PRIVATE_KEY") -or
   -not $apiServerSource.Contains("web_push_not_configured") -or
   -not $apiServerSource.Contains('eventType: "notification_enabled"') -or
   -not $apiServerSource.Contains("isPushSubscriptionPayload") -or
-  -not $apiServerSource.Contains("demoPushSubscriptions")
+  -not $apiServerSource.Contains("saveDemoPushSubscriptionAsync") -or
+  -not $apiServerSource.Contains("countDemoPushSubscriptionsAsync")
 ) {
   throw "API must expose guarded Web Push readiness and subscription registration endpoints."
+}
+
+if (
+  -not $apiServerSource.Contains('import webpush from "web-push"') -or
+  -not $apiServerSource.Contains("sendChatMessageNotifications") -or
+  -not $apiServerSource.Contains("loadDemoPushSubscriptionsForMessageAsync(input.senderMemberId)") -or
+  -not $apiServerSource.Contains("webpush.sendNotification") -or
+  -not $apiServerSource.Contains("recordDemoNotificationDeliveryAsync") -or
+  -not $apiServerSource.Contains("revokeDemoPushSubscriptionAsync") -or
+  -not $apiServerSource.Contains("senderMemberId: memberId")
+) {
+  throw "API must send Web Push notifications for new chat messages, exclude the sender, and record delivery outcomes."
+}
+
+$apiNotificationsSource = Get-Content (Join-Path $root "apps\api\src\data\localNotifications.ts") -Raw -Encoding UTF8
+if (
+  -not $apiNotificationsSource.Contains("push_subscriptions") -or
+  -not $apiNotificationsSource.Contains("notification_preferences") -or
+  -not $apiNotificationsSource.Contains("notification_deliveries") -or
+  -not $apiNotificationsSource.Contains("revoked_at") -or
+  -not $apiNotificationsSource.Contains("DEMO_TRIP_GROUP_UUID") -or
+  -not $apiNotificationsSource.Contains("demoPushSubscriptions")
+) {
+  throw "Notification storage must persist subscriptions/preferences/delivery audit to Supabase with a local fallback."
 }
 
 if (

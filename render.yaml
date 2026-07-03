@@ -4,8 +4,8 @@ services:
     runtime: node
     plan: free
     branch: main
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
+    buildCommand: corepack enable && corepack prepare pnpm@11.7.0 --activate && pnpm install --frozen-lockfile && pnpm run build
+    startCommand: corepack enable && pnpm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV

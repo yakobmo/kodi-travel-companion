@@ -1,4 +1,5 @@
 import express from "express";
+import webpush from "web-push";
 import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
 import {
@@ -23,6 +24,13 @@ import {
   loadDemoTripMessagesAsync,
   resetDemoTripMessagesAsync
 } from "./data/localMessages.js";
+import {
+  countDemoPushSubscriptionsAsync,
+  loadDemoPushSubscriptionsForMessageAsync,
+  recordDemoNotificationDeliveryAsync,
+  revokeDemoPushSubscriptionAsync,
+  saveDemoPushSubscriptionAsync
+} from "./data/localNotifications.js";
 import {
   buildDemoTripSetupStateAsync,
   resetDemoTripSetupStateAsync,
@@ -79,21 +87,6 @@ let agentTripStateCache:
     }
   | undefined;
 
-type StoredPushSubscription = {
-  tripGroupId: string;
-  memberId: string;
-  endpoint: string;
-  keys: {
-    p256dh: string;
-    auth: string;
-  };
-  userAgent?: string;
-  createdAt: string;
-  lastSeenAt: string;
-};
-
-const demoPushSubscriptions = new Map<string, StoredPushSubscription>();
-
 function isGoogleMapsViewingLink(value: string) {
   const normalized = value.trim().toLowerCase();
   return normalized.includes("maps.app.goo.gl") || normalized.includes("google.com/maps");
@@ -105,6 +98,29 @@ function canManageTripMapSource(member: Awaited<ReturnType<typeof loadDemoTripMe
 
 function getWebPushPublicKey() {
   return process.env.VAPID_PUBLIC_KEY?.trim() || "";
+}
+
+function getWebPushPrivateKey() {
+  return process.env.VAPID_PRIVATE_KEY?.trim() || "";
+}
+
+function hasWebPushSenderConfig() {
+  return getWebPushPublicKey().length > 0 && getWebPushPrivateKey().length > 0;
+}
+
+function getWebPushSubject() {
+  return process.env.VAPID_SUBJECT?.trim() || "mailto:kodi-travel-companion@example.com";
+}
+
+function configureWebPushSender() {
+  const publicKey = getWebPushPublicKey();
+  const privateKey = getWebPushPrivateKey();
+  if (!publicKey || !privateKey) {
+    return false;
+  }
+
+  webpush.setVapidDetails(getWebPushSubject(), publicKey, privateKey);
+  return true;
 }
 
 function isPushSubscriptionPayload(value: unknown): value is { endpoint: string; keys: { p256dh: string; auth: string } } {
@@ -121,6 +137,87 @@ function isPushSubscriptionPayload(value: unknown): value is { endpoint: string;
     typeof candidate.keys?.auth === "string" &&
     candidate.keys.auth.length > 0
   );
+}
+
+function buildNotificationBody(author: string, source: "member" | "agent" | "system") {
+  if (source === "agent") {
+    return "קודי כתב הודעה חדשה בקבוצת הטיול.";
+  }
+
+  return `${author} כתב/ה הודעה חדשה בקבוצת הטיול.`;
+}
+
+async function sendChatMessageNotifications(input: {
+  messageId?: string;
+  author: string;
+  text: string;
+  source: "member" | "agent" | "system";
+  senderMemberId?: string;
+}) {
+  if (input.source === "system" || !configureWebPushSender()) {
+    return {
+      status: "not_configured",
+      attempted: 0,
+      sent: 0,
+      failed: 0
+    };
+  }
+
+  const subscriptions = await loadDemoPushSubscriptionsForMessageAsync(input.senderMemberId);
+  let sent = 0;
+  let failed = 0;
+
+  await Promise.all(
+    subscriptions.map(async (subscription) => {
+      const payload = JSON.stringify({
+        title: "קבוצת הטיול",
+        body: buildNotificationBody(input.author, input.source),
+        url: "/"
+      });
+
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: subscription.endpoint,
+            keys: subscription.keys
+          },
+          payload
+        );
+        sent += 1;
+        await recordDemoNotificationDeliveryAsync({
+          messageId: input.messageId,
+          recipientMemberId: subscription.memberId,
+          subscriptionId: subscription.id,
+          status: "sent"
+        });
+      } catch (error) {
+        failed += 1;
+        const statusCode =
+          typeof error === "object" && error && "statusCode" in error ? Number((error as { statusCode?: unknown }).statusCode) : 0;
+        const providerError = error instanceof Error ? error.message : "web_push_send_failed";
+        const status = statusCode === 404 || statusCode === 410 ? "revoked" : "failed";
+
+        if (status === "revoked") {
+          await revokeDemoPushSubscriptionAsync(subscription.endpoint);
+        }
+
+        await recordDemoNotificationDeliveryAsync({
+          messageId: input.messageId,
+          recipientMemberId: subscription.memberId,
+          subscriptionId: subscription.id,
+          status,
+          providerError
+        });
+      }
+    })
+  );
+
+  return {
+    status: "sent",
+    attempted: subscriptions.length,
+    sent,
+    failed
+  };
 }
 
 async function buildKodiMemberWelcomeMessage(memberName: string) {
@@ -1131,22 +1228,22 @@ app.get("/api/trips/demo/messages", async (_req, res) => {
   });
 });
 
-app.get("/api/trips/demo/notifications/config", (_req, res) => {
+app.get("/api/trips/demo/notifications/config", async (_req, res) => {
   const publicKey = getWebPushPublicKey();
+  const webPushConfigured = hasWebPushSenderConfig();
   res.json({
     tripGroupId: "group_family_greece_demo",
-    webPushConfigured: publicKey.length > 0,
+    webPushConfigured,
     publicKey,
-    subscriptionCount: demoPushSubscriptions.size,
-    status: publicKey.length > 0 ? "ready" : "not_configured"
+    subscriptionCount: await countDemoPushSubscriptionsAsync(),
+    status: webPushConfigured ? "ready" : "not_configured"
   });
 });
 
 app.post("/api/trips/demo/notifications/subscriptions", async (req, res) => {
-  const publicKey = getWebPushPublicKey();
   const { memberId, subscription } = req.body ?? {};
 
-  if (publicKey.length === 0) {
+  if (!hasWebPushSenderConfig()) {
     res.status(409).json({
       error: "web_push_not_configured",
       message: "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are required before Kodi can register real push notifications."
@@ -1171,18 +1268,10 @@ app.post("/api/trips/demo/notifications/subscriptions", async (req, res) => {
     return;
   }
 
-  const now = new Date().toISOString();
-  demoPushSubscriptions.set(subscription.endpoint, {
-    tripGroupId: "group_family_greece_demo",
+  await saveDemoPushSubscriptionAsync({
     memberId,
-    endpoint: subscription.endpoint,
-    keys: {
-      p256dh: subscription.keys.p256dh,
-      auth: subscription.keys.auth
-    },
-    userAgent: req.get("user-agent") ?? undefined,
-    createdAt: demoPushSubscriptions.get(subscription.endpoint)?.createdAt ?? now,
-    lastSeenAt: now
+    subscription,
+    userAgent: req.get("user-agent") ?? undefined
   });
 
   await safeRecordTripEvent({
@@ -1197,7 +1286,7 @@ app.post("/api/trips/demo/notifications/subscriptions", async (req, res) => {
     tripGroupId: "group_family_greece_demo",
     status: "subscribed",
     memberId,
-    subscriptionCount: demoPushSubscriptions.size
+    subscriptionCount: await countDemoPushSubscriptionsAsync()
   });
 });
 
@@ -1811,6 +1900,15 @@ app.post("/api/trips/demo/messages", async (req, res) => {
     actorName: author.trim(),
     relatedEntityId: message.id,
     summary: `${author.trim()} sent a ${message.source} message.`
+  });
+  void sendChatMessageNotifications({
+    messageId: message.id,
+    author: author.trim(),
+    text: message.text,
+    source: message.source,
+    senderMemberId: memberId
+  }).catch((error) => {
+    console.warn("Chat push notification send failed", error);
   });
 
   res.json({

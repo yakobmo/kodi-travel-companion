@@ -16,11 +16,13 @@
     "express": "latest",
     "openai": "latest",
     "postgres": "^3.4.9",
+    "web-push": "latest",
     "zod": "latest"
   },
   "devDependencies": {
     "@types/express": "latest",
     "@types/node": "latest",
+    "@types/web-push": "latest",
     "prisma": "latest",
     "tsx": "latest",
     "typescript": "latest"
