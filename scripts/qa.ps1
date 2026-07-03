@@ -321,6 +321,30 @@ if (
 }
 
 if (
+  -not $webAppSource.Contains("joinTripFromInvite") -or
+  -not $webAppSource.Contains("/api/trips/demo/members") -or
+  -not $webAppSource.Contains("removeTripMember") -or
+  -not $webAppSource.Contains("leaveTripGroup") -or
+  -not $webAppSource.Contains("members-menu") -or
+  -not $webAppSource.Contains("danger-menu-action") -or
+  -not $webAppSource.Contains("trip-map-source-menu") -or
+  -not $webAppSource.Contains("requestTripMapSwitch") -or
+  -not $webAppSource.Contains("mapSwitchDraft")
+) {
+  throw "Web hamburger must support simple invite join, member removal/leave, and trip map source switching."
+}
+
+$apiServerSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw
+if (
+  -not $apiServerSource.Contains("app.post(`"/api/trips/demo/members`"") -or
+  -not $apiServerSource.Contains("app.delete(`"/api/trips/demo/members/:memberId`"") -or
+  -not $apiServerSource.Contains("addDemoTripMemberAsync") -or
+  -not $apiServerSource.Contains("removeDemoTripMemberAsync")
+) {
+  throw "API must expose server-backed trip member join and leave/remove actions."
+}
+
+if (
   -not $webAppSource.Contains("isCurrentLocationQuestion") -or
   -not $webAppSource.Contains("getFreshCurrentLocationForAgent") -or
   -not $webAppSource.Contains("navigator.geolocation.getCurrentPosition") -or

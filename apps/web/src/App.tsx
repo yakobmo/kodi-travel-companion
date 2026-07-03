@@ -388,6 +388,8 @@ interface TripEvent {
     | "destination_set"
     | "route_created"
     | "route_progressed"
+    | "member_joined"
+    | "member_left"
     | "setup_updated"
     | "system";
   actorMemberId?: string;
@@ -603,7 +605,7 @@ function mapMemberLocations(members: TripMemberLocationResponse["members"]): Dem
 }
 
 function getTripEventLabel(eventType: TripEvent["eventType"]) {
-  const labels: Record<TripEvent["eventType"], string> = {
+  const labels: Partial<Record<TripEvent["eventType"], string>> = {
     message_created: "הודעה",
     location_updated: "מיקום",
     destination_set: "יעד",
@@ -613,7 +615,7 @@ function getTripEventLabel(eventType: TripEvent["eventType"]) {
     system: "מערכת"
   };
 
-  return labels[eventType];
+  return labels[eventType] ?? (eventType === "member_joined" ? "הצטרפות" : eventType === "member_left" ? "יציאה" : "מערכת");
 }
 
 function getTripEventText(event: TripEvent) {
@@ -628,6 +630,10 @@ function getTripEventText(event: TripEvent) {
       return `${event.actorName ?? "מנהל"} יצר/ה מסלול קבוצתי`;
     case "route_progressed":
       return `${event.actorName ?? "מנהל"} סימן/ה התקדמות במסלול`;
+    case "member_joined":
+      return `${event.actorName ?? "משתתף"} הצטרף/ה לקבוצה`;
+    case "member_left":
+      return `${event.actorName ?? "משתתף"} יצא/ה או הוסר/ה מהקבוצה`;
     case "setup_updated":
       return "הקליטה הראשונית נשמרה";
     default:
@@ -1100,6 +1106,11 @@ export function App() {
   });
   const [inviteCopyState, setInviteCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [inviteShareState, setInviteShareState] = useState<"idle" | "sharing" | "shared" | "copied" | "error">("idle");
+  const [memberActionState, setMemberActionState] = useState<"idle" | "working" | "done" | "error">("idle");
+  const [mapSwitchDraft, setMapSwitchDraft] = useState({
+    name: "",
+    googleLink: ""
+  });
   const initialPlaces = useMemo(() => applyLocalPlaceRemovals(demoPlaces), []);
   const [summary, setSummary] = useState<TripPlacesSummary>(() =>
     initialPlaces.length === demoPlaces.length
@@ -3180,7 +3191,7 @@ export function App() {
     setInstallState(choice.outcome === "accepted" ? "installed" : "unavailable");
   }
 
-  function joinTripFromInvite(event: FormEvent<HTMLFormElement>) {
+  async function joinTripFromInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const name = joinDraft.name.trim();
@@ -3188,6 +3199,7 @@ export function App() {
       return;
     }
 
+    setMemberActionState("working");
     const nextMember: DemoMember = {
       id: `guest-${Date.now()}`,
       name,
@@ -3196,9 +3208,39 @@ export function App() {
       locationSharing: "disabled",
       liveLocation: null
     };
+    const numericAge = Number(joinDraft.age);
+    const safeAge = Number.isInteger(numericAge) && numericAge >= 0 && numericAge <= 120 ? numericAge : undefined;
 
-    setMembers((currentMembers) => [...currentMembers, nextMember]);
-    setActiveMemberId(nextMember.id);
+    let joinedMember = nextMember;
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/trips/demo/members`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          displayName: name,
+          age: safeAge,
+          ageGroup: getAgeGroupFromDraft(joinDraft.age)
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Join failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as {
+        member: TripMemberLocationResponse["members"][number];
+        members: TripMemberLocationResponse["members"];
+      };
+      joinedMember = mapMemberLocations([payload.member])[0] ?? nextMember;
+      setMembers(normalizeTripMembers(mapMemberLocations(payload.members), setupDraft.memberName));
+    } catch {
+      setMembers((currentMembers) => [...currentMembers, nextMember]);
+      setMemberActionState("error");
+    }
+
+    setActiveMemberId(joinedMember.id);
     setShowJoinFlow(false);
     setShowActivation(false);
     setMessages((currentMessages) => [
@@ -3211,6 +3253,69 @@ export function App() {
         createdAt: new Date().toISOString()
       }
     ]);
+    setMemberActionState("done");
+  }
+
+  async function removeTripMember(memberId: string) {
+    if (memberActionState === "working") {
+      return;
+    }
+
+    const target = members.find((member) => member.id === memberId);
+    if (!target || target.role === "owner") {
+      return;
+    }
+
+    setMemberActionState("working");
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/trips/demo/members/${encodeURIComponent(memberId)}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          actorMemberId: activeMember.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Remove member failed with ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { members: TripMemberLocationResponse["members"] };
+      const nextMembers = normalizeTripMembers(mapMemberLocations(payload.members), setupDraft.memberName);
+      setMembers(nextMembers);
+      if (activeMemberId === memberId) {
+        setActiveMemberId(nextMembers.find((member) => member.role === "owner")?.id ?? nextMembers[0]?.id ?? "mom");
+      }
+      setMemberActionState("done");
+    } catch {
+      setMemberActionState("error");
+    }
+  }
+
+  function leaveTripGroup() {
+    void removeTripMember(activeMember.id);
+  }
+
+  function requestTripMapSwitch() {
+    const nextName = mapSwitchDraft.name.trim();
+    const nextLink = mapSwitchDraft.googleLink.trim();
+    if (!nextName && !nextLink) {
+      return;
+    }
+
+    setSetupDraft((draft) => ({
+      ...draft,
+      tripName: nextName || draft.tripName,
+      googleLink: nextLink || draft.googleLink
+    }));
+    setDraft(
+      `קודי, החלף את מפת הטיול ל${nextName ? ` ${nextName}` : "מפה אחרת"}${
+        nextLink ? `. קישור Google Maps: ${nextLink}` : ""
+      }. תבדוק מה צריך כדי לסנכרן את נקודות הטיול החדשות.`
+    );
+    setSecondaryMenuOpen(false);
   }
 
   function enablePersonalGps() {
@@ -3813,6 +3918,60 @@ export function App() {
           {inviteShareState === "error" ? <small>לא הצלחתי לשתף. אפשר להעתיק קישור.</small> : null}
           {inviteCopyState === "copied" ? <small>הקישור הועתק</small> : null}
           {inviteCopyState === "error" ? <small>לא הצלחתי להעתיק. אפשר לסמן ולהעתיק ידנית.</small> : null}
+        </section>
+        <section className="menu-block members-menu" aria-label="ניהול חברי הקבוצה">
+          <strong>חברי הקבוצה</strong>
+          <p>הצטרפות פשוטה: שם, גיל ואישור מיקום מהמכשיר. הסוכן, המפה וההרשאות נשארים תחת מנהל הטיול.</p>
+          <div className="member-management-list">
+            {members.map((member) => (
+              <article key={member.id}>
+                <span>
+                  {member.name}
+                  {member.id === activeMember.id ? " · אני" : ""}
+                </span>
+                <small>{member.role === "owner" ? "מנהל" : member.role === "admin" ? "מנהל נוסף" : "משתתף"}</small>
+                {activeMember.id !== member.id && (activeMember.role === "owner" || activeMember.role === "admin") && member.role !== "owner" ? (
+                  <button disabled={memberActionState === "working"} onClick={() => removeTripMember(member.id)} type="button">
+                    הסר משתתף
+                  </button>
+                ) : null}
+              </article>
+            ))}
+          </div>
+          {activeMember.role !== "owner" ? (
+            <button className="danger-menu-action" disabled={memberActionState === "working"} onClick={leaveTripGroup} type="button">
+              יציאה מהקבוצה
+            </button>
+          ) : (
+            <small>מנהל הטיול לא יוצא מהקבוצה; הוא יכול להסיר משתתפים ולשלוח הזמנות.</small>
+          )}
+          {memberActionState === "error" ? <small>לא הצלחתי לעדכן את הקבוצה כרגע.</small> : null}
+        </section>
+        <section className="menu-block trip-map-source-menu" aria-label="מפות הטיול שלי">
+          <strong>מפות הטיול שלי</strong>
+          <p>כאן מחליפים מקור טיול: צפון יוון, אוסטריה או כל מפה אחרת שיצרת ב-Google Maps.</p>
+          <div className="trip-map-source-current">
+            <span>פעיל עכשיו</span>
+            <strong>{setupDraft.tripName || "צפון יוון"}</strong>
+            <small>{setupDraft.googleLink || "Google Maps trip list"}</small>
+          </div>
+          <input
+            aria-label="שם מפת טיול חדשה"
+            onChange={(event) => setMapSwitchDraft((draft) => ({ ...draft, name: event.target.value }))}
+            placeholder="שם הטיול, למשל אוסטריה"
+            value={mapSwitchDraft.name}
+          />
+          <input
+            aria-label="קישור Google Maps למפת טיול חדשה"
+            dir="ltr"
+            onChange={(event) => setMapSwitchDraft((draft) => ({ ...draft, googleLink: event.target.value }))}
+            placeholder="https://maps.app.goo.gl/..."
+            value={mapSwitchDraft.googleLink}
+          />
+          <button onClick={requestTripMapSwitch} type="button">
+            בקש מקודי להחליף מפה
+          </button>
+          <small>בשלב הנוכחי קודי מכין את החלפת המקור. סנכרון מלא מכל המפות בחשבון Google דורש חיבור Google OAuth.</small>
         </section>
         <section className="menu-block location-menu">
           <strong>מיקום בטלפון</strong>

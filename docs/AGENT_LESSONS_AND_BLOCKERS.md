@@ -399,3 +399,25 @@ QA/automation:
 
 - `scripts/qa.ps1` now checks the API fallback and web fallback for banned rigid phrases.
 - `scripts/smoke-local.mjs` now asserts Kodi replies avoid the old template language instead of waiting for it.
+
+### 16. Invitation Must Create Server Membership, Not A Local Illusion
+
+What happened:
+
+The product goal is WhatsApp-style joining: the manager sends a link and another family member becomes part of the same trip group. A local-only join flow looks right for one browser but does not create a reliable shared group state.
+
+Why it happened:
+
+Early invite UX focused on reducing onboarding friction and did not immediately promote the participant into the backend member model. That is tempting for prototype speed, but it breaks the real product promise once multiple devices are involved.
+
+Decision:
+
+- Joining through an invite link must call a backend member endpoint.
+- Participants should provide only name and optional age/age group.
+- Participants must never configure Render, Google Cloud, OpenAI, Supabase, or private provider keys.
+- Owner/admin can remove participants; non-owner participants can leave.
+- Location sharing remains per-device consent and is not inherited from the manager.
+
+QA/automation:
+
+- `scripts/qa.ps1` checks that the web join flow calls `/api/trips/demo/members`, that remove/leave actions exist, and that the API exposes member create/delete endpoints.

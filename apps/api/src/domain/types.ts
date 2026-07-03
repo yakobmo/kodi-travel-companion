@@ -38,6 +38,8 @@ export type TripEventType =
   | "destination_set"
   | "route_created"
   | "route_progressed"
+  | "member_joined"
+  | "member_left"
   | "setup_updated"
   | "system";
 

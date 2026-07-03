@@ -1445,6 +1445,47 @@ input {
   padding-inline: 12px;
 }
 
+.member-management-list {
+  display: grid;
+  gap: 8px;
+}
+
+.member-management-list article,
+.trip-map-source-current {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #d4e9ee;
+  border-radius: 8px;
+  background: #f7fcfd;
+}
+
+.member-management-list article span,
+.trip-map-source-current strong {
+  color: #07394d;
+  font-weight: 900;
+}
+
+.member-management-list article small,
+.trip-map-source-current small,
+.trip-map-source-current span {
+  color: #546a72;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.member-management-list article button,
+.danger-menu-action {
+  border: 1px solid #f2c7c7 !important;
+  background: #fff2f2 !important;
+  color: #8a1f1f !important;
+}
+
+.trip-map-source-menu {
+  border-color: #bfe7f2;
+  background: #f2fbfd;
+}
+
 .place-filter-chips {
   display: flex;
   flex-wrap: wrap;

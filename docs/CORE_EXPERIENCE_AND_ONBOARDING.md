@@ -168,6 +168,17 @@ Participants can talk in the family conversation, ask Kodi questions, approve th
 
 Participants should not receive provider secrets, Google keys, OpenAI keys, Supabase service-role keys, or owner billing access.
 
+Current implementation direction:
+
+- The invite/join flow is server-backed, not only local browser state.
+- A participant joins with a name and optional age/age group; they do not configure Render, Google Cloud, OpenAI, or Supabase.
+- The owner/admin can remove a participant from the hamburger menu.
+- A non-owner participant can leave the group from the hamburger menu.
+- The trip owner cannot leave their own trip space from the participant action; they manage the group instead.
+- Location sharing remains per-device consent, so every participant must approve their own live location when they want to appear on the map.
+
+This keeps the join experience close to WhatsApp: open link, enter identity, join group, approve location only if needed.
+
 ## Google Source Clarity
 
 Pasting a Google Maps viewing link must not pretend to perform live sync.
@@ -186,6 +197,16 @@ I found these Google Maps lists/maps. Which trip should I sync?
 ```
 
 Then the user selects the real trip source, such as "טיול צפון יוון".
+
+The hamburger may expose a trip-maps management area where the owner names a different trip map and provides a Google Maps share link, for example switching from Northern Greece to Austria. In the current stage, Kodi can prepare and guide the switch request, but the app must not claim that it has scanned all private Google Maps folders until Google OAuth is implemented.
+
+Future OAuth-backed behavior:
+
+1. The owner connects Google.
+2. The backend lists the owner's available Google trip maps/lists that the API can legally read.
+3. Kodi asks which trip to use.
+4. The selected trip becomes the active Google source for the shared group.
+5. The previous trip remains available as another owner-managed trip source, not as stale hidden state.
 
 ## Main Screen
 

@@ -12,7 +12,9 @@ import { searchGooglePlacesText, type GooglePlacesTextSearchResult } from "./goo
 import { estimateGoogleRoute, type GoogleRouteTravelMode } from "./google/routes.js";
 import { buildDemoGoogleSourcePreview, getGoogleSourceReadiness } from "./google/sourceAdapter.js";
 import {
+  addDemoTripMemberAsync,
   loadDemoTripMembersAsync,
+  removeDemoTripMemberAsync,
   resetDemoTripMembersAsync,
   updateDemoMemberLocationAsync
 } from "./data/localMembers.js";
@@ -64,7 +66,7 @@ import {
   type TripTimelineResolution
 } from "./agent/tripTimelineResolver.js";
 import { canMemberRunAgentAction, isAgentActionType } from "./permissions/agentActions.js";
-import type { TripEventType } from "./domain/types.js";
+import type { AgeGroup, TripEventType } from "./domain/types.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
@@ -917,6 +919,75 @@ app.get("/api/trips/demo/members", async (_req, res) => {
   res.json({
     tripGroupId: "group_family_greece_demo",
     members
+  });
+});
+
+app.post("/api/trips/demo/members", async (req, res) => {
+  const { displayName, age, ageGroup } = req.body ?? {};
+
+  if (typeof displayName !== "string" || displayName.trim().length < 2) {
+    res.status(400).json({ error: "displayName is required" });
+    return;
+  }
+
+  const safeAgeGroup: AgeGroup = ["child", "teen", "adult", "senior"].includes(String(ageGroup))
+    ? (String(ageGroup) as AgeGroup)
+    : "adult";
+  const numericAge = Number(age);
+  const safeAge = Number.isInteger(numericAge) && numericAge >= 0 && numericAge <= 120 ? numericAge : undefined;
+  const member = await addDemoTripMemberAsync({
+    displayName: displayName.trim(),
+    ageGroup: safeAgeGroup,
+    age: safeAge,
+    role: "member"
+  });
+
+  await safeRecordTripEvent({
+    eventType: "member_joined",
+    actorMemberId: member.member.id,
+    actorName: member.member.displayName,
+    relatedEntityId: member.member.id,
+    summary: `${member.member.displayName} joined the trip group.`
+  });
+
+  res.json({
+    tripGroupId: "group_family_greece_demo",
+    member,
+    members: await loadDemoTripMembersAsync()
+  });
+});
+
+app.delete("/api/trips/demo/members/:memberId", async (req, res) => {
+  const { memberId } = req.params;
+  const { actorMemberId } = req.body ?? {};
+
+  if (typeof actorMemberId !== "string" || actorMemberId.trim().length < 1) {
+    res.status(400).json({ error: "actorMemberId is required" });
+    return;
+  }
+
+  const result = await removeDemoTripMemberAsync({
+    memberId,
+    actorMemberId: actorMemberId.trim()
+  });
+
+  if (!result.ok) {
+    const status = result.error === "not_allowed" ? 403 : result.error === "member_not_found" ? 404 : 400;
+    res.status(status).json(result);
+    return;
+  }
+
+  await safeRecordTripEvent({
+    eventType: "member_left",
+    actorMemberId: actorMemberId.trim(),
+    actorName: actorMemberId.trim(),
+    relatedEntityId: memberId,
+    summary: `${memberId} left or was removed from the trip group.`
+  });
+
+  res.json({
+    tripGroupId: "group_family_greece_demo",
+    ...result
   });
 });
 
