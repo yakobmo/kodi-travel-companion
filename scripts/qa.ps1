@@ -371,6 +371,12 @@ if (
   throw "Kodi place/route recommendations must be enhanced with Google Maps and Waze action URLs when a target is available."
 }
 
+$presencePingIndex = $serverSource.IndexOf("if (isKodiPresencePing(message))")
+$tripSnapshotIndex = $serverSource.IndexOf("await buildAgentTripStateSnapshot()")
+if ($presencePingIndex -lt 0 -or $tripSnapshotIndex -lt 0 -or $presencePingIndex -gt $tripSnapshotIndex) {
+  throw "Kodi presence checks must answer before building the full trip snapshot so simple connectivity pings stay fast."
+}
+
 if (
   -not $openAiAgentSource.Contains("freshest currentLocation/live member location") -or
   -not $openAiAgentSource.Contains("For every practical recommendation of a concrete place") -or
@@ -380,6 +386,16 @@ if (
 }
 
 $reverseGeocodeSource = Get-Content (Join-Path $root "apps\api\src\google\reverseGeocode.ts") -Raw
+$googleRoutesSourceForTimeout = Get-Content (Join-Path $root "apps\api\src\google\routes.ts") -Raw
+if (
+  -not $reverseGeocodeSource.Contains("GOOGLE_GEOCODE_TIMEOUT_MS") -or
+  -not $reverseGeocodeSource.Contains("controller.abort()") -or
+  -not $googleRoutesSourceForTimeout.Contains("GOOGLE_ROUTES_TIMEOUT_MS") -or
+  -not $googleRoutesSourceForTimeout.Contains("controller.abort()")
+) {
+  throw "Google geocode and routes calls used by Kodi must be time-boxed so the chat never appears disconnected."
+}
+
 $kodiSourceEarly = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -Encoding utf8
 if (
   -not $kodiSourceEarly.Contains("isTripRouteDiagramRequest") -or
@@ -1114,6 +1130,14 @@ if (
   -not $appSource.Contains("currentLocation: agentCurrentLocation")
 ) {
   throw "Web app must refresh or pass the freshest available location context before location-dependent Kodi calls."
+}
+
+if (
+  -not $appSource.Contains("new AbortController()") -or
+  -not $appSource.Contains("controller.abort()") -or
+  -not $appSource.Contains("signal: controller.signal")
+) {
+  throw "Web chat must time-box Kodi agent requests and fall back instead of leaving the user with a disconnected chat."
 }
 
 if (-not $appSource.Contains("visibleMembers")) {

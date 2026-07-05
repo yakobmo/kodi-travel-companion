@@ -2581,13 +2581,18 @@ export function App() {
   }
 
   async function requestKodiReply(text: string, nextMessages: ChatMessage[]) {
+    let timeoutId: number | undefined;
+
     try {
       const agentCurrentLocation = await getFreshCurrentLocationForAgent(text);
+      const controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller.abort(), 24_000);
       const response = await fetch(`${apiBaseUrl}/api/agent/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
+        signal: controller.signal,
         body: JSON.stringify({
           tripGroupId: "group_family_greece_demo",
           member: {
@@ -2619,6 +2624,10 @@ export function App() {
       return data.text;
     } catch {
       return buildKodiFallbackReply(nextMessages, selectedPlace);
+    } finally {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
     }
   }
 

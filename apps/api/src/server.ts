@@ -363,7 +363,20 @@ function shouldUseDeterministicRouteDiagram(message: string) {
 
 function isKodiPresencePing(message: string) {
   const normalized = message.replace(/[?!.,\s]/g, "").toLowerCase();
-  return ["קודי", "kodi", "codex", "קודקס"].includes(normalized);
+  const wakeWords = ["קודי", "kodi", "codex", "קודקס"];
+  const wakeWord = wakeWords.find((word) => normalized.startsWith(word));
+
+  if (!wakeWord) {
+    return false;
+  }
+
+  if (normalized === wakeWord || normalized.length <= wakeWord.length + 2) {
+    return true;
+  }
+
+  return ["אתהכאן", "אתהפה", "כאן", "שלום", "היי", "הי", "מחובר", "עובד"].some((term) =>
+    normalized.includes(term)
+  );
 }
 
 function shouldUseExternalPlacesSearch(message: string) {
@@ -2286,17 +2299,6 @@ app.post("/api/agent/message", async (req, res) => {
     return;
   }
 
-  const requestCurrentLocation = getRequestCurrentLocation(context);
-  const hereAndNowContext = shouldUseHereAndNowContext(message);
-  const tripState = withRequestCurrentLocation(
-    req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
-    normalizedMember,
-    requestCurrentLocation
-  );
-  const usagePool = buildDemoTripUsagePool({
-    tripGroupId: tripState.trip.groupId,
-    members: tripState.members
-  });
   const permissionPolicy =
     context && typeof context === "object"
       ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
@@ -2317,20 +2319,31 @@ app.post("/api/agent/message", async (req, res) => {
         fastLane: true,
         latencyMs: Date.now() - agentStartedAt
       },
-      contextSummary: buildAgentContextSummary({
+      contextSummary: {
         tripGroupId,
-        member: {
-          id: normalizedMember.id,
-          displayName: normalizedMember.displayName,
-          role: normalizedMember.role
-        },
-        recentMessages,
-        tripState,
-        permissionPolicy
-      })
+        memberId: normalizedMember.id,
+        memberName: normalizedMember.displayName,
+        memberRole: normalizedMember.role,
+        recentMessagesCount: recentMessages.length,
+        hasTripState: false,
+        operationalChangesRequireAdmin: permissionPolicy?.operationalChangesRequireAdmin,
+        canShareLiveLocation: permissionPolicy?.canShareLiveLocation
+      }
     });
     return;
   }
+
+  const requestCurrentLocation = getRequestCurrentLocation(context);
+  const hereAndNowContext = shouldUseHereAndNowContext(message);
+  const tripState = withRequestCurrentLocation(
+    req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
+    normalizedMember,
+    requestCurrentLocation
+  );
+  const usagePool = buildDemoTripUsagePool({
+    tripGroupId: tripState.trip.groupId,
+    members: tripState.members
+  });
 
   const focusedReferenceMessage = buildFocusedReferenceMessage(message, recentMessages);
   const timelineReference = resolveTimelineReferenceForMessage(focusedReferenceMessage, tripState);

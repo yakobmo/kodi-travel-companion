@@ -49,9 +49,20 @@ interface GoogleRoutesApiResponse {
 
 const GOOGLE_ROUTES_COMPUTE_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 const GOOGLE_ROUTES_FIELD_MASK = "routes.duration,routes.distanceMeters";
+const DEFAULT_TIMEOUT_MS = 3500;
 
 function getGoogleMapsApiKey() {
   return process.env.GOOGLE_MAPS_API_KEY?.trim() ?? "";
+}
+
+function normalizeTimeoutMs(value: string | undefined) {
+  const timeoutMs = Number(value);
+
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return DEFAULT_TIMEOUT_MS;
+  }
+
+  return Math.min(Math.max(Math.round(timeoutMs), 800), 8000);
 }
 
 function normalizeTravelMode(value: GoogleRouteTravelMode | undefined): GoogleRouteTravelMode {
@@ -141,15 +152,38 @@ export async function estimateGoogleRoute(input: GoogleRouteEstimateInput): Prom
     };
   }
 
-  const response = await fetch(GOOGLE_ROUTES_COMPUTE_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": GOOGLE_ROUTES_FIELD_MASK
-    },
-    body: JSON.stringify(buildRouteRequestBody(input, travelMode))
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), normalizeTimeoutMs(process.env.GOOGLE_ROUTES_TIMEOUT_MS));
+  let response: Response;
+
+  try {
+    response = await fetch(GOOGLE_ROUTES_COMPUTE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": GOOGLE_ROUTES_FIELD_MASK
+      },
+      body: JSON.stringify(buildRouteRequestBody(input, travelMode)),
+      signal: controller.signal
+    });
+  } catch (error) {
+    return {
+      ...base,
+      status: "google_error",
+      configured: true,
+      error: {
+        code: error instanceof Error && error.name === "AbortError" ? "google_routes_timeout" : "google_routes_fetch_error",
+        message:
+          error instanceof Error && error.name === "AbortError"
+            ? "Google Routes timed out before Kodi could use it."
+            : "Google Routes request failed before a response was returned."
+      }
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+
   const payload = (await response.json()) as GoogleRoutesApiResponse;
 
   if (!response.ok) {

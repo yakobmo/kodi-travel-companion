@@ -46,9 +46,20 @@ interface GoogleGeocodeResponse {
 }
 
 const GOOGLE_GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
+const DEFAULT_TIMEOUT_MS = 2500;
 
 function getGoogleMapsApiKey() {
   return process.env.GOOGLE_MAPS_API_KEY?.trim() ?? "";
+}
+
+function normalizeTimeoutMs(value: string | undefined) {
+  const timeoutMs = Number(value);
+
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return DEFAULT_TIMEOUT_MS;
+  }
+
+  return Math.min(Math.max(Math.round(timeoutMs), 800), 8000);
 }
 
 function isFiniteCoordinate(value: number) {
@@ -154,7 +165,31 @@ export async function reverseGeocodeLocation(input: GoogleReverseGeocodeInput): 
     params.set("region", input.regionCode);
   }
 
-  const response = await fetch(`${GOOGLE_GEOCODE_URL}?${params.toString()}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), normalizeTimeoutMs(process.env.GOOGLE_GEOCODE_TIMEOUT_MS));
+  let response: Response;
+
+  try {
+    response = await fetch(`${GOOGLE_GEOCODE_URL}?${params.toString()}`, {
+      signal: controller.signal
+    });
+  } catch (error) {
+    return {
+      ...base,
+      configured: true,
+      status: "google_error",
+      error: {
+        code: error instanceof Error && error.name === "AbortError" ? "google_geocode_timeout" : "google_geocode_fetch_error",
+        message:
+          error instanceof Error && error.name === "AbortError"
+            ? "Google reverse geocoding timed out before Kodi could use it."
+            : "Google reverse geocoding request failed before a response was returned."
+      }
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+
   const payload = (await response.json()) as GoogleGeocodeResponse;
 
   if (!response.ok || payload.status !== "OK") {

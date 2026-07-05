@@ -487,3 +487,24 @@ Decision:
 QA/automation:
 
 - `scripts/qa.ps1` now fails if `package-lock.json` is missing or if root build/start drift away from the npm-compatible path.
+
+### 20. Kodi Must Never Look Disconnected While Waiting For External Services
+
+What happened:
+
+Kodi could appear disconnected when an agent request waited too long on the full trip snapshot, OpenAI, Google Routes, or Google reverse geocoding. Simple messages like "Kodi, are you here?" should feel instant, but they could still enter the heavier agent path.
+
+Why it happened:
+
+The server built trip context before checking simple presence pings. Google Routes and reverse geocoding also lacked explicit abort timeouts, and the browser fetch could wait until the connection closed instead of falling back gracefully.
+
+Decision:
+
+- Presence pings are answered before loading the full trip snapshot.
+- Google Places, Routes, and reverse geocoding calls used by Kodi must be time-boxed.
+- The web chat must abort slow agent requests and show a fallback rather than leaving Kodi thinking forever.
+- Real travel questions still go through the normal agent path; only short presence/hello checks use the fast lane.
+
+QA/automation:
+
+- `scripts/qa.ps1` checks that presence pings run before snapshot loading, that Google Routes and reverse geocoding use abort timeouts, and that the web chat uses `AbortController` for agent calls.
