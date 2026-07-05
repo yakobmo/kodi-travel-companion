@@ -71,6 +71,14 @@ foreach ($file in $requiredFiles) {
   }
 }
 
+if (-not (Test-Path (Join-Path $root "pnpm-lock.yaml"))) {
+  throw "Render build must use pnpm-lock.yaml."
+}
+
+if (Test-Path (Join-Path $root "package-lock.json")) {
+  throw "Do not commit package-lock.json. Kodi uses pnpm on Render; a second npm lockfile can make Render run the wrong install path."
+}
+
 $jsonFiles = @(
   "package.json",
   "apps/api/package.json",

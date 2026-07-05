@@ -464,3 +464,24 @@ Decision:
 QA/automation:
 
 - `scripts/qa.ps1` checks that `pnpm notifications:vapid` exists, generates VAPID variables, and that deployment docs explain the Render setup without committing secrets.
+
+### 19. Render Must Not See Competing npm And pnpm Lockfiles
+
+What happened:
+
+Render failed the build for `Prevent duplicate trip member joins` while logging npm workspace/install help instead of the intended pnpm install/build flow.
+
+Why it happened:
+
+The repository contained both `pnpm-lock.yaml` and `package-lock.json`. Even when the project is configured for pnpm, a committed npm lockfile can make a Node hosting environment choose or attempt an npm install path. That creates confusing workspace errors and blocks deploys.
+
+Decision:
+
+- Kodi uses pnpm as the single package manager.
+- Keep `pnpm-lock.yaml`.
+- Do not commit `package-lock.json`.
+- Render build/start commands must stay on the pnpm/corepack path.
+
+QA/automation:
+
+- `scripts/qa.ps1` now fails if `package-lock.json` exists or if `pnpm-lock.yaml` is missing.
