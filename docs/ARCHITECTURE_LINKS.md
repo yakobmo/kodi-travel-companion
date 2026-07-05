@@ -13,6 +13,7 @@ Source planning docs:
 - `../../outputs/codex-self-review-approval-protocol.md`
 - `../../outputs/google-maps-integration-risk-review.md`
 - `docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md`
+- `docs/KODI_AGENT_SPEC.md`
 - `docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md`
 - `docs/CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md`
 

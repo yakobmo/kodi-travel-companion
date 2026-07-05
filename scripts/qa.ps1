@@ -13,6 +13,7 @@ $requiredFiles = @(
   "docs/SUPABASE_SCHEMA.md",
   "docs/GOOGLE_INTEGRATION_PLAN.md",
   "docs/CORE_EXPERIENCE_AND_ONBOARDING.md",
+  "docs/KODI_AGENT_SPEC.md",
   "docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md",
   "docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md",
   "docs/CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md",
@@ -120,6 +121,20 @@ if (-not $packageSource.Contains("smoke:google-places-live")) {
 
 if (-not $packageSource.Contains("smoke:google-routes-live")) {
   throw "Root package.json must expose the live Google Routes smoke script."
+}
+
+$kodiAgentSpecSource = Get-Content (Join-Path $root "docs\KODI_AGENT_SPEC.md") -Raw -Encoding UTF8
+if (
+  -not $kodiAgentSpecSource.Contains("Kodi is not a FAQ bot") -or
+  -not $kodiAgentSpecSource.Contains("Google Maps is the map") -or
+  -not $kodiAgentSpecSource.Contains("Here-And-Now Mode") -or
+  -not $kodiAgentSpecSource.Contains("Trip Timeline Intelligence") -or
+  -not $kodiAgentSpecSource.Contains("Operational actions require owner/admin permission") -or
+  -not $kodiAgentSpecSource.Contains("QA Scenarios") -or
+  -not $kodiAgentSpecSource.Contains("קודי, איפה אני עכשיו") -or
+  -not $kodiAgentSpecSource.Contains("קודי, החלף את מפת הטיול לווינה")
+) {
+  throw "Kodi agent specification must preserve the agent-first product contract and QA scenarios."
 }
 
 $sharedMediaSource = Get-Content (Join-Path $root "docs\SHARED_TRIP_MEDIA_ARCHITECTURE.md") -Raw -Encoding UTF8

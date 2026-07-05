@@ -135,6 +135,7 @@ Repository-local docs:
 - `docs/ARCHITECTURE_LINKS.md`
 - `docs/DEPLOYMENT_PLAN.md`
 - `docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md`
+- `docs/KODI_AGENT_SPEC.md`
 - `docs/SUPABASE_SCHEMA.md`
 - `docs/AGENT_LESSONS_AND_BLOCKERS.md`
 - `docs/CODEX_REMINDER_COMMANDS.md`

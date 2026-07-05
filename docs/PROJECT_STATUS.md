@@ -343,6 +343,7 @@ Current Supabase state:
 - Kodi app branding selected on `2026-07-02`: the home-screen/share identity is the blue compass `K` icon with a small turquoise sparkle, preserving the name `קודי` as the app shortcut while using `Kodi AI Smart Guide` for full title/share metadata.
 - Render build recovery added on `2026-07-05`: production packaging was aligned with the live Render npm dashboard path after deploys failed on npm workspace/install help. Kodi now keeps `package-lock.json`, removes the pnpm production lockfile, builds through `node scripts/build.mjs`, starts through `node apps/api/dist/server.js`, and QA guards the npm-compatible Render path.
 - Public smoke passed on `2026-07-05` after the Render build recovery: Render served `assets/index-DWXlSwt1.css` and `assets/index-CX0FO_xk.js`, `/api/health` and `/api/trips/demo/storage` returned successfully, the deployed CSS contains the mobile composer grid fix, and duplicate joining as `אורייה` returned `existingMember=true` without creating another participant row.
+- Kodi agent specification consolidated on `2026-07-05`: `docs/KODI_AGENT_SPEC.md` now defines Kodi as the intelligent Hebrew travel companion, not a FAQ bot; it captures Google Maps as the map engine, here-and-now behavior, trip timeline intelligence, permission boundaries, voice expectations, failure behavior, speed principles, and required QA scenarios for future agent improvements.
 
 ## Next Continuation Checkpoint
 
