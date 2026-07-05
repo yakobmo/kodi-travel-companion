@@ -388,6 +388,8 @@ function shouldUseDeterministicRouteDiagram(message: string) {
       "מפה של מסלול",
       "תראה לי מסלול",
       "תראה את המסלול",
+      "סמן לי על המפה",
+      "סמן את המסלול",
       "צייר לי",
       "route map",
       "route diagram",
@@ -493,6 +495,9 @@ function shouldUseExternalPlacesSearch(message: string) {
     "פארם",
     "סופר",
     "חנות",
+    "שנורקל",
+    "צלילה",
+    "snorkel",
     "קרוב",
     "באזור"
   ]);

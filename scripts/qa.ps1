@@ -443,6 +443,19 @@ if (
   throw "Kodi must answer current-location questions from Google reverse geocoding before falling back to raw coordinates."
 }
 
+if ($kodiSourceEarly.Contains('["איפה", "כולם", "מיקום", "נפגשים", "קרוב למי"]')) {
+  throw "Kodi rules must not classify any sentence containing 'איפה' as group-location; this breaks natural travel questions like snorkeling in Pelion."
+}
+
+if (
+  -not $kodiSourceEarly.Contains('"שנורקל"') -or
+  -not $serverSource.Contains('"שנורקל"') -or
+  -not $kodiSourceEarly.Contains('"סמן לי על המפה"') -or
+  -not $serverSource.Contains('"סמן לי על המפה"')
+) {
+  throw "Kodi must route snorkeling/activity questions and map-marking requests to the correct agent paths."
+}
+
 if (
   $kodiSourceEarly.Contains("בקואורדינטות `${visibleMember.liveLocation.lat}") -or
   $kodiSourceEarly.Contains("לא הצלחתי לתרגם אותן לשם מקום")
@@ -1647,7 +1660,8 @@ if (-not $kodiSource.Contains("place_recommendation")) {
 if (
   -not $kodiSource.Contains("externalPlacesSearch") -or
   -not $kodiSource.Contains("buildExternalPlacesContext") -or
-  -not $kodiSource.Contains("GOOGLE_MAPS_API_KEY") -or
+  -not $kodiSource.Contains("אין לי כרגע תוצאות Google Places חיות") -or
+  $kodiSource.Contains("חסר GOOGLE_MAPS_API_KEY") -or
   -not $kodiSource.Contains("Google Places")
 ) {
   throw "Kodi agent must explain guarded Google Places search context without pretending live results exist."

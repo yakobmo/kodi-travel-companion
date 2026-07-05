@@ -203,6 +203,8 @@ function isTripRouteDiagramRequest(message: string) {
       "תראה לי מסלול",
       "תראה את המסלול",
       "צייר לי",
+      "סמן לי על המפה",
+      "סמן את המסלול",
       "diagram",
       "route map",
       "map diagram"
@@ -415,7 +417,7 @@ function buildExternalPlacesContext(search?: GooglePlacesTextSearchResult) {
   }
 
   if (search.status === "not_configured") {
-    return " חיפוש Google Places חי עדיין לא מופעל כי חסר GOOGLE_MAPS_API_KEY, ולכן אני לא אציג מקומות חיצוניים כאילו בדקתי אותם עכשיו.";
+    return " אין לי כרגע תוצאות Google Places חיות לשאלה הזו, אז אני נשען על מפת הטיול וההיגיון המקומי בלי להמציא דירוגים או שעות פתיחה.";
   }
 
   if (search.status === "google_error") {
@@ -443,7 +445,7 @@ function buildRouteEstimateContext(routeEstimate?: GoogleRouteEstimateResult) {
   }
 
   if (routeEstimate.status === "not_configured") {
-    return "חישוב זמן נסיעה חי מ-Google Routes עדיין לא מופעל כי חסר GOOGLE_MAPS_API_KEY.";
+    return "אין לי כרגע חישוב נסיעה חי מ-Google Routes, אז אתן הערכה זהירה לפי ההקשר ולא אציג ETA כאילו נבדק עכשיו.";
   }
 
   if (routeEstimate.status === "google_error") {
@@ -638,6 +640,21 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     };
   }
 
+  if (includesAny(message, ["שנורקל", "צלילה", "snorkel"])) {
+    return {
+      author: "קודי",
+      intent: "place_recommendation",
+      requiresAdminApproval: false,
+      source: "rules",
+      text:
+        `${memberName}, כן, בפיליון יש איפה לעשות שנורקל, אבל צריך לכוון את הציפייה: זה לא שנורקל טרופי, אלא מפרצים, מים צלולים יחסית, סלעים, דגים קטנים וחוויית ים רגועה. ` +
+        "מתוך אופי המסלול שלכם הייתי מחפש בעיקר סביב Damouchari, Papa Nero, Plaka, Mylopotamos וחופים שקטים ליד Chorefto. " +
+        "למשפחה עדיף יום עם ים שקט, בוקר מוקדם, כניסה ליד סלעים או קצה חוף ולא באמצע רצועת רחצה עמוסה. " +
+        `${externalPlacesContext ? `${externalPlacesContext} ` : ""}` +
+        "אם רוצים לשדרג את זה, שווה לשלב עם סירה קטנה בלי סקיפר במפרץ רגוע, ואז אפשר להגיע לפינות טובות יותר לשחייה ושנורקל. Google Maps מתאים כאן לבדיקה רגלית/חוף, ו-Waze רק אם נוסעים לנקודת החוף."
+    };
+  }
+
   if (includesAny(message, ["מה כדאי", "מה לעשות", "לאן ללכת", "תמליץ", "המלצה", "הכי טוב", "משהו עם מים"])) {
     const recommendation = selectRecommendedPlace(message, input.tripState);
     const best = recommendation.best;
@@ -719,6 +736,9 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       "בית חבד",
       "בית חב\"ד",
       "ראפטינג",
+      "שנורקל",
+      "צלילה",
+      "snorkel",
       "קיר טיפוס"
     ])
   ) {
@@ -734,7 +754,7 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     };
   }
 
-  if (includesAny(message, ["איפה", "כולם", "מיקום", "נפגשים", "קרוב למי"])) {
+  if (includesAny(message, ["איפה כולם", "איפה כל", "מיקום הקבוצה", "מיקום של", "כולם", "נפגשים", "קרוב למי"])) {
     const visibleNames =
       locationSummary.visibleNames.length > 0 ? locationSummary.visibleNames.join(", ") : "אף אחד עדיין לא משתף מיקום";
     const hiddenText =
