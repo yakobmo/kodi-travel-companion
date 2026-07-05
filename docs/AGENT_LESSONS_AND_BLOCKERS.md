@@ -463,25 +463,27 @@ Decision:
 
 QA/automation:
 
-- `scripts/qa.ps1` checks that `pnpm notifications:vapid` exists, generates VAPID variables, and that deployment docs explain the Render setup without committing secrets.
+- `scripts/qa.ps1` checks that the `notifications:vapid` script exists, generates VAPID variables, and that deployment docs explain the Render setup without committing secrets.
 
-### 19. Render Must Not See Competing npm And pnpm Lockfiles
+### 19. Render Build Must Match The Live Dashboard Package Manager
 
 What happened:
 
-Render failed the build for `Prevent duplicate trip member joins` while logging npm workspace/install help instead of the intended pnpm install/build flow.
+Render failed the build for `Prevent duplicate trip member joins` and then failed again for the lockfile guard commit while logging npm workspace/install help. The live Render service was running the dashboard npm path, not the pnpm/corepack path described in the repository config.
 
 Why it happened:
 
-The repository contained both `pnpm-lock.yaml` and `package-lock.json`. Even when the project is configured for pnpm, a committed npm lockfile can make a Node hosting environment choose or attempt an npm install path. That creates confusing workspace errors and blocks deploys.
+The first fix inferred the wrong root cause and removed `package-lock.json`. That made the actual Render dashboard command, which uses `npm ci`, fail earlier. The stable fix is to align the repository with the live Render execution path and keep the build script independent of workspace package-manager quirks.
 
 Decision:
 
-- Kodi uses pnpm as the single package manager.
-- Keep `pnpm-lock.yaml`.
-- Do not commit `package-lock.json`.
-- Render build/start commands must stay on the pnpm/corepack path.
+- Kodi production build uses npm on Render.
+- Keep `package-lock.json` as the committed production lockfile.
+- Do not rely on `pnpm --filter` for production build/start.
+- Root `build` runs `node scripts/build.mjs`, which invokes `tsc` and `vite` directly.
+- Root `start` runs `node apps/api/dist/server.js`.
+- Render build/start commands must stay `npm ci && npm run build` and `npm start`.
 
 QA/automation:
 
-- `scripts/qa.ps1` now fails if `package-lock.json` exists or if `pnpm-lock.yaml` is missing.
+- `scripts/qa.ps1` now fails if `package-lock.json` is missing or if root build/start drift away from the npm-compatible path.

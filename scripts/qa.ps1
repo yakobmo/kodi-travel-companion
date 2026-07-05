@@ -71,12 +71,29 @@ foreach ($file in $requiredFiles) {
   }
 }
 
-if (-not (Test-Path (Join-Path $root "pnpm-lock.yaml"))) {
-  throw "Render build must use pnpm-lock.yaml."
+if (-not (Test-Path (Join-Path $root "package-lock.json"))) {
+  throw "Render build must keep package-lock.json because the live service runs npm ci."
 }
 
-if (Test-Path (Join-Path $root "package-lock.json")) {
-  throw "Do not commit package-lock.json. Kodi uses pnpm on Render; a second npm lockfile can make Render run the wrong install path."
+$packageSource = Get-Content (Join-Path $root "package.json") -Raw
+if (
+  -not $packageSource.Contains('"packageManager": "npm@') -or
+  -not $packageSource.Contains('"build": "node scripts/build.mjs"') -or
+  -not $packageSource.Contains('"start": "node apps/api/dist/server.js"')
+) {
+  throw "Root package scripts must stay npm-compatible for Render."
+}
+
+$renderSource = Get-Content (Join-Path $root "render.yaml") -Raw
+if (
+  -not $renderSource.Contains("buildCommand: npm ci && npm run build") -or
+  -not $renderSource.Contains("startCommand: npm start")
+) {
+  throw "Render config must match the npm build path used by the live dashboard."
+}
+
+if (-not (Test-Path (Join-Path $root "scripts/build.mjs"))) {
+  throw "Kodi build must keep the package-manager-independent build script."
 }
 
 $jsonFiles = @(
