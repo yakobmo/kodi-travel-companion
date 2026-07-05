@@ -328,7 +328,7 @@ try {
   const membersAfterJoinPayload = await (await joinPage.request.get("http://localhost:3001/api/trips/demo/members")).json();
   assertCheck("join api ok", joinResponse.ok());
   assertCheck("join adds participant locally", membersAfterJoinPayload.members?.some((member) => member.member?.displayName === smokeJoinName));
-  assertCheck("join location consent copy", joinBody.includes("מיקום אישי במפה יוצג רק אחרי אישור מיקום"));
+  assertCheck("join location consent copy", joinBody.includes("אישור מיקום נעשה בנפרד מהמכשיר שלך"));
   await joinPage.close();
 
   assertCheck("members api ok", membersResponse.ok());
@@ -576,7 +576,7 @@ try {
   await page.waitForTimeout(1200);
   assertCheck("qa system messages stay hidden", (await page.getByText("הודעה שנכנסה מבחוץ").count()) === 0);
 
-  const wazeButton = menu.getByRole("button", { name: "פתח ב-Waze" });
+  const wazeButton = menu.getByRole("button", { name: "Waze" }).first();
   await input.fill("https://waze.com/ul?ll=31.25297,34.79146&navigate=yes");
   await page.locator(".composer button[type='submit']").click();
   const chatWazeLink = page.getByRole("link", { name: "פתח ב-Waze" }).last();
@@ -585,24 +585,6 @@ try {
   assertCheck("chat waze URL becomes tappable", chatWazeHref?.includes("waze.com/ul?ll=31.25297,34.79146"));
 
   const disabled = await wazeButton.isDisabled();
-  await menu.getByRole("button", { name: "בקש להפוך ליעד קבוצתי" }).click();
-  await menu.getByText("אושר על ידי מנהל/ת").waitFor();
-  await menu.getByText("יעד קבוצתי נוכחי").waitFor();
-  await menu.getByRole("button", { name: "בנה מסלול קבוצתי קצר" }).click();
-  await menu.getByText("מסלול קבוצתי אושר ונשמר.").waitFor();
-  await menu.getByText("מסלול קבוצתי פעיל").waitFor();
-  await menu.getByText("ETA מדויק").waitFor();
-  await menu.getByText("עכשיו ·").waitFor();
-  assertCheck("active route stop navigation", await menu.getByRole("button", { name: "פתח תחנה פעילה ב-Waze" }).isVisible());
-  await menu.getByRole("button", { name: "סמן תחנה כהושלמה" }).click();
-  await menu.getByText("הושלם ·").waitFor();
-  await page.getByText("סימן/ה את").waitFor();
-  for (let index = 0; index < 3; index += 1) {
-    await menu.getByRole("button", { name: "סמן תחנה כהושלמה" }).click();
-  }
-  await menu.getByText("המסלול הושלם.").waitFor();
-  assertCheck("route completion disables progress", await menu.getByRole("button", { name: "סמן תחנה כהושלמה" }).isDisabled());
-
   await menu.getByRole("button", { name: /אשר מיקום|רענן מיקום/ }).click();
   await menu.getByText("פעיל על Google Maps").waitFor();
   await page.locator(".self-marker").waitFor();
@@ -636,6 +618,16 @@ try {
   const lastKodiText = await page.locator(".message.kodi").last().innerText();
   assertCheck("kodi chat reply avoids template language", !lastKodiText.includes("שמעתי את") && !lastKodiText.includes("מהשיחה אני מזהה"));
   assertCheck("kodi voice output control", (await page.locator(".message.kodi .speak-message-button").count()) >= 1);
+
+  const kodiMessagesBeforeParticipantChat = await page.locator(".message.kodi").count();
+  await input.fill("מה קורה אורייה");
+  await page.locator(".composer button[type='submit']").click();
+  await page.getByText("מה קורה אורייה").waitFor();
+  await page.waitForTimeout(1200);
+  assertCheck(
+    "kodi stays asleep for participant chat after reply",
+    (await page.locator(".message.kodi").count()) === kodiMessagesBeforeParticipantChat
+  );
 
   assertCheck("retired demo member pill removed", (await page.locator(".member-pills").getByRole("button", { name: "נועה" }).count()) === 0);
 

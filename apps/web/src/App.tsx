@@ -952,83 +952,8 @@ function shouldAttachSelectedPlaceToAgent(text: string) {
 
 function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
   const explicitCall = /\b(kodi|codex)\b/i.test(text) || text.includes("קודי") || text.includes("קודקס");
-  if (explicitCall) {
-    return true;
-  }
-
-  const naturalQuestionOrTask = [
-    "?",
-    "מה",
-    "כמה",
-    "איפה",
-    "איך",
-    "מתי",
-    "לאן",
-    "האם",
-    "יש",
-    "כדאי",
-    "אפשר",
-    "תבדוק",
-    "תחפש",
-    "תמצא",
-    "תמליץ",
-    "תסביר",
-    "ספר",
-    "שים",
-    "פתח",
-    "קח אותנו",
-    "תארגן",
-    "תכנן",
-    "מסלול",
-    "מלון",
-    "אטרקציה",
-    "חוף",
-    "מסעדה",
-    "טברנה",
-    "שנורקל",
-    "משקפת",
-    "משקפות",
-    "מזומן",
-    "אשראי",
-    "יורו",
-    "מזג",
-    "שקיעה",
-    "Waze",
-    "waze",
-    "Google Maps"
-  ].some((term) => text.includes(term));
-
-  if (naturalQuestionOrTask) {
-    return true;
-  }
-
-  const recentMessages = currentMessages.slice(-4);
-  const kodiWasRecentlyActive = recentMessages.some((message) => message.author === "קודי" || message.source === "agent");
-  if (!kodiWasRecentlyActive) {
-    return false;
-  }
-
-  return [
-    "?",
-    "מה",
-    "כמה",
-    "איפה",
-    "איך",
-    "מתי",
-    "לאן",
-    "האם",
-    "יש",
-    "אפשר",
-    "תבדוק",
-    "תחפש",
-    "תמצא",
-    "תמליץ",
-    "תסביר",
-    "ספר",
-    "שים",
-    "פתח",
-    "קח אותנו"
-  ].some((term) => text.includes(term));
+  void currentMessages;
+  return explicitCall;
 }
 
 function getMapPosition(index: number, total: number) {

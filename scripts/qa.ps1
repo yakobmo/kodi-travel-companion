@@ -785,10 +785,10 @@ $appSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encoding
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
-  -not $appSource.Contains("kodiWasRecentlyActive") -or
+  -not $appSource.Contains("return explicitCall") -or
   -not $appSource.Contains("shouldWakeKodi(text, messages)")
 ) {
-  throw "Web app must keep Kodi awake for natural follow-up questions after Kodi has already joined the conversation."
+  throw "Web app must wake Kodi only through the explicit Kodi wake word, while voice conversation can still force Kodi separately."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/state")) {
@@ -1077,9 +1077,17 @@ if (
   -not $appSource.Contains("shouldAskKodi = shouldWakeKodi(text, messages)") -or
   -not $appSource.Contains("text.includes") -or
   -not $appSource.Contains("kodi|codex") -or
-  -not $appSource.Contains("kodiWasRecentlyActive")
+  -not $appSource.Contains("return explicitCall")
 ) {
-  throw "Web group chat must wake Kodi when explicitly addressed or when a recent Kodi exchange has an obvious follow-up question."
+  throw "Web group chat must wake Kodi only when explicitly addressed; ordinary participant questions must stay in the group chat."
+}
+
+if (
+  -not $kodiAgentSpecSource.Contains("Until Kodi is explicitly called again") -or
+  -not $kodiAgentSpecSource.Contains("מה קורה אורייה") -or
+  -not $kodiAgentSpecSource.Contains("Kodi stays quiet")
+) {
+  throw "Kodi agent spec must protect the wake-word rule for ordinary participant messages."
 }
 
 if (-not $appSource.Contains("visibleMembers")) {

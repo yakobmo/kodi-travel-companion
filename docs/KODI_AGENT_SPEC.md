@@ -130,13 +130,27 @@ There is no separate "ask the bot" channel.
 Kodi wakes when:
 
 - the user explicitly says "קודי"
-- the conversation is already with Kodi and the next message is a natural follow-up
-- the message is a clear travel/task question in the Kodi chat context
 - voice conversation mode is active
 
 Kodi should not inject itself into every family message. Ordinary group chatter can remain group chatter.
 
-Kodi should remember the recent flow. If the user corrected a wrong assumption, the correction should override stale state.
+When Kodi wakes, it reads recent group context and then answers the request. Until Kodi is explicitly called again, normal messages between participants must not trigger Kodi, even if they are questions or appear right after a Kodi reply.
+
+Kodi should remember the recent flow only after being called. If the user corrected a wrong assumption, the correction should override stale state.
+
+Bad behavior:
+
+```text
+Manager: מה קורה אורייה?
+Kodi: repeats an unrelated answer from the previous exchange.
+```
+
+Good behavior:
+
+```text
+Manager: מה קורה אורייה?
+Kodi stays quiet because the message is addressed to אורייה, not to Kodi.
+```
 
 Bad behavior:
 
@@ -508,4 +522,3 @@ This specification should guide:
 5. Add a safe action planner for map edits, route edits, and trip source switching.
 6. Add OAuth-backed Google trip source selection before claiming live private Google Maps sync.
 7. Add streaming/progress UX for slower agent tasks.
-
