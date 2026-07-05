@@ -872,6 +872,37 @@ function isCurrentLocationQuestion(text: string) {
   );
 }
 
+function shouldRefreshLocationForKodi(text: string, hasKnownLocation: boolean) {
+  const normalizedText = text.toLowerCase();
+  const locationDependentRequest =
+    isCurrentLocationQuestion(text) ||
+    [
+      "לידי",
+      "לידינו",
+      "בסביבה",
+      "קרוב אליי",
+      "קרוב אלינו",
+      "כאן",
+      "כאן ועכשיו",
+      "איפה יש",
+      "כמה זמן",
+      "עד המלון",
+      "שים בוויז",
+      "וויז",
+      "waze",
+      "google maps",
+      "מאפייה",
+      "מסעדה",
+      "טברנה",
+      "גלידה",
+      "דלק",
+      "שירותים",
+      "בית חב\"ד"
+    ].some((fragment) => normalizedText.includes(fragment.toLowerCase()));
+
+  return hasKnownLocation || locationDependentRequest;
+}
+
 function buildSpeechText(text: string) {
   return text.replace(messageUrlPattern, "").replace(/\s+/g, " ").trim();
 }
@@ -2521,7 +2552,7 @@ export function App() {
   }
 
   async function getFreshCurrentLocationForAgent(text: string) {
-    if (!isCurrentLocationQuestion(text) || !("geolocation" in navigator)) {
+    if (!shouldRefreshLocationForKodi(text, Boolean(currentLocation) || locationState === "enabled") || !("geolocation" in navigator)) {
       return currentLocation;
     }
 

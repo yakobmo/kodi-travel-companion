@@ -34,6 +34,7 @@ export interface AgentMessageResponse {
   intent: "local_guide" | "route_creation" | "family_compromise" | "group_location" | "place_recommendation" | "general";
   requiresAdminApproval: boolean;
   source: "rules" | "openai";
+  recommendedPlaceId?: string;
 }
 
 interface RecommendationCandidate {
@@ -665,6 +666,7 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       intent: "place_recommendation",
       requiresAdminApproval: true,
       source: "rules",
+      recommendedPlaceId: best.place.id,
       text:
         `ההמלצה שלי כרגע היא ${best.place.name}. בחרתי אותה כי היא מתאימה לבקשת ${recommendation.requestedFocus}. ` +
         `${needsText ? `העדפתי לשקלל גם: ${needsText}. ` : ""}` +

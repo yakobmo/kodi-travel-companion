@@ -361,6 +361,24 @@ if ($serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message) && ope
   throw "Current-location questions must reach the OpenAI agent after reverse geocoding; do not force them into rules-only replies."
 }
 
+if (
+  -not $serverSource.Contains("enhanceKodiReplyWithNavigationLinks") -or
+  -not $serverSource.Contains("hasNavigationUrl") -or
+  -not $serverSource.Contains("recommendedPlaceId") -or
+  -not $serverSource.Contains("Google Maps:") -or
+  -not $serverSource.Contains("Waze:")
+) {
+  throw "Kodi place/route recommendations must be enhanced with Google Maps and Waze action URLs when a target is available."
+}
+
+if (
+  -not $openAiAgentSource.Contains("freshest currentLocation/live member location") -or
+  -not $openAiAgentSource.Contains("For every practical recommendation of a concrete place") -or
+  -not $openAiAgentSource.Contains("Google Maps for walking/checking details and Waze for driving")
+) {
+  throw "Kodi OpenAI prompt must require fresh location reasoning and action links for concrete place recommendations."
+}
+
 $reverseGeocodeSource = Get-Content (Join-Path $root "apps\api\src\google\reverseGeocode.ts") -Raw
 $kodiSourceEarly = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -Encoding utf8
 if (
@@ -1088,6 +1106,14 @@ if (
   -not $kodiAgentSpecSource.Contains("Kodi stays quiet")
 ) {
   throw "Kodi agent spec must protect the wake-word rule for ordinary participant messages."
+}
+
+if (
+  -not $appSource.Contains("function shouldRefreshLocationForKodi") -or
+  -not $appSource.Contains("getFreshCurrentLocationForAgent(text)") -or
+  -not $appSource.Contains("currentLocation: agentCurrentLocation")
+) {
+  throw "Web app must refresh or pass the freshest available location context before location-dependent Kodi calls."
 }
 
 if (-not $appSource.Contains("visibleMembers")) {

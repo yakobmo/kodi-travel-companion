@@ -64,7 +64,7 @@ import {
 } from "./data/localGroupRoute.js";
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
-import { buildKodiReplyFromContext } from "./agent/kodi.js";
+import { buildKodiReplyFromContext, type AgentMessageResponse } from "./agent/kodi.js";
 import { tryBuildKodiReplyWithOpenAi } from "./agent/openaiAgent.js";
 import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
 import { reverseGeocodeLocation } from "./google/reverseGeocode.js";
@@ -75,7 +75,7 @@ import {
   type TripTimelineResolution
 } from "./agent/tripTimelineResolver.js";
 import { canMemberRunAgentAction, isAgentActionType } from "./permissions/agentActions.js";
-import type { AgeGroup, TripEventType } from "./domain/types.js";
+import type { AgeGroup, TripEventType, TripPlace } from "./domain/types.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
@@ -630,6 +630,102 @@ function buildGoogleMapsSearchNearLocation(query: string, location: { lat?: numb
   return `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${location.lat},${location.lng},14z`;
 }
 
+function hasCoordinates(value: { lat?: unknown; lng?: unknown } | undefined | null): value is { lat: number; lng: number } {
+  return typeof value?.lat === "number" && typeof value.lng === "number";
+}
+
+function hasNavigationUrl(text: string) {
+  return /(?:waze\.com\/ul|waze:\/\/|google\.com\/maps|maps\.app\.goo\.gl)/i.test(text);
+}
+
+function shouldAppendNavigationLinks(reply: AgentMessageResponse) {
+  return ["place_recommendation", "route_creation", "group_location"].includes(reply.intent);
+}
+
+function findTripPlaceById(tripState: ReturnType<typeof buildDemoTripState>, placeId: string | undefined) {
+  if (!placeId) {
+    return undefined;
+  }
+
+  return tripState.places.find((place) => place.id === placeId && hasCoordinates(place));
+}
+
+function findFirstExternalPlaceWithCoordinates(search: GooglePlacesTextSearchResult | undefined) {
+  if (search?.status !== "ready") {
+    return undefined;
+  }
+
+  return search.places.find((place) => hasCoordinates(place) || place.googleMapsUri);
+}
+
+function getSelectedPlaceTarget(selectedPlace: unknown) {
+  if (!selectedPlace || typeof selectedPlace !== "object") {
+    return undefined;
+  }
+
+  const candidate = selectedPlace as Partial<TripPlace>;
+  return hasCoordinates(candidate) ? candidate : undefined;
+}
+
+function buildNavigationText(target: { lat?: number; lng?: number; name?: string; label?: string; googleMapsUri?: string }) {
+  const label = target.name ?? target.label ?? "הנקודה";
+  const mapsUrl =
+    typeof target.googleMapsUri === "string" && target.googleMapsUri.length > 0
+      ? target.googleMapsUri
+      : hasCoordinates(target)
+        ? createNavigationLinks({ lat: target.lat, lng: target.lng, label }).googleMapsWalking
+        : undefined;
+  const wazeUrl = hasCoordinates(target)
+    ? createNavigationLinks({ lat: target.lat, lng: target.lng, label }).waze.web
+    : undefined;
+
+  const parts = [
+    mapsUrl ? `Google Maps: ${mapsUrl}` : undefined,
+    wazeUrl ? `Waze: ${wazeUrl}` : undefined
+  ].filter(Boolean);
+
+  return parts.length > 0 ? `\n${parts.join("\n")}` : "";
+}
+
+function enhanceKodiReplyWithNavigationLinks(input: {
+  reply: AgentMessageResponse;
+  tripState: ReturnType<typeof buildDemoTripState>;
+  externalPlacesSearch?: GooglePlacesTextSearchResult;
+  tripDestination?: { lat: number; lng: number; label?: string };
+  selectedPlace?: unknown;
+}) {
+  if (!shouldAppendNavigationLinks(input.reply) || hasNavigationUrl(input.reply.text)) {
+    return input.reply;
+  }
+
+  const recommendedPlace = findTripPlaceById(input.tripState, input.reply.recommendedPlaceId);
+  const externalPlace = findFirstExternalPlaceWithCoordinates(input.externalPlacesSearch);
+  const selectedPlace = getSelectedPlaceTarget(input.selectedPlace);
+  const routeDestination = input.tripDestination;
+  const target =
+    recommendedPlace ??
+    (externalPlace
+      ? {
+          lat: externalPlace.lat,
+          lng: externalPlace.lng,
+          name: externalPlace.displayName ?? externalPlace.formattedAddress,
+          googleMapsUri: externalPlace.googleMapsUri
+        }
+      : undefined) ??
+    selectedPlace ??
+    routeDestination;
+  const navigationText = target ? buildNavigationText(target) : "";
+
+  if (!navigationText) {
+    return input.reply;
+  }
+
+  return {
+    ...input.reply,
+    text: `${input.reply.text.trim()}${navigationText}`
+  };
+}
+
 function buildFastTripAnswer(input: {
   message: string;
   tripState: ReturnType<typeof buildDemoTripState>;
@@ -660,8 +756,10 @@ function buildFastTripAnswer(input: {
           }`;
 
   return {
-    text: `הלינה הלילה לפי ציר הטיול היא ${lodging.name}.${lodgingAddress}${foodText}\nאם תרצה, כתוב "שים בוויז" ואפתח ניווט למלון או למקום שבחרת.`,
-    intent: "trip_fast_answer",
+    author: "קודי" as const,
+    text: `הלינה הלילה לפי ציר הטיול היא ${lodging.name}.${lodgingAddress}${foodText}`,
+    intent: "place_recommendation" as const,
+    requiresAdminApproval: false,
     recommendedPlaceId: lodging.id,
     source: "rules" as const
   };
@@ -2237,8 +2335,13 @@ app.post("/api/agent/message", async (req, res) => {
     timelineReference
   });
   if (fastTripAnswer) {
+    const enhancedFastTripAnswer = enhanceKodiReplyWithNavigationLinks({
+      reply: fastTripAnswer,
+      tripState,
+      selectedPlace: req.body?.selectedPlace
+    });
     res.json({
-      ...fastTripAnswer,
+      ...enhancedFastTripAnswer,
       agentRuntime: {
         openAiStatus: "skipped_fast_lane",
         openAiModel: undefined,
@@ -2368,7 +2471,13 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
-  const reply = openAiReply?.reply ?? rulesReply;
+  const reply = enhanceKodiReplyWithNavigationLinks({
+    reply: openAiReply?.reply ?? rulesReply,
+    tripState,
+    externalPlacesSearch,
+    tripDestination: tripReference.destination,
+    selectedPlace: req.body?.selectedPlace
+  });
 
   res.json({
     ...reply,
