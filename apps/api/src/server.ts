@@ -88,6 +88,31 @@ let agentTripStateCache:
     }
   | undefined;
 
+function getAgentTripStateSnapshotTimeoutMs() {
+  const timeoutMs = Number(process.env.AGENT_TRIP_STATE_TIMEOUT_MS);
+
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return 2500;
+  }
+
+  return Math.min(Math.max(Math.round(timeoutMs), 500), 8000);
+}
+
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 function isGoogleMapsViewingLink(value: string) {
   const normalized = value.trim().toLowerCase();
   return normalized.includes("maps.app.goo.gl") || normalized.includes("google.com/maps");
@@ -233,7 +258,18 @@ async function buildAgentTripStateSnapshot() {
     return agentTripStateCache.state;
   }
 
-  const state = await buildDemoTripStateAsync();
+  let state: ReturnType<typeof buildDemoTripState>;
+  try {
+    state = await withTimeout(
+      buildDemoTripStateAsync(),
+      getAgentTripStateSnapshotTimeoutMs(),
+      "agent_trip_state_snapshot_timeout"
+    );
+  } catch (error) {
+    console.warn("Agent trip snapshot fallback used", error instanceof Error ? error.message : error);
+    state = buildDemoTripState();
+  }
+
   agentTripStateCache = {
     loadedAt: now,
     state
@@ -2405,7 +2441,7 @@ app.post("/api/agent/message", async (req, res) => {
       })
     : undefined;
   if (placesUsageGate?.allowed) {
-    await safeRecordUsageGateEvent({
+    void safeRecordUsageGateEvent({
       usageGate: placesUsageGate,
       actorName: String(normalizedMember.displayName),
       source: "kodi_agent"
@@ -2444,7 +2480,7 @@ app.post("/api/agent/message", async (req, res) => {
       travelMode: includesAnyTerm(focusedReferenceMessage, ["הליכה", "ברגל"]) ? "WALK" : "DRIVE",
       languageCode: "he"
     });
-    await safeRecordUsageGateEvent({
+    void safeRecordUsageGateEvent({
       usageGate: routesUsageGate,
       actorName: String(normalizedMember.displayName),
       source: "kodi_agent"
@@ -2483,7 +2519,7 @@ app.post("/api/agent/message", async (req, res) => {
         })
       : undefined;
   if (openAiUsageGate.allowed && openAiUsageGate.providerConfigured && !deterministicRouteDiagram && openAiReply?.status === "ready") {
-    await safeRecordUsageGateEvent({
+    void safeRecordUsageGateEvent({
       usageGate: openAiUsageGate,
       actorName: String(normalizedMember.displayName),
       source: "kodi_agent"

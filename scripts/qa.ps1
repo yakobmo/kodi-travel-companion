@@ -378,6 +378,21 @@ if ($presencePingIndex -lt 0 -or $tripSnapshotIndex -lt 0 -or $presencePingIndex
 }
 
 if (
+  -not $serverSource.Contains("AGENT_TRIP_STATE_TIMEOUT_MS") -or
+  -not $serverSource.Contains("agent_trip_state_snapshot_timeout") -or
+  -not $serverSource.Contains("state = buildDemoTripState()")
+) {
+  throw "Kodi agent trip-state snapshot must be time-boxed and fall back locally so Supabase latency cannot disconnect the agent."
+}
+
+if (
+  -not $serverSource.Contains("void safeRecordUsageGateEvent") -or
+  $serverSource.Contains("await safeRecordUsageGateEvent({`r`n      usageGate: openAiUsageGate")
+) {
+  throw "Kodi usage audit writes must not block the live agent response path."
+}
+
+if (
   -not $openAiAgentSource.Contains("freshest currentLocation/live member location") -or
   -not $openAiAgentSource.Contains("For every practical recommendation of a concrete place") -or
   -not $openAiAgentSource.Contains("Google Maps for walking/checking details and Waze for driving")
