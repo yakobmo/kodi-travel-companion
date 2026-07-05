@@ -693,12 +693,17 @@ function enhanceKodiReplyWithNavigationLinks(input: {
   externalPlacesSearch?: GooglePlacesTextSearchResult;
   tripDestination?: { lat: number; lng: number; label?: string };
   selectedPlace?: unknown;
+  fallbackRecommendedPlaceId?: string;
+  forceAppend?: boolean;
 }) {
-  if (!shouldAppendNavigationLinks(input.reply) || hasNavigationUrl(input.reply.text)) {
+  if ((!shouldAppendNavigationLinks(input.reply) && !input.forceAppend) || hasNavigationUrl(input.reply.text)) {
     return input.reply;
   }
 
-  const recommendedPlace = findTripPlaceById(input.tripState, input.reply.recommendedPlaceId);
+  const recommendedPlace = findTripPlaceById(
+    input.tripState,
+    input.reply.recommendedPlaceId ?? input.fallbackRecommendedPlaceId
+  );
   const externalPlace = findFirstExternalPlaceWithCoordinates(input.externalPlacesSearch);
   const selectedPlace = getSelectedPlaceTarget(input.selectedPlace);
   const routeDestination = input.tripDestination;
@@ -2476,7 +2481,9 @@ app.post("/api/agent/message", async (req, res) => {
     tripState,
     externalPlacesSearch,
     tripDestination: tripReference.destination,
-    selectedPlace: req.body?.selectedPlace
+    selectedPlace: req.body?.selectedPlace,
+    fallbackRecommendedPlaceId: rulesReply.recommendedPlaceId,
+    forceAppend: Boolean(rulesReply.recommendedPlaceId || routeEstimate?.route || externalPlacesSearch?.status === "ready")
   });
 
   res.json({
