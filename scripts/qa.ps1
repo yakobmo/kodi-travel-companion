@@ -14,6 +14,7 @@ $requiredFiles = @(
   "docs/GOOGLE_INTEGRATION_PLAN.md",
   "docs/CORE_EXPERIENCE_AND_ONBOARDING.md",
   "docs/KODI_AGENT_SPEC.md",
+  "docs/KODI_AGENT_ENGINEERING_README.md",
   "docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md",
   "docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md",
   "docs/CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md",
@@ -25,6 +26,7 @@ $requiredFiles = @(
   "scripts/dev-web.ps1",
   "scripts/smoke-google-places-live.mjs",
   "scripts/smoke-google-routes-live.mjs",
+  "scripts/kodi-agent-regression.mjs",
   "scripts/smoke-local.mjs",
   "apps/api/package.json",
   "apps/api/tsconfig.json",
@@ -83,6 +85,10 @@ if (
   -not $packageSource.Contains('"start": "node apps/api/dist/server.js"')
 ) {
   throw "Root package scripts must stay npm-compatible for Render."
+}
+
+if (-not $packageSource.Contains('"agent:regression": "node scripts/kodi-agent-regression.mjs"')) {
+  throw "Package scripts must expose Kodi agent regression checks."
 }
 
 $renderSource = Get-Content (Join-Path $root "render.yaml") -Raw
