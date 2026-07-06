@@ -2245,6 +2245,42 @@ app.post("/api/trips/demo/google-source/switch", async (req, res) => {
   });
 });
 
+app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
+  const setupState = await buildDemoTripSetupStateAsync();
+  const googleSource = buildDemoGoogleSourcePreview();
+  const tripState = await buildDemoTripStateAsync();
+  const syncedAt = new Date().toISOString();
+
+  agentTripStateCache = undefined;
+
+  await safeRecordTripEvent({
+    eventType: "setup_updated",
+    actorName: "Kodi",
+    relatedEntityId: googleSource.source.id,
+    summary: `Trip Google Maps source synchronized on app startup with ${tripState.places.length} available points.`
+  });
+
+  res.json({
+    ok: true,
+    tripGroupId: setupState.tripGroupId,
+    setupState,
+    googleSource,
+    tripState,
+    pointsSync: {
+      automatic: true,
+      trigger: "app_startup",
+      sourceRegistered: setupState.readiness.hasGoogleSource,
+      sourceUrl: setupState.setupSummary?.googleLink || googleSource.source.sourceUrl,
+      importedPlacesCount: tripState.places.length,
+      syncMode: googleSource.sync.mode,
+      liveGoogleAccess: googleSource.adapter.liveGoogleAccess,
+      canOpenGoogleMapsUrl: googleSource.sync.canOpenGoogleMapsUrl,
+      canWriteBackToGoogle: googleSource.sync.canWriteBackToGoogle,
+      syncedAt
+    }
+  });
+});
+
 app.delete("/api/trips/demo/setup", async (_req, res) => {
   await resetDemoTripMembersAsync();
   await resetDemoTripMessagesAsync();

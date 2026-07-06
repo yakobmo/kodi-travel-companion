@@ -535,6 +535,26 @@ interface TripMapSourceSwitchResponse {
   };
 }
 
+interface TripMapSourceSyncResponse {
+  ok: boolean;
+  tripGroupId: string;
+  setupState: TripSetupStateResponse;
+  googleSource: GoogleSourcePreviewResponse;
+  tripState: TripStateResponse;
+  pointsSync: {
+    automatic: boolean;
+    trigger: "app_startup";
+    sourceRegistered: boolean;
+    sourceUrl: string;
+    importedPlacesCount: number;
+    syncMode: string;
+    liveGoogleAccess: boolean;
+    canOpenGoogleMapsUrl: boolean;
+    canWriteBackToGoogle: boolean;
+    syncedAt: string;
+  };
+}
+
 interface GoogleSourcePreviewResponse {
   tripGroupId: string;
   adapter: {
@@ -1395,6 +1415,57 @@ export function App() {
   useEffect(() => {
     let ignore = false;
 
+    function applyTripState(data: TripStateResponse) {
+      const visibleTripPlaces = applyLocalPlaceRemovals(data.places);
+      setSummary(
+        visibleTripPlaces.length === data.places.length ? data.summary : buildTripSummaryFromPlaces(visibleTripPlaces)
+      );
+      setPlaces(visibleTripPlaces);
+      setSelectedPlaceId(visibleTripPlaces[0]?.id ?? "");
+      setMembers(normalizeTripMembers(mapMemberLocations(data.members), setupDraft.memberName));
+      setGroupDestination(data.groupDestination ?? null);
+      setGroupRoute(data.groupRoute ?? null);
+      setActiveRouteStopIndex(data.groupRoute?.activeStopIndex ?? 0);
+      setLoadState("ready");
+    }
+
+    async function syncGoogleSourceOnStartup() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/trips/demo/google-source/sync`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`Google source sync failed with ${response.status}`);
+        }
+
+        const data = (await response.json()) as TripMapSourceSyncResponse;
+        if (ignore) {
+          return false;
+        }
+
+        setSetupState(data.setupState);
+        setGoogleSourcePreview(data.googleSource);
+        applyTripState(data.tripState);
+        const savedSetup = data.setupState.setupSummary;
+        if (savedSetup) {
+          setSetupDraft((draft) => ({
+            ...draft,
+            tripName: savedSetup.tripName,
+            memberName: savedSetup.firstMemberName,
+            memberAge:
+              typeof savedSetup.firstMemberAge === "number" ? String(savedSetup.firstMemberAge) : draft.memberAge,
+            googleLink: savedSetup.googleLink
+          }));
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     async function loadSetupState() {
       try {
         const response = await fetch(`${apiBaseUrl}/api/trips/demo/setup`);
@@ -1513,17 +1584,7 @@ export function App() {
           return;
         }
 
-        const visibleTripPlaces = applyLocalPlaceRemovals(data.places);
-        setSummary(
-          visibleTripPlaces.length === data.places.length ? data.summary : buildTripSummaryFromPlaces(visibleTripPlaces)
-        );
-        setPlaces(visibleTripPlaces);
-        setSelectedPlaceId(visibleTripPlaces[0]?.id ?? "");
-        setMembers(normalizeTripMembers(mapMemberLocations(data.members), setupDraft.memberName));
-        setGroupDestination(data.groupDestination ?? null);
-        setGroupRoute(data.groupRoute ?? null);
-        setActiveRouteStopIndex(data.groupRoute?.activeStopIndex ?? 0);
-        setLoadState("ready");
+        applyTripState(data);
       } catch {
         if (!ignore) {
           setLoadState("fallback");
@@ -1602,9 +1663,12 @@ export function App() {
       }
     }
 
-    void loadSetupState();
-    void loadGoogleSourcePreview();
-    void loadTripState();
+    void (async () => {
+      const synced = await syncGoogleSourceOnStartup();
+      if (!synced) {
+        await Promise.all([loadSetupState(), loadGoogleSourcePreview(), loadTripState()]);
+      }
+    })();
     void loadMessages();
     void loadTripEvents();
 

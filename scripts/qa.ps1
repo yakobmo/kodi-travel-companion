@@ -421,6 +421,16 @@ if (
   throw "Kodi web chat must send the current app Google Maps trip state with every agent request."
 }
 
+if (
+  -not $serverSource.Contains('app.post("/api/trips/demo/google-source/sync"') -or
+  -not $serverSource.Contains("Trip Google Maps source synchronized on app startup") -or
+  -not $webAppSource.Contains("syncGoogleSourceOnStartup") -or
+  -not $webAppSource.Contains("/api/trips/demo/google-source/sync") -or
+  -not $webAppSource.Contains("applyTripState(data.tripState)")
+) {
+  throw "Kodi must automatically synchronize the active Google Maps source on app startup/refresh before normal trip rendering."
+}
+
 $reverseGeocodeSource = Get-Content (Join-Path $root "apps\api\src\google\reverseGeocode.ts") -Raw
 $googleRoutesSourceForTimeout = Get-Content (Join-Path $root "apps\api\src\google\routes.ts") -Raw
 if (

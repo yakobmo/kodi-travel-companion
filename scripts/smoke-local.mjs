@@ -106,6 +106,16 @@ try {
   assertCheck("google source preview count", googleSourcePayload.source?.importedPlacesCount >= 100);
   assertCheck("google source write-back blocked", googleSourcePayload.sync?.canWriteBackToGoogle === false);
 
+  const googleSourceSyncResponse = await fetch("http://localhost:3001/api/trips/demo/google-source/sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  });
+  const googleSourceSyncPayload = await googleSourceSyncResponse.json();
+  assertCheck("google source startup sync endpoint", googleSourceSyncResponse.ok);
+  assertCheck("google source startup sync automatic", googleSourceSyncPayload.pointsSync?.automatic === true);
+  assertCheck("google source startup sync trigger", googleSourceSyncPayload.pointsSync?.trigger === "app_startup");
+  assertCheck("google source startup sync places", googleSourceSyncPayload.tripState?.places?.length >= 100);
+
   const googleReadinessResponse = await fetch("http://localhost:3001/api/trips/demo/google-source/readiness");
   const googleReadinessPayload = await googleReadinessResponse.json();
   assertCheck("google source readiness endpoint", googleReadinessResponse.ok);
