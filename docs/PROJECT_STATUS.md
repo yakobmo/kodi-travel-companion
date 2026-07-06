@@ -31,6 +31,7 @@ Agent map-context correction: every web chat request to Kodi now sends the curre
 Public smoke passed on 2026-07-06 after the agent map-context correction: `/api/health`, `/api/trips/demo/storage`, and `/api/trips/demo/google-source` returned OK; public Kodi agent regression passed with OpenAI ready for presence, live-location, trip-character, current-location, and guide questions. One lodging-order prompt fell back to rules after an OpenAI error and remains a follow-up quality hardening item.
 
 Google Maps startup sync correction: the app now calls `/api/trips/demo/google-source/sync` automatically on open/refresh before normal trip rendering. The sync response refreshes setup state, Google source metadata, trip points, members, route/destination state, and clears the agent trip-state cache so Kodi starts each session from the latest app map layer.
+Public smoke passed on 2026-07-07 after startup sync deploy: `/api/health` and `/api/trips/demo/google-source` returned OK, and `POST /api/trips/demo/google-source/sync` returned `automatic=true`, `trigger=app_startup`, `sourceRegistered=true`, `syncMode=read_only_fixture`, and 107 trip points in the refreshed trip state.
 
 Location architecture correction: product-wise, Kodi is connected to the Google Maps context. The app should feel like normal Google Maps with Kodi over it. Implementation-wise, the browser still requires device/location permission before the app can use the user's live location; Kodi cannot silently inherit private live location from the user's Google Maps app or account.
 
