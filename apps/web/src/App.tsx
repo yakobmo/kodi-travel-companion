@@ -953,10 +953,44 @@ function shouldAttachSelectedPlaceToAgent(text: string) {
   ].some((term) => normalized.includes(term));
 }
 
+function isDirectFamilyChat(text: string) {
+  const normalized = text.trim().toLowerCase();
+  return ["אורייה", "אוריה", "עומרי", "אמא", "אבא", "נועה"].some((name) => normalized.includes(name));
+}
+
+function isKodiPresenceReply(message: ChatMessage | undefined) {
+  if (!message || message.source !== "agent") {
+    return false;
+  }
+
+  return (
+    message.author === "קודי" &&
+    (message.text.includes("אני כאן") || message.text.includes("תגידו לי מה צריך עכשיו"))
+  );
+}
+
+function wasRecentMessageExplicitKodiCall(message: ChatMessage | undefined) {
+  if (!message) {
+    return false;
+  }
+
+  const normalized = message.text.replace(/[?!.,\s]/g, "").toLowerCase();
+  return ["קודי", "kodi", "codex", "קודקס"].includes(normalized);
+}
+
 function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
   const explicitCall = /\b(kodi|codex)\b/i.test(text) || text.includes("קודי") || text.includes("קודקס");
-  void currentMessages;
-  return explicitCall;
+  if (explicitCall) {
+    return true;
+  }
+
+  if (isDirectFamilyChat(text)) {
+    return false;
+  }
+
+  const lastMessage = currentMessages.at(-1);
+  const previousMessage = currentMessages.at(-2);
+  return isKodiPresenceReply(lastMessage) && wasRecentMessageExplicitKodiCall(previousMessage);
 }
 
 function getMapPosition(index: number, total: number) {

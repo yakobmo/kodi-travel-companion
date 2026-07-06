@@ -2367,7 +2367,7 @@ app.post("/api/agent/message", async (req, res) => {
   if (isKodiPresencePing(message)) {
     res.json({
       author: "קודי",
-      text: "אני כאן. תגידו לי מה צריך עכשיו: ניווט, נקודה במסלול, מקום קרוב, הסבר על מה שרואים, או סידור מחדש של המסלול.",
+      text: "אני כאן. כתבו עכשיו את השאלה או הבקשה שלכם, והיא תגיע אליי גם בלי לכתוב שוב קודי.",
       intent: "general",
       requiresAdminApproval: false,
       source: "fast_presence",

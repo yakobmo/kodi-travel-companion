@@ -854,10 +854,18 @@ $openAiSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts"
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
-  -not $appSource.Contains("return explicitCall") -or
+  -not $appSource.Contains("if (explicitCall)") -or
   -not $appSource.Contains("shouldWakeKodi(text, messages)")
 ) {
-  throw "Web app must wake Kodi only through the explicit Kodi wake word, while voice conversation can still force Kodi separately."
+  throw "Web app must wake Kodi through explicit calls and the short follow-up window, while voice conversation can still force Kodi separately."
+}
+
+if (
+  -not $appSource.Contains("isKodiPresenceReply") -or
+  -not $appSource.Contains("wasRecentMessageExplicitKodiCall") -or
+  -not $appSource.Contains("isDirectFamilyChat")
+) {
+  throw "Web app must support a short Kodi follow-up window after 'קודי?' without waking on direct family chat."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/state")) {
@@ -1164,17 +1172,20 @@ if (
   -not $appSource.Contains("shouldAskKodi = shouldWakeKodi(text, messages)") -or
   -not $appSource.Contains("text.includes") -or
   -not $appSource.Contains("kodi|codex") -or
-  -not $appSource.Contains("return explicitCall")
+  -not $appSource.Contains("if (explicitCall)") -or
+  -not $appSource.Contains("isKodiPresenceReply") -or
+  -not $appSource.Contains("wasRecentMessageExplicitKodiCall") -or
+  -not $appSource.Contains("isDirectFamilyChat")
 ) {
-  throw "Web group chat must wake Kodi only when explicitly addressed; ordinary participant questions must stay in the group chat."
+  throw "Web group chat must wake Kodi through explicit calls or a short Kodi follow-up window; ordinary participant-to-participant chat must stay in the group chat."
 }
 
 if (
-  -not $kodiAgentSpecSource.Contains("Until Kodi is explicitly called again") -or
+  -not $kodiAgentSpecSource.Contains("short follow-up window") -or
   -not $kodiAgentSpecSource.Contains("מה קורה אורייה") -or
   -not $kodiAgentSpecSource.Contains("Kodi stays quiet")
 ) {
-  throw "Kodi agent spec must protect the wake-word rule for ordinary participant messages."
+  throw "Kodi agent spec must protect the wake-word rule and the short follow-up behavior for ordinary participant messages."
 }
 
 if (
