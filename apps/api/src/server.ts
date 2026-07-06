@@ -400,20 +400,29 @@ function shouldUseDeterministicRouteDiagram(message: string) {
 }
 
 function isKodiPresencePing(message: string) {
-  const normalized = message.replace(/[?!.,\s]/g, "").toLowerCase();
+  const spaced = message.replace(/[?!.,]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  const compact = spaced.replace(/\s/g, "");
   const wakeWords = ["קודי", "kodi", "codex", "קודקס"];
-  const wakeWord = wakeWords.find((word) => normalized.startsWith(word));
+  const wakeWord = wakeWords.find((word) => spaced === word || spaced.startsWith(`${word} `));
 
   if (!wakeWord) {
     return false;
   }
 
-  if (normalized === wakeWord || normalized.length <= wakeWord.length + 2) {
+  const rest = spaced === wakeWord ? "" : spaced.slice(wakeWord.length).trim();
+  if (!rest) {
     return true;
   }
 
-  return ["אתהכאן", "אתהפה", "כאן", "שלום", "היי", "הי", "מחובר", "עובד"].some((term) =>
-    normalized.includes(term)
+  const purePresenceTerms = ["אתה כאן", "אתה פה", "את כאן", "את פה", "כאן", "שלום", "היי", "הי", "מחובר", "עובד"];
+  const compactPresenceTerms = purePresenceTerms.map((term) => term.replace(/\s/g, ""));
+  const compactRest = rest.replace(/\s/g, "");
+  const compactAfterWakeWord = compact.slice(wakeWord.length);
+
+  return (
+    purePresenceTerms.includes(rest) ||
+    compactPresenceTerms.includes(compactRest) ||
+    compactPresenceTerms.includes(compactAfterWakeWord)
   );
 }
 

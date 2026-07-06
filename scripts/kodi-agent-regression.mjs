@@ -109,6 +109,19 @@ const tripNature = await postAgent("קודי מה אופי הטיול שלנו �
 expectHealthyAgentResult("trip nature", tripNature);
 assertCheck("trip nature mentions north Greece or Pelion", /צפון יוון|פיליון|זגוריה|צומרקה/.test(String(tripNature.payload.text ?? "")));
 
+const actionableYouCan = await postAgent("קודי אתה יכול לעשות לי סדר במקומות לינה?");
+expectHealthyAgentResult("actionable you can", actionableYouCan);
+assertCheck(
+  "actionable you can is not presence ping",
+  actionableYouCan.payload.source !== "fast_presence",
+  `source=${actionableYouCan.payload.source}`
+);
+assertCheck(
+  "actionable you can answers lodging task",
+  /לינה|מלון|מקומות/.test(String(actionableYouCan.payload.text ?? "")),
+  String(actionableYouCan.payload.text ?? "").slice(0, 200)
+);
+
 const routeMap = await postAgent("קודי סמן לי על המפה את המסלול");
 expectHealthyAgentResult("route map", routeMap);
 assertCheck("route map intent", ["route_creation", "general"].includes(String(routeMap.payload.intent ?? "")));
@@ -147,6 +160,11 @@ console.log(
           elapsedMs: tripNature.elapsedMs,
           source: tripNature.payload.source,
           openAiStatus: tripNature.payload.agentRuntime?.openAiStatus
+        },
+        actionableYouCan: {
+          elapsedMs: actionableYouCan.elapsedMs,
+          source: actionableYouCan.payload.source,
+          openAiStatus: actionableYouCan.payload.agentRuntime?.openAiStatus
         },
         routeMap: {
           elapsedMs: routeMap.elapsedMs,

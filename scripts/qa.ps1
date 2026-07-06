@@ -383,6 +383,22 @@ if ($presencePingIndex -lt 0 -or $tripSnapshotIndex -lt 0 -or $presencePingIndex
   throw "Kodi presence checks must answer before building the full trip snapshot so simple connectivity pings stay fast."
 }
 
+$presenceFunctionStart = $serverSource.IndexOf("function isKodiPresencePing(message: string)")
+$presenceFunctionEnd = $serverSource.IndexOf("function shouldUseExternalPlacesSearch", $presenceFunctionStart)
+$presenceFunctionSource = if ($presenceFunctionStart -ge 0 -and $presenceFunctionEnd -gt $presenceFunctionStart) {
+  $serverSource.Substring($presenceFunctionStart, $presenceFunctionEnd - $presenceFunctionStart)
+} else {
+  ""
+}
+
+if (
+  -not $presenceFunctionSource.Contains("purePresenceTerms.includes(rest)") -or
+  -not $presenceFunctionSource.Contains("compactPresenceTerms.includes(compactRest)") -or
+  $presenceFunctionSource.Contains(".includes(term)")
+) {
+  throw "Kodi presence ping detection must match exact presence phrases only; actionable requests such as 'קודי אתה יכול...' must reach the agent."
+}
+
 if (
   -not $serverSource.Contains("AGENT_TRIP_STATE_TIMEOUT_MS") -or
   -not $serverSource.Contains("agent_trip_state_snapshot_timeout") -or
