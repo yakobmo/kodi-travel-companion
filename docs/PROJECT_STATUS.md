@@ -30,8 +30,8 @@ Map architecture correction: Google Maps is the product map engine. Kodi does no
 Agent map-context correction: every web chat request to Kodi now sends the current app Google Maps layer as `tripState`: visible trip points, members, consented live/current location, selected place, group route/destination state, and Google source metadata. Kodi must use that app map context before saying it lacks map access. Private Google account sync/write-back is still a separate OAuth-gated capability, but that must not stop Kodi from acting on the map state already loaded in the app.
 Public smoke passed on 2026-07-06 after the agent map-context correction: `/api/health`, `/api/trips/demo/storage`, and `/api/trips/demo/google-source` returned OK; public Kodi agent regression passed with OpenAI ready for presence, live-location, trip-character, current-location, and guide questions. One lodging-order prompt fell back to rules after an OpenAI error and remains a follow-up quality hardening item.
 
-Google Maps startup sync correction: the app now calls `/api/trips/demo/google-source/sync` automatically on open/refresh before normal trip rendering. The sync response refreshes setup state, Google source metadata, trip points, members, route/destination state, and clears the agent trip-state cache so Kodi starts each session from the latest app map layer.
-Public smoke passed on 2026-07-07 after startup sync deploy: `/api/health` and `/api/trips/demo/google-source` returned OK, and `POST /api/trips/demo/google-source/sync` returned `automatic=true`, `trigger=app_startup`, `sourceRegistered=true`, `syncMode=read_only_fixture`, and 107 trip points in the refreshed trip state.
+Google Maps startup sync correction: the app now calls `/api/trips/demo/google-source/sync` automatically on open/refresh before normal trip rendering. That endpoint must first attempt a real public Google Maps list import from the saved share link, then refresh setup state, Google source metadata, trip points, members, route/destination state, and clear the agent trip-state cache. The previous behavior was misleading because it refreshed the local fixture and still reported 107 points while the live public Google Maps list has 79 places.
+Public-list import correction in progress on 2026-07-07: the saved Google Maps share link exposes a public `entitylist/getlist` response for `צפון יוון` with 79 declared items. Kodi now treats `imported_google_public_list` and `syncMode=google_public_list_read` as the required startup-sync evidence; falling back to the stale fixture must be reported as a fallback, not as Google sync.
 
 Location architecture correction: product-wise, Kodi is connected to the Google Maps context. The app should feel like normal Google Maps with Kodi over it. Implementation-wise, the browser still requires device/location permission before the app can use the user's live location; Kodi cannot silently inherit private live location from the user's Google Maps app or account.
 
@@ -55,7 +55,7 @@ Implemented locally:
 
 - React + TypeScript web app.
 - Node + Express API.
-- Trip state with 107 imported places after removing a stale `Averof 12` stop that was not part of the intended live trip flow.
+- Trip state should load 79 places from the public Google Maps trip list on app startup; the older 107-place local file is a fallback only.
 - Hebrew chat/map UI.
 - Kodi wake behavior inside the group conversation.
 - Active speaker selection.

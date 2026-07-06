@@ -5,12 +5,13 @@ import {
   DEMO_GOOGLE_SOURCE_URL,
   DEMO_SOURCE_ID,
   getDemoTripPlacesSourcePath,
+  getRuntimeSyncedTripPlacesSource,
   loadDemoTripPlaces
 } from "../data/localPlaces.js";
 
-export type GoogleSourceAdapterKind = "fixture" | "google_api";
+export type GoogleSourceAdapterKind = "fixture" | "google_public_list" | "google_api";
 export type GoogleSourceState = "read_only_preview" | "not_configured" | "connected" | "needs_refresh";
-export type GoogleSourceSyncMode = "read_only_fixture" | "google_api_read" | "google_oauth_live";
+export type GoogleSourceSyncMode = "read_only_fixture" | "google_public_list_read" | "google_api_read" | "google_oauth_live";
 
 export interface GoogleSourcePreview {
   tripGroupId: string;
@@ -80,36 +81,38 @@ function countPlacesWithCoordinates(places: TripPlace[]) {
 
 function buildReadOnlyFixturePreview(): GoogleSourcePreview {
   const sourcePath = getDemoTripPlacesSourcePath();
+  const runtimeSource = getRuntimeSyncedTripPlacesSource();
   const places = loadDemoTripPlaces();
   const placesWithCoordinates = countPlacesWithCoordinates(places);
   const placesWithGoogleIds = places.filter((place) => Boolean(place.sourcePlaceId)).length;
+  const isGooglePublicList = Boolean(runtimeSource);
 
   return {
     tripGroupId: DEMO_GROUP_ID,
     adapter: {
-      kind: "fixture",
-      name: "Read-only Google fixture adapter",
-      liveGoogleAccess: false
+      kind: isGooglePublicList ? "google_public_list" : "fixture",
+      name: isGooglePublicList ? "Google Maps public list adapter" : "Read-only Google fixture adapter",
+      liveGoogleAccess: isGooglePublicList
     },
     source: {
       id: DEMO_SOURCE_ID,
       type: "google_maps_place_list",
-      state: "read_only_preview",
-      displayName: "Google Maps Place List",
-      sourceUrl: process.env.DEMO_GOOGLE_SOURCE_URL ?? DEMO_GOOGLE_SOURCE_URL,
-      fixtureFileName: path.basename(sourcePath),
+      state: isGooglePublicList ? "connected" : "read_only_preview",
+      displayName: runtimeSource?.label ?? "Google Maps Place List",
+      sourceUrl: runtimeSource?.sourceUrl ?? process.env.DEMO_GOOGLE_SOURCE_URL ?? DEMO_GOOGLE_SOURCE_URL,
+      fixtureFileName: runtimeSource ? runtimeSource.label : path.basename(sourcePath),
       importedPlacesCount: places.length,
       placesWithCoordinates,
       placesMissingCoordinates: places.length - placesWithCoordinates,
       placesWithGoogleIds,
-      lastCheckedAt: new Date().toISOString()
+      lastCheckedAt: runtimeSource?.importedAt ?? new Date().toISOString()
     },
     sync: {
-      mode: "read_only_fixture",
+      mode: isGooglePublicList ? "google_public_list_read" : "read_only_fixture",
       canPreviewImportedPlaces: true,
       canOpenGoogleMapsUrl: true,
       canWriteBackToGoogle: false,
-      requiresGoogleOAuthForLiveSync: true,
+      requiresGoogleOAuthForLiveSync: false,
       requiresGoogleMapsApiKeyForPlacesEnrichment: true,
       requiresRoutesApiForEta: true
     },
@@ -210,7 +213,7 @@ export function getGoogleSourceReadiness(): GoogleSourceReadiness {
     .every((requirement) => requirement.configured);
 
   return {
-    activeAdapterKind: getActiveGoogleSourceAdapter().kind,
+    activeAdapterKind: getRuntimeSyncedTripPlacesSource() ? "google_public_list" : getActiveGoogleSourceAdapter().kind,
     futureGoogleApiAdapter: {
       kind: "google_api",
       state: "not_configured",

@@ -8,9 +8,15 @@ import {
   buildTripUsageAuditSummary,
   type TripUsageGateDecision
 } from "./billing/tripUsagePool.js";
-import { buildTripPlacesSummary, loadDemoTripPlaces } from "./data/localPlaces.js";
+import {
+  buildTripPlacesSummary,
+  DEMO_GOOGLE_SOURCE_URL,
+  loadDemoTripPlaces,
+  setRuntimeSyncedTripPlacesSource
+} from "./data/localPlaces.js";
 import { searchGooglePlacesText, type GooglePlacesTextSearchResult } from "./google/placesSearch.js";
 import { estimateGoogleRoute, type GoogleRouteTravelMode } from "./google/routes.js";
+import { importGooglePublicList } from "./google/publicListImport.js";
 import { buildDemoGoogleSourcePreview, getGoogleSourceReadiness } from "./google/sourceAdapter.js";
 import {
   addDemoTripMemberAsync,
@@ -2247,9 +2253,27 @@ app.post("/api/trips/demo/google-source/switch", async (req, res) => {
 
 app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
   const setupState = await buildDemoTripSetupStateAsync();
-  const googleSource = buildDemoGoogleSourcePreview();
-  const tripState = await buildDemoTripStateAsync();
+  const sourceUrl = setupState.setupSummary?.googleLink || process.env.DEMO_GOOGLE_SOURCE_URL || DEMO_GOOGLE_SOURCE_URL;
   const syncedAt = new Date().toISOString();
+  let importStatus: "imported_google_public_list" | "fallback_fixture" = "fallback_fixture";
+  let importError: string | undefined;
+
+  try {
+    const imported = await importGooglePublicList(sourceUrl);
+
+    setRuntimeSyncedTripPlacesSource({
+      label: imported.listName,
+      sourceUrl,
+      importedAt: imported.importedAt,
+      places: imported.places
+    });
+    importStatus = "imported_google_public_list";
+  } catch (error) {
+    importError = error instanceof Error ? error.message : "Unknown Google public list import error.";
+  }
+
+  const googleSource = buildDemoGoogleSourcePreview();
+  const refreshedTripState = await buildDemoTripStateAsync();
 
   agentTripStateCache = undefined;
 
@@ -2257,7 +2281,10 @@ app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
     eventType: "setup_updated",
     actorName: "Kodi",
     relatedEntityId: googleSource.source.id,
-    summary: `Trip Google Maps source synchronized on app startup with ${tripState.places.length} available points.`
+    summary:
+      importStatus === "imported_google_public_list"
+        ? `Trip Google Maps public list imported on app startup with ${refreshedTripState.places.length} points.`
+        : `Trip Google Maps public list import failed on app startup; app kept ${refreshedTripState.places.length} fallback points.`
   });
 
   res.json({
@@ -2265,15 +2292,17 @@ app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
     tripGroupId: setupState.tripGroupId,
     setupState,
     googleSource,
-    tripState,
+    tripState: refreshedTripState,
     pointsSync: {
       automatic: true,
       trigger: "app_startup",
       sourceRegistered: setupState.readiness.hasGoogleSource,
-      sourceUrl: setupState.setupSummary?.googleLink || googleSource.source.sourceUrl,
-      importedPlacesCount: tripState.places.length,
+      sourceUrl,
+      importedPlacesCount: refreshedTripState.places.length,
       syncMode: googleSource.sync.mode,
       liveGoogleAccess: googleSource.adapter.liveGoogleAccess,
+      importStatus,
+      importError,
       canOpenGoogleMapsUrl: googleSource.sync.canOpenGoogleMapsUrl,
       canWriteBackToGoogle: googleSource.sync.canWriteBackToGoogle,
       syncedAt

@@ -114,12 +114,17 @@ try {
   assertCheck("google source startup sync endpoint", googleSourceSyncResponse.ok);
   assertCheck("google source startup sync automatic", googleSourceSyncPayload.pointsSync?.automatic === true);
   assertCheck("google source startup sync trigger", googleSourceSyncPayload.pointsSync?.trigger === "app_startup");
-  assertCheck("google source startup sync places", googleSourceSyncPayload.tripState?.places?.length >= 100);
+  assertCheck(
+    "google source startup sync imports Google public list",
+    googleSourceSyncPayload.pointsSync?.importStatus === "imported_google_public_list"
+  );
+  assertCheck("google source startup sync mode", googleSourceSyncPayload.pointsSync?.syncMode === "google_public_list_read");
+  assertCheck("google source startup sync places", googleSourceSyncPayload.tripState?.places?.length === 79);
 
   const googleReadinessResponse = await fetch("http://localhost:3001/api/trips/demo/google-source/readiness");
   const googleReadinessPayload = await googleReadinessResponse.json();
   assertCheck("google source readiness endpoint", googleReadinessResponse.ok);
-  assertCheck("google source active adapter fixture", googleReadinessPayload.activeAdapterKind === "fixture");
+  assertCheck("google source active adapter public list", googleReadinessPayload.activeAdapterKind === "google_public_list");
   assertCheck("google api skeleton not configured", googleReadinessPayload.futureGoogleApiAdapter?.state === "not_configured");
   assertCheck("google api skeleton no live access", googleReadinessPayload.futureGoogleApiAdapter?.liveGoogleAccess === false);
   assertCheck("google api readiness hides values", googleReadinessPayload.requirements?.every((item) => item.value === undefined));
@@ -261,7 +266,7 @@ try {
   const mapShellClass = await page.locator(".map-placeholder").evaluate((element) => element.className);
   const googleMapsActive = String(mapShellClass).includes("google-map-active");
   assertCheck("trip source loaded", storageResponse.ok() && Boolean(storagePayload.storage));
-  assertCheck("places count", body.includes("107 נקודות"));
+  assertCheck("places count", body.includes("79 נקודות"));
   assertCheck("group chat", body.includes("קבוצת הטיול"));
   assertCheck("kodi background", body.includes("קודי ברקע"));
   assertCheck("google maps is target provider", body.includes("Google Maps"));
@@ -290,7 +295,7 @@ try {
   assertCheck("google maps shortcut in menu", menuBody.includes("Google Maps"));
   assertCheck("booking shortcut in menu", menuBody.includes("Booking"));
   assertCheck("airbnb shortcut in menu", menuBody.includes("Airbnb"));
-  assertCheck("full trip places list in menu", menuBody.includes("נקודות הטיול") && menuBody.includes("107 נקודות"));
+  assertCheck("full trip places list in menu", menuBody.includes("נקודות הטיול") && menuBody.includes("79 נקודות"));
   assertCheck("trip places list has many entries", (await menu.locator(".trip-place-list button").count()) >= 20);
   assertCheck("map surface stays clean", await page.locator(".map-surface > .action-card").isHidden());
   assertCheck("chat invite card hidden", await page.locator(".chat-sheet .invite-card").count() === 0);

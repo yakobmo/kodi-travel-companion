@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { PlaceType, TripPlace, TripPlacesSummary } from "../domain/types.js";
 
-interface SourcePlace {
+export interface SourcePlace {
   id?: string;
   sourceIndex?: number;
   name?: string;
@@ -12,6 +12,13 @@ interface SourcePlace {
   lng?: number;
   googleIds?: string[];
   type?: string;
+}
+
+export interface RuntimeTripPlacesSource {
+  label: string;
+  sourceUrl: string;
+  importedAt: string;
+  places: SourcePlace[];
 }
 
 const DEMO_TRIP_ID = "trip_north_greece_demo";
@@ -29,6 +36,8 @@ const placesPathCandidates = [
   path.resolve(process.cwd(), "../../../work/spikes/google-place-list/out/places.json")
 ].filter(Boolean) as string[];
 
+let runtimeSyncedPlacesSource: RuntimeTripPlacesSource | undefined;
+
 function resolvePlacesPath() {
   const found = placesPathCandidates.find((candidate) => existsSync(candidate));
 
@@ -41,6 +50,18 @@ function resolvePlacesPath() {
 
 export function getDemoTripPlacesSourcePath() {
   return resolvePlacesPath();
+}
+
+export function getRuntimeSyncedTripPlacesSource() {
+  return runtimeSyncedPlacesSource;
+}
+
+export function setRuntimeSyncedTripPlacesSource(source: RuntimeTripPlacesSource) {
+  runtimeSyncedPlacesSource = source;
+}
+
+export function clearRuntimeSyncedTripPlacesSource() {
+  runtimeSyncedPlacesSource = undefined;
 }
 
 function normalizePlaceType(type: string | undefined): PlaceType {
@@ -78,8 +99,8 @@ function normalizeTags(source: SourcePlace, type: PlaceType) {
 }
 
 export function loadDemoTripPlaces(): TripPlace[] {
-  const sourcePath = resolvePlacesPath();
-  const sourcePlaces = JSON.parse(readFileSync(sourcePath, "utf8")) as SourcePlace[];
+  const sourcePlaces =
+    runtimeSyncedPlacesSource?.places ?? (JSON.parse(readFileSync(resolvePlacesPath(), "utf8")) as SourcePlace[]);
 
   return sourcePlaces.map((source, index) => {
     const type = normalizePlaceType(source.type);

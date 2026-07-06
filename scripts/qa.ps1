@@ -423,12 +423,23 @@ if (
 
 if (
   -not $serverSource.Contains('app.post("/api/trips/demo/google-source/sync"') -or
-  -not $serverSource.Contains("Trip Google Maps source synchronized on app startup") -or
+  -not $serverSource.Contains("importGooglePublicList") -or
+  -not $serverSource.Contains("imported_google_public_list") -or
   -not $webAppSource.Contains("syncGoogleSourceOnStartup") -or
   -not $webAppSource.Contains("/api/trips/demo/google-source/sync") -or
   -not $webAppSource.Contains("applyTripState(data.tripState)")
 ) {
-  throw "Kodi must automatically synchronize the active Google Maps source on app startup/refresh before normal trip rendering."
+  throw "Kodi must import the active public Google Maps list on app startup/refresh before normal trip rendering."
+}
+
+$googlePublicListImportSource = Get-Content (Join-Path $root "apps\api\src\google\publicListImport.ts") -Raw -Encoding UTF8
+if (
+  -not $googlePublicListImportSource.Contains("entitylist") -or
+  -not $googlePublicListImportSource.Contains("getlist") -or
+  -not $googlePublicListImportSource.Contains("declaredCount") -or
+  -not $googlePublicListImportSource.Contains("places.length !== declaredCount")
+) {
+  throw "Kodi Google source sync must parse and verify the public Google Maps list instead of trusting a stale local fixture."
 }
 
 $reverseGeocodeSource = Get-Content (Join-Path $root "apps\api\src\google\reverseGeocode.ts") -Raw
