@@ -58,7 +58,10 @@ const retiredMessageFragments = [
   "יעד הקבוצתי הנוכחי",
   "מסלול קבוצתי קצר סביב",
   "התחנה הפעילה הבאה במסלול",
-  "QA live route"
+  "QA live route",
+  "אני כאן. תשאלו אותי חופשי",
+  "אני כאן. כתבו עכשיו",
+  "תגידו לי מה צריך עכשיו"
 ];
 
 declare global {
@@ -958,39 +961,12 @@ function isDirectFamilyChat(text: string) {
   return ["אורייה", "אוריה", "עומרי", "אמא", "אבא", "נועה"].some((name) => normalized.includes(name));
 }
 
-function isKodiPresenceReply(message: ChatMessage | undefined) {
-  if (!message || message.source !== "agent") {
-    return false;
-  }
-
-  return (
-    message.author === "קודי" &&
-    (message.text.includes("אני כאן") || message.text.includes("תגידו לי מה צריך עכשיו"))
-  );
-}
-
-function wasRecentMessageExplicitKodiCall(message: ChatMessage | undefined) {
-  if (!message) {
-    return false;
-  }
-
-  const normalized = message.text.replace(/[?!.,\s]/g, "").toLowerCase();
-  return ["קודי", "kodi", "codex", "קודקס"].includes(normalized);
-}
-
 function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
-  const explicitCall = /\b(kodi|codex)\b/i.test(text) || text.includes("קודי") || text.includes("קודקס");
-  if (explicitCall) {
-    return true;
-  }
-
+  void currentMessages;
   if (isDirectFamilyChat(text)) {
     return false;
   }
-
-  const lastMessage = currentMessages.at(-1);
-  const previousMessage = currentMessages.at(-2);
-  return isKodiPresenceReply(lastMessage) && wasRecentMessageExplicitKodiCall(previousMessage);
+  return true;
 }
 
 function getMapPosition(index: number, total: number) {

@@ -48,7 +48,7 @@ Kodi should be built as an explicit harness:
 
 ```text
 User message
--> wake-word gate
+-> conversation routing gate
 -> context builder
 -> intent/context resolver
 -> tool planner
@@ -62,17 +62,16 @@ User message
 
 Each layer has one job.
 
-### 1. Wake-Word Gate
+### 1. Conversation Routing Gate
 
-Kodi wakes only when:
+Kodi is not limited to a wake word. The default product behavior is:
 
-- the user says `קודי`
-- the user says `קודקס`
-- the user says `Kodi` or `Codex`
-- the previous exchange was a pure Kodi presence ping such as `קודי?`, and the very next user message is the actual follow-up request
-- voice conversation mode explicitly forces Kodi
+- normal trip/group messages are routed to Kodi so the agent can reason from context
+- explicit calls such as `קודי`, `קודקס`, `Kodi`, or `Codex` are routed to Kodi
+- voice conversation mode routes to Kodi
+- direct participant-to-participant messages stay in the group
 
-Normal family chat must not trigger Kodi. The short follow-up window is only for the common flow where a user first checks that Kodi is present and then writes the real request.
+Kodi must not be intercepted by a hard-coded presence response. The UI/backend should send the conversation event to the agent harness, not to canned `I am here` logic.
 
 Example:
 
@@ -89,16 +88,6 @@ Example:
 ```
 
 Kodi should answer.
-
-Example:
-
-```text
-מנהל הטיול: קודי?
-קודי: אני כאן...
-מנהל הטיול: איזה בית קפה איכותי יש באזור שלי?
-```
-
-Kodi should answer the follow-up request without forcing the user to type `קודי` twice.
 
 ### 2. Context Builder
 

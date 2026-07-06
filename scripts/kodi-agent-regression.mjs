@@ -76,6 +76,8 @@ function expectHealthyAgentResult(name, result) {
   assertCheck(`${name} has text`, text.trim().length > 0);
   assertCheck(`${name} latency`, result.elapsedMs <= maxLatencyMs, `elapsedMs=${result.elapsedMs}`);
   assertCheck(`${name} not browser fallback`, !text.includes("תגידו לי מה צריך עכשיו: ניווט"));
+  assertCheck(`${name} not canned presence`, !text.includes("תשאלו אותי חופשי"));
+  assertCheck(`${name} not fast presence`, result.payload.source !== "fast_presence", `source=${result.payload.source}`);
   assertCheck(`${name} no feminine Kodi self-reference`, !text.includes("אני יכולה"));
   assertCheck(`${name} no fake future-live disclaimer`, !text.includes("כשיהיה חיבור חי מלא"));
   assertCheck(`${name} no markdown stars`, !text.includes("**"));
@@ -83,6 +85,9 @@ function expectHealthyAgentResult(name, result) {
 
 const health = await getJson("/api/health");
 assertCheck("health", health.response.ok && health.payload.ok === true);
+
+const bareKodi = await postAgent("קודי?");
+expectHealthyAgentResult("bare Kodi", bareKodi);
 
 const liveCafe = await postAgent("קודי איזה בית קפה פתוח יש באזור שלי כרגע?", {
   currentLocation: {
@@ -111,11 +116,6 @@ assertCheck("trip nature mentions north Greece or Pelion", /צפון יוון|פ
 
 const actionableYouCan = await postAgent("קודי אתה יכול לעשות לי סדר במקומות לינה?");
 expectHealthyAgentResult("actionable you can", actionableYouCan);
-assertCheck(
-  "actionable you can is not presence ping",
-  actionableYouCan.payload.source !== "fast_presence",
-  `source=${actionableYouCan.payload.source}`
-);
 assertCheck(
   "actionable you can answers lodging task",
   /לינה|מלון|מקומות/.test(String(actionableYouCan.payload.text ?? "")),
@@ -150,6 +150,11 @@ console.log(
       ok: true,
       baseUrl,
       checks: {
+        bareKodi: {
+          elapsedMs: bareKodi.elapsedMs,
+          source: bareKodi.payload.source,
+          openAiStatus: bareKodi.payload.agentRuntime?.openAiStatus
+        },
         liveCafe: {
           elapsedMs: liveCafe.elapsedMs,
           source: liveCafe.payload.source,

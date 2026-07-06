@@ -793,6 +793,6 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     requiresAdminApproval: false,
     source: "rules",
     text:
-      "אני כאן. תשאלו אותי חופשי על המסלול, מקום בדרך, עלויות, אוכל, ניווט, מזג אוויר או מה כדאי לעשות עכשיו."
+      "לא קיבלתי מספיק הקשר כדי לבצע פעולה טובה. כתבו לי מה לבדוק או מה לעשות בטיול, ואענה לפי המפה, המיקום ונקודות המסלול."
   };
 }

@@ -399,33 +399,6 @@ function shouldUseDeterministicRouteDiagram(message: string) {
   );
 }
 
-function isKodiPresencePing(message: string) {
-  const spaced = message.replace(/[?!.,]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-  const compact = spaced.replace(/\s/g, "");
-  const wakeWords = ["קודי", "kodi", "codex", "קודקס"];
-  const wakeWord = wakeWords.find((word) => spaced === word || spaced.startsWith(`${word} `));
-
-  if (!wakeWord) {
-    return false;
-  }
-
-  const rest = spaced === wakeWord ? "" : spaced.slice(wakeWord.length).trim();
-  if (!rest) {
-    return true;
-  }
-
-  const purePresenceTerms = ["אתה כאן", "אתה פה", "את כאן", "את פה", "כאן", "שלום", "היי", "הי", "מחובר", "עובד"];
-  const compactPresenceTerms = purePresenceTerms.map((term) => term.replace(/\s/g, ""));
-  const compactRest = rest.replace(/\s/g, "");
-  const compactAfterWakeWord = compact.slice(wakeWord.length);
-
-  return (
-    purePresenceTerms.includes(rest) ||
-    compactPresenceTerms.includes(compactRest) ||
-    compactPresenceTerms.includes(compactAfterWakeWord)
-  );
-}
-
 function shouldUseExternalPlacesSearch(message: string) {
   const normalizedMessage = message.toLowerCase();
 
@@ -2372,34 +2345,6 @@ app.post("/api/agent/message", async (req, res) => {
       ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
           .permissionPolicy
       : undefined;
-
-  if (isKodiPresencePing(message)) {
-    res.json({
-      author: "קודי",
-      text: "אני כאן. כתבו עכשיו את השאלה או הבקשה שלכם, והיא תגיע אליי גם בלי לכתוב שוב קודי.",
-      intent: "general",
-      requiresAdminApproval: false,
-      source: "fast_presence",
-      agentRuntime: {
-        openAiStatus: "skipped_presence_ping",
-        openAiModel: undefined,
-        fallbackUsed: false,
-        fastLane: true,
-        latencyMs: Date.now() - agentStartedAt
-      },
-      contextSummary: {
-        tripGroupId,
-        memberId: normalizedMember.id,
-        memberName: normalizedMember.displayName,
-        memberRole: normalizedMember.role,
-        recentMessagesCount: recentMessages.length,
-        hasTripState: false,
-        operationalChangesRequireAdmin: permissionPolicy?.operationalChangesRequireAdmin,
-        canShareLiveLocation: permissionPolicy?.canShareLiveLocation
-      }
-    });
-    return;
-  }
 
   const requestCurrentLocation = getRequestCurrentLocation(context);
   const hereAndNowContext = shouldUseHereAndNowContext(message);

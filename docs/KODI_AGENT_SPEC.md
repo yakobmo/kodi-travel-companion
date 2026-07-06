@@ -127,25 +127,11 @@ Kodi is a participant in one shared family/group chat.
 
 There is no separate "ask the bot" channel.
 
-Kodi wakes when:
+Kodi is part of the group conversation. It is not limited to a wake word.
 
-- the user explicitly says "קודי"
-- the user sent a pure presence ping such as "קודי?" and the next message is the actual short follow-up request
-- voice conversation mode is active
+Kodi should receive normal trip/group messages and reason from context. Direct participant-to-participant chatter can remain group chatter.
 
-Kodi should not inject itself into every family message. Ordinary group chatter can remain group chatter.
-
-When Kodi wakes, it reads recent group context and then answers the request. Outside that short follow-up window, normal messages between participants must not trigger Kodi, even if they are questions or appear right after a Kodi reply.
-
-The short follow-up window exists only to prevent this broken flow:
-
-```text
-Manager: קודי?
-Kodi: אני כאן.
-Manager: איזה בית קפה איכותי יש באזור שלי?
-```
-
-In that case Kodi should answer the cafe request. The user already called Kodi.
+When Kodi handles a message, it reads recent group context and then answers through the agent harness. Even a short call such as "קודי?" must not be intercepted by a hard-coded presence response.
 
 Kodi should remember the recent flow only after being called. If the user corrected a wrong assumption, the correction should override stale state.
 

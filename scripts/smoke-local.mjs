@@ -600,7 +600,7 @@ try {
   await page.locator(".menu-shortcut-form button").click();
   await page.getByRole("link", { name: "תרגום" }).waitFor();
 
-  const messagesBeforeFamilyOnly = await page.locator(".message").count();
+  const kodiMessagesBeforeContextChat = await page.locator(".message.kodi").count();
   await input.fill("בא לי גלידה ליד המלון");
   await page.locator(".composer button[type='submit']").click();
   await page.getByText("בא לי גלידה ליד המלון").waitFor();
@@ -608,8 +608,11 @@ try {
     "message activity visible",
     (await page.locator(".event-activity").getByText("שלח/ה הודעה בקבוצה").count()) >= 1
   );
-  const messagesAfterFamilyOnly = await page.locator(".message").count();
-  assertCheck("kodi stays asleep without call", messagesAfterFamilyOnly === messagesBeforeFamilyOnly + 1);
+  await page.waitForFunction(
+    (count) => document.querySelectorAll(".message.kodi").length > count,
+    kodiMessagesBeforeContextChat
+  );
+  assertCheck("kodi responds to contextual trip chat without wake word", (await page.locator(".message.kodi").count()) > kodiMessagesBeforeContextChat);
 
   await input.fill("קודי, מה מתאים לקבוצה עכשיו ליד המלון?");
   await page.locator(".composer button[type='submit']").click();

@@ -377,26 +377,13 @@ if (
   throw "Kodi place/route recommendations must be enhanced with Google Maps and Waze action URLs when a target is available."
 }
 
-$presencePingIndex = $serverSource.IndexOf("if (isKodiPresencePing(message))")
-$tripSnapshotIndex = $serverSource.IndexOf("await buildAgentTripStateSnapshot()")
-if ($presencePingIndex -lt 0 -or $tripSnapshotIndex -lt 0 -or $presencePingIndex -gt $tripSnapshotIndex) {
-  throw "Kodi presence checks must answer before building the full trip snapshot so simple connectivity pings stay fast."
-}
-
-$presenceFunctionStart = $serverSource.IndexOf("function isKodiPresencePing(message: string)")
-$presenceFunctionEnd = $serverSource.IndexOf("function shouldUseExternalPlacesSearch", $presenceFunctionStart)
-$presenceFunctionSource = if ($presenceFunctionStart -ge 0 -and $presenceFunctionEnd -gt $presenceFunctionStart) {
-  $serverSource.Substring($presenceFunctionStart, $presenceFunctionEnd - $presenceFunctionStart)
-} else {
-  ""
-}
-
 if (
-  -not $presenceFunctionSource.Contains("purePresenceTerms.includes(rest)") -or
-  -not $presenceFunctionSource.Contains("compactPresenceTerms.includes(compactRest)") -or
-  $presenceFunctionSource.Contains(".includes(term)")
+  $serverSource.Contains("fast_presence") -or
+  $serverSource.Contains("skipped_presence_ping") -or
+  $serverSource.Contains("function isKodiPresencePing") -or
+  $serverSource.Contains("if (isKodiPresencePing(message))")
 ) {
-  throw "Kodi presence ping detection must match exact presence phrases only; actionable requests such as 'קודי אתה יכול...' must reach the agent."
+  throw "Kodi must not use a hard-coded presence response path; explicit Kodi calls must reach the agent harness."
 }
 
 if (
@@ -870,18 +857,16 @@ $openAiSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts"
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
-  -not $appSource.Contains("if (explicitCall)") -or
+  -not $appSource.Contains("return true;") -or
   -not $appSource.Contains("shouldWakeKodi(text, messages)")
 ) {
-  throw "Web app must wake Kodi through explicit calls and the short follow-up window, while voice conversation can still force Kodi separately."
+  throw "Web app must route normal group messages to Kodi by default so the agent can reason from context."
 }
 
 if (
-  -not $appSource.Contains("isKodiPresenceReply") -or
-  -not $appSource.Contains("wasRecentMessageExplicitKodiCall") -or
   -not $appSource.Contains("isDirectFamilyChat")
 ) {
-  throw "Web app must support a short Kodi follow-up window after 'קודי?' without waking on direct family chat."
+  throw "Web app must keep only direct participant-to-participant chat out of Kodi's agent path."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/state")) {
@@ -1186,22 +1171,17 @@ if (
 if (
   -not $appSource.Contains("function shouldWakeKodi") -or
   -not $appSource.Contains("shouldAskKodi = shouldWakeKodi(text, messages)") -or
-  -not $appSource.Contains("text.includes") -or
-  -not $appSource.Contains("kodi|codex") -or
-  -not $appSource.Contains("if (explicitCall)") -or
-  -not $appSource.Contains("isKodiPresenceReply") -or
-  -not $appSource.Contains("wasRecentMessageExplicitKodiCall") -or
-  -not $appSource.Contains("isDirectFamilyChat")
+  -not $appSource.Contains("isDirectFamilyChat") -or
+  -not $appSource.Contains("return true;")
 ) {
-  throw "Web group chat must wake Kodi through explicit calls or a short Kodi follow-up window; ordinary participant-to-participant chat must stay in the group chat."
+  throw "Web group chat must route messages to Kodi by default while direct participant-to-participant chat stays in the group."
 }
 
 if (
-  -not $kodiAgentSpecSource.Contains("short follow-up window") -or
   -not $kodiAgentSpecSource.Contains("מה קורה אורייה") -or
   -not $kodiAgentSpecSource.Contains("Kodi stays quiet")
 ) {
-  throw "Kodi agent spec must protect the wake-word rule and the short follow-up behavior for ordinary participant messages."
+  throw "Kodi agent spec must protect direct participant-to-participant messages while letting Kodi reason from normal trip chat."
 }
 
 if (
