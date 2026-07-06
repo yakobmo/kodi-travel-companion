@@ -844,6 +844,7 @@ if (-not $demoTripSource.Contains("locationSharing")) {
 }
 
 $appSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encoding UTF8
+$openAiSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts") -Raw -Encoding UTF8
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
@@ -1116,6 +1117,10 @@ if (-not $serverSource.Contains('"באזור שלי"') -or -not $appSource.Conta
 
 if (-not $serverSource.Contains('options.hereAndNow ? "cafe"') -or -not $serverSource.Contains('options.hereAndNow ? "bakery"')) {
   throw "Kodi near-me cafe/bakery searches must use clean Google Places queries, not trip/hotel-biased text."
+}
+
+if (-not $openAiSource.Contains("Kodi speaks about himself in masculine Hebrew")) {
+  throw "Kodi OpenAI prompt must keep Kodi's Hebrew self-reference masculine and consistent."
 }
 
 $agentTemplateLeaks = @(
