@@ -1110,6 +1110,10 @@ if (-not $serverSource.Contains("buildExternalPlacesQuery(focusedReferenceMessag
   throw "Kodi Google Places search must receive here-and-now context for live-location requests."
 }
 
+if (-not $serverSource.Contains('"באזור שלי"') -or -not $appSource.Contains('"באזור שלי"')) {
+  throw "Kodi must treat 'באזור שלי' as a live-location request on both server and web."
+}
+
 if (-not $serverSource.Contains('options.hereAndNow ? "cafe"') -or -not $serverSource.Contains('options.hereAndNow ? "bakery"')) {
   throw "Kodi near-me cafe/bakery searches must use clean Google Places queries, not trip/hotel-biased text."
 }
