@@ -325,7 +325,7 @@ if (
   -not $openAiAgentSource.Contains("road accessibility") -or
   -not $openAiAgentSource.Contains("Support a here-and-now mode") -or
   -not $openAiAgentSource.Contains("reverseGeocodedLocation") -or
-  -not $openAiAgentSource.Contains("Do not claim live Google account sync") -or
+  -not $openAiAgentSource.Contains("Do not claim private Google account sync") -or
   -not $openAiAgentSource.Contains("Return JSON only") -or
   -not $openAiAgentSource.Contains('source: "openai"')
 ) {
@@ -403,10 +403,22 @@ if (
 
 if (
   -not $openAiAgentSource.Contains("freshest currentLocation/live member location") -or
+  -not $openAiAgentSource.Contains("current Google Maps view context as tripState") -or
+  -not $openAiAgentSource.Contains("use it before saying you lack map access") -or
   -not $openAiAgentSource.Contains("For every practical recommendation of a concrete place") -or
   -not $openAiAgentSource.Contains("Google Maps for walking/checking details and Waze for driving")
 ) {
-  throw "Kodi OpenAI prompt must require fresh location reasoning and action links for concrete place recommendations."
+  throw "Kodi OpenAI prompt must require fresh map/location reasoning and action links for concrete place recommendations."
+}
+
+$webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encoding UTF8
+if (
+  -not $webAppSource.Contains("buildAgentTripStateForKodi") -or
+  -not $webAppSource.Contains("tripState: agentTripState") -or
+  -not $webAppSource.Contains("googleMapsContext") -or
+  -not $webAppSource.Contains("liveGoogleAccountSync")
+) {
+  throw "Kodi web chat must send the current app Google Maps trip state with every agent request."
 }
 
 $reverseGeocodeSource = Get-Content (Join-Path $root "apps\api\src\google\reverseGeocode.ts") -Raw

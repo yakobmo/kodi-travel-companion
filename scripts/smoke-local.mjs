@@ -431,7 +431,8 @@ try {
   const gelatoAgentPayload = await gelatoAgentResponse.json();
   assertCheck("agent google places context ok", gelatoAgentResponse.ok());
   assertCheck("agent google places status", gelatoAgentPayload.contextSummary?.externalPlacesSearchStatus === "not_configured");
-  assertCheck("agent google places guarded copy", gelatoAgentPayload.text?.includes("חיפוש Google Places חי עדיין לא מופעל"));
+  assertCheck("agent google places keeps trip state", gelatoAgentPayload.contextSummary?.hasTripState === true);
+  assertCheck("agent google places not canned presence", !String(gelatoAgentPayload.text ?? "").includes("תשאלו אותי חופשי"));
   assertCheck(
     "agent google places usage gate",
     gelatoAgentPayload.contextSummary?.usageGateResults?.some(

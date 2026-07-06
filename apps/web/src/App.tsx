@@ -455,6 +455,26 @@ interface TripStateResponse {
   groupRoute?: GroupRoute | null;
 }
 
+interface AgentTripStateRequest extends TripStateResponse {
+  agentContext: {
+    name: "קודי";
+    language: "he";
+    canRecommendPlaces: boolean;
+    canCreateRoutes: boolean;
+    requiresAdminApprovalForOperationalChanges: boolean;
+    visibleLiveLocationMemberIds: string[];
+    googleMapsContext: {
+      mapEngine: "google_maps";
+      sourceDisplayName?: string;
+      sourceUrl?: string;
+      syncMode?: string;
+      liveGoogleAccountSync: boolean;
+      canOpenGoogleMapsUrl: boolean;
+      canWriteBackToGoogle: boolean;
+    };
+  };
+}
+
 interface GroupRouteResponse {
   tripGroupId: string;
   route: GroupRoute | null;
@@ -2577,6 +2597,7 @@ export function App() {
 
     try {
       const agentCurrentLocation = await getFreshCurrentLocationForAgent(text);
+      const agentTripState = buildAgentTripStateForKodi(agentCurrentLocation);
       const controller = new AbortController();
       timeoutId = window.setTimeout(() => controller.abort(), 24_000);
       const response = await fetch(`${apiBaseUrl}/api/agent/message`, {
@@ -2595,6 +2616,7 @@ export function App() {
           },
           message: text,
           recentMessages: nextMessages.slice(-24),
+          tripState: agentTripState,
           context: {
             permissionPolicy: {
               operationalChangesRequireAdmin: true,
@@ -2622,6 +2644,90 @@ export function App() {
         window.clearTimeout(timeoutId);
       }
     }
+  }
+
+  function buildAgentTripStateForKodi(agentCurrentLocation: CurrentLocationState | null): AgentTripStateRequest {
+    const now = new Date().toISOString();
+    const activeLocation = agentCurrentLocation ?? currentLocation;
+    const agentMembers = members.map((member) => {
+      const shouldAttachCurrentLocation = member.id === activeMember.id && activeLocation;
+      const liveLocation = shouldAttachCurrentLocation
+        ? {
+            memberId: member.id,
+            tripGroupId: "group_family_greece_demo",
+            lat: activeLocation.lat,
+            lng: activeLocation.lng,
+            accuracyMeters: activeLocation.accuracyMeters,
+            updatedAt: activeLocation.updatedAt,
+            source: "gps" as const
+          }
+        : member.liveLocation
+          ? {
+              memberId: member.id,
+              tripGroupId: "group_family_greece_demo",
+              lat: member.liveLocation.lat,
+              lng: member.liveLocation.lng,
+              updatedAt: now,
+              source: "gps" as const
+            }
+          : null;
+
+      return {
+        member: {
+          id: member.id,
+          tripGroupId: "group_family_greece_demo",
+          displayName: member.name,
+          ageGroup: member.ageGroup,
+          role: member.role,
+          canChatWithAgent: true,
+          canMarkVisited: true,
+          canManagePlaces: member.role === "owner" || member.role === "admin",
+          canManageMembers: member.role === "owner" || member.role === "admin"
+        },
+        consent: {
+          memberId: member.id,
+          tripGroupId: "group_family_greece_demo",
+          state: liveLocation ? "enabled" : member.locationSharing,
+          updatedAt: now
+        },
+        liveLocation,
+        displayLabel: liveLocation ? "מיקום חי על Google Maps" : member.name,
+        updatedMinutesAgo: liveLocation ? 0 : member.liveLocation?.updatedMinutesAgo
+      };
+    });
+
+    return {
+      trip: {
+        id: "trip_north_greece_demo",
+        groupId: "group_family_greece_demo",
+        name: setupDraft.tripName.trim() || setupState?.setupSummary?.tripName || demoTripSummary.name,
+        groupName: demoTripSummary.groupName
+      },
+      summary,
+      places,
+      members: agentMembers,
+      groupDestination,
+      groupRoute,
+      agentContext: {
+        name: "קודי",
+        language: "he",
+        canRecommendPlaces: true,
+        canCreateRoutes: true,
+        requiresAdminApprovalForOperationalChanges: true,
+        visibleLiveLocationMemberIds: agentMembers
+          .filter((item) => item.consent.state === "enabled" && item.liveLocation)
+          .map((item) => item.member.id),
+        googleMapsContext: {
+          mapEngine: "google_maps",
+          sourceDisplayName: googleSourcePreview?.source.displayName,
+          sourceUrl: googleSourcePreview?.source.sourceUrl,
+          syncMode: googleSourcePreview?.sync.mode,
+          liveGoogleAccountSync: Boolean(googleSourcePreview?.adapter.liveGoogleAccess),
+          canOpenGoogleMapsUrl: Boolean(googleSourcePreview?.sync.canOpenGoogleMapsUrl ?? true),
+          canWriteBackToGoogle: Boolean(googleSourcePreview?.sync.canWriteBackToGoogle)
+        }
+      }
+    };
   }
 
   function playChatTone(kind: "record-start" | "voice-sent") {
