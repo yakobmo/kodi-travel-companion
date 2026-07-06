@@ -1098,8 +1098,20 @@ if (-not $appSource.Contains("activeMemberId") -or -not $appSource.Contains("set
   throw "Web group chat must support choosing the active speaker."
 }
 
-if (-not $appSource.Contains("buildKodiFallbackReply")) {
-  throw "Web app must keep a local Kodi fallback for demo resilience."
+if ($appSource.Contains("buildKodiFallbackReply")) {
+  throw "Web app must not keep a fake local Kodi answer fallback; failed agent calls must be explicit."
+}
+
+if (-not $appSource.Contains("buildKodiConnectionErrorMessage")) {
+  throw "Web app must show an explicit Kodi connection error when the agent call fails."
+}
+
+if (-not $serverSource.Contains("buildExternalPlacesQuery(focusedReferenceMessage, { hereAndNow: hereAndNowContext })")) {
+  throw "Kodi Google Places search must receive here-and-now context for live-location requests."
+}
+
+if (-not $serverSource.Contains('options.hereAndNow ? "cafe"') -or -not $serverSource.Contains('options.hereAndNow ? "bakery"')) {
+  throw "Kodi near-me cafe/bakery searches must use clean Google Places queries, not trip/hotel-biased text."
 }
 
 $agentTemplateLeaks = @(
@@ -1112,11 +1124,9 @@ $agentTemplateLeaks = @(
   "מכנה משותף"
 )
 
-$appFallbackSource = [regex]::Match($appSource, "function buildKodiFallbackReply[\s\S]*?function shouldWakeKodi").Value
-
 foreach ($leak in $agentTemplateLeaks) {
-  if ($appFallbackSource.Contains($leak) -or $kodiSourceEarly.Contains($leak)) {
-    throw "Kodi agent/fallback must not leak rigid template phrasing: $leak"
+  if ($kodiSourceEarly.Contains($leak)) {
+    throw "Kodi agent must not leak rigid template phrasing: $leak"
   }
 }
 

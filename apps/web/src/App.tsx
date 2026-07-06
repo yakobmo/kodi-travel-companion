@@ -926,38 +926,6 @@ function getKodiHebrewVoice() {
   );
 }
 
-function buildKodiFallbackReply(messages: ChatMessage[], selectedPlace?: TripPlace) {
-  const lastText = messages.at(-1)?.text.trim() ?? "";
-  const normalizedLastText = lastText.replace(/[?!.,\s]/g, "").toLowerCase();
-  if (["קודי", "kodi", "codex", "קודקס"].includes(normalizedLastText)) {
-    return "אני כאן. תגידו לי מה צריך עכשיו: ניווט, נקודה במסלול, מקום קרוב, הסבר על מה שרואים, או סידור מחדש של המסלול.";
-  }
-
-  const recentText = messages
-    .slice(-4)
-    .map((message) => message.text)
-    .join(" ");
-  const selected = selectedPlace?.name ?? "המלון הקרוב";
-
-  if (recentText.includes("ספר") || recentText.includes("רואים") || recentText.includes("מזרקה")) {
-    return "אני יכול להיות רגע מדריך מקומי. לפי ההקשר אני צריך לזהות בדיוק איפה אתם או איזו נקודה נבחרה. אם זו מזרקה, אספר בקצרה מה רואים, למה זה מעניין, ואתאים את ההסבר לילדים בלי להמציא עובדות שאני לא בטוח בהן.";
-  }
-
-  if (recentText.includes("מסלול") || recentText.includes("שעה פנויה") || recentText.includes("מזרקות")) {
-    return "אני יכול לבנות מסלול חדש, אבל קודם צריך לאפיין אותו. כמה זמן יש לכם, האם זה ברגל או ברכב, מה דרגת הקושי הרצויה, מי בקבוצה עכשיו, ומה מעניין אתכם: מים, אוכל, היסטוריה, ילדים או משהו רגוע ליד המלון?";
-  }
-
-  if (recentText.includes("גלידה") || recentText.includes("לישון") || recentText.includes("מלון")) {
-    return `אפשר. אחפש סביב ${selected} מקום קרוב ונוח, עם כמה שפחות סטייה והליכה קצרה. אם יש כמה אפשרויות טובות, אבחר את זו שהכי מתאימה למה שביקשתם ואציע קישור ניווט ברור.`;
-  }
-
-  if (recentText.includes("איפה") || recentText.includes("כולם")) {
-    return "אני מסתכל על ההקשר של הקבוצה. כשנחבר מיקום חי, אוכל להגיד מי קרוב למי ולהציע נקודת מפגש נוחה בלי לחשוף מיקום של מי שלא אישר שיתוף.";
-  }
-
-  return "אני כאן. אפשר לשאול אותי על המסלול, מקום בדרך, עלויות, אוכל, ניווט, מזג אוויר או מה כדאי לעשות עכשיו.";
-}
-
 function shouldAttachSelectedPlaceToAgent(text: string) {
   const normalized = text.trim().toLowerCase();
 
@@ -2580,6 +2548,16 @@ export function App() {
     }
   }
 
+  function buildKodiConnectionErrorMessage(): ChatMessage {
+    return {
+      id: `local-kodi-error-${Date.now()}`,
+      author: "קודי",
+      text: "אני לא מצליח להתחבר כרגע לסוכן. זו לא תשובה אמיתית שלי, אז לא אשמור אותה כהמלצה. נסו שוב בעוד רגע.",
+      source: "system",
+      createdAt: new Date().toISOString()
+    };
+  }
+
   async function requestKodiReply(text: string, nextMessages: ChatMessage[]) {
     let timeoutId: number | undefined;
 
@@ -2622,8 +2600,9 @@ export function App() {
 
       const data = (await response.json()) as AgentMessageResponse;
       return data.text;
-    } catch {
-      return buildKodiFallbackReply(nextMessages, selectedPlace);
+    } catch (error) {
+      console.warn("Kodi agent request failed", error);
+      return null;
     } finally {
       if (timeoutId) {
         window.clearTimeout(timeoutId);
@@ -3080,6 +3059,10 @@ export function App() {
 
     if (shouldAskKodi) {
       const reply = await requestKodiReply(text, nextMessages);
+      if (!reply) {
+        setMessages((currentMessages) => [...currentMessages, buildKodiConnectionErrorMessage()]);
+        return;
+      }
       const localKodiMessage = { id: `local-kodi-${Date.now()}`, author: "קודי" as const, text: reply };
       setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
       if (shouldSpeakKodiReply(text)) {
@@ -3120,6 +3103,10 @@ export function App() {
       setIsKodiThinking(true);
       try {
         const reply = await requestKodiReply(text, nextMessages);
+        if (!reply) {
+          setMessages((currentMessages) => [...currentMessages, buildKodiConnectionErrorMessage()]);
+          return;
+        }
         const localKodiMessage: ChatMessage = {
           id: `local-kodi-${Date.now()}`,
           author: "קודי",

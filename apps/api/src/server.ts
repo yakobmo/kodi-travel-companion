@@ -524,14 +524,39 @@ function shouldUseRouteEstimate(message: string) {
   return asksForTimeOrDistance && hasDestinationHint;
 }
 
-function buildExternalPlacesQuery(message: string) {
+function buildExternalPlacesQuery(message: string, options: { hereAndNow?: boolean } = {}) {
   const normalizedMessage = message
     .replace(/קודי[, ]*/g, "")
     .replace(/\?/g, "")
+    .replace(/אזור שלי/g, "")
+    .replace(/בסביבה שלי/g, "")
+    .replace(/קרוב אליי/g, "")
+    .replace(/קרוב אלי/g, "")
+    .replace(/כאן/g, "")
     .trim();
 
   if (shouldReverseGeocodeCurrentLocation(message)) {
     return "school nearby";
+  }
+
+  if (includesAnyTerm(message, ["מאפייה", "מאפיה", "לחם", "מאפים", "קונדיטוריה", "bakery"])) {
+    return options.hereAndNow ? "bakery" : "bakery nearby";
+  }
+
+  if (includesAnyTerm(message, ["בית קפה", "קפה", "coffee", "cafe"])) {
+    return options.hereAndNow ? "cafe" : "cafe nearby";
+  }
+
+  if (includesAnyTerm(message, ["גלידה", "מתוק", "קינוח", "ice cream", "gelato"])) {
+    return options.hereAndNow ? "ice cream" : "gelato ice cream nearby";
+  }
+
+  if (includesAnyTerm(message, ["שירותים", "WC", "toilet", "toilets"])) {
+    return options.hereAndNow ? "public toilets" : "public toilets nearby";
+  }
+
+  if (includesAnyTerm(message, ["בית מרקחת", "פארם", "תרופה", "pharmacy"])) {
+    return options.hereAndNow ? "pharmacy" : "pharmacy nearby";
   }
 
   if (
@@ -545,27 +570,14 @@ function buildExternalPlacesQuery(message: string) {
       "טברנות",
       "אוכל",
       "לאכול",
-      "ארוחה",
-      "קפה"
+      "ארוחה"
     ])
   ) {
-    return "taverna restaurant near hotel";
+    return options.hereAndNow ? "restaurant" : "taverna restaurant near hotel";
   }
 
   if (normalizedMessage.length >= 3) {
-    return `${normalizedMessage} nearby`;
-  }
-
-  if (includesAnyTerm(message, ["גלידה", "מתוק", "קינוח"])) {
-    return "gelato ice cream nearby";
-  }
-
-  if (includesAnyTerm(message, ["שירותים", "WC"])) {
-    return "public toilets nearby";
-  }
-
-  if (includesAnyTerm(message, ["בית מרקחת", "פארם", "תרופה"])) {
-    return "pharmacy nearby";
+    return options.hereAndNow ? normalizedMessage : `${normalizedMessage} nearby`;
   }
 
   if (includesAnyTerm(message, ["מסעדה", "אוכל", "קפה"])) {
@@ -2439,7 +2451,7 @@ app.post("/api/agent/message", async (req, res) => {
     : undefined;
   const externalPlacesSearch = placesUsageGate?.allowed
     ? await searchGooglePlacesText({
-        query: buildExternalPlacesQuery(focusedReferenceMessage),
+        query: buildExternalPlacesQuery(focusedReferenceMessage, { hereAndNow: hereAndNowContext }),
         ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext),
         radiusMeters: 3000,
         languageCode: "he"

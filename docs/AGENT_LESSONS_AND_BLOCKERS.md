@@ -508,3 +508,26 @@ Decision:
 QA/automation:
 
 - `scripts/qa.ps1` checks that presence pings run before snapshot loading, that Google Routes and reverse geocoding use abort timeouts, and that the web chat uses `AbortController` for agent calls.
+
+### 21. Do Not Let Browser Fallback Pretend To Be Kodi
+
+What happened:
+
+When the real agent request failed or timed out, the web app generated a local canned Kodi answer such as "I am here, tell me what you need." Those fake answers were persisted into the group chat as agent messages. Later requests used them as recent context, so Kodi appeared disconnected, repetitive, and unintelligent.
+
+Why it happened:
+
+The fallback was created for demo resilience, but the product is no longer a demo. In a real group travel assistant, a fake agent answer is worse than a visible failure because it pollutes memory and hides the actual blocker.
+
+Decision:
+
+- The browser must not fabricate travel-agent answers.
+- If `/api/agent/message` fails or times out, show a short explicit local connection error.
+- Do not persist that error as a Kodi recommendation.
+- Here-and-now searches such as cafe, bakery, pharmacy, toilets, or ice cream must use the live/current GPS anchor and clean Google Places queries, not hotel/trip-biased text.
+
+QA/automation:
+
+- `scripts/qa.ps1` rejects `buildKodiFallbackReply`.
+- `scripts/qa.ps1` requires explicit Kodi connection-error handling.
+- `scripts/qa.ps1` checks that live-location Google Places requests pass here-and-now context and clean cafe/bakery queries.
