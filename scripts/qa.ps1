@@ -395,6 +395,11 @@ if (
   throw "Kodi live-location flow must pass GPS accuracy/timestamp, answer identity questions deterministically, reverse-geocode when possible, and restrict here-and-now Google Places searches to a useful live-location radius."
 }
 
+$reverseGeocodeFunction = [regex]::Match($serverSource, "function shouldReverseGeocodeCurrentLocation\([\s\S]*?\n\}")
+if (-not $reverseGeocodeFunction.Success -or $reverseGeocodeFunction.Value.Contains('"באזור"') -or $reverseGeocodeFunction.Value.Contains('"לידי"')) {
+  throw "Reverse geocoding must stay limited to location-identity questions; nearby service searches such as cafe in the area must not become school/identity searches."
+}
+
 if ($serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed")) {
   throw "Current-location questions must reach the OpenAI agent after reverse geocoding; do not force them into rules-only replies."
 }

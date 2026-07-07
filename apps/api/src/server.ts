@@ -878,23 +878,7 @@ function shouldReverseGeocodeCurrentLocation(message: string) {
     "ישוב",
     "כתובת",
     "רחוב",
-    "לידי",
-    "לידינו",
-    "בסביבה",
-    "באזור",
-    "באזור הנוכחי",
-    "סביבה שלי",
-    "באזור שלי",
-    "אזור שלי",
-    "סביבי",
-    "קרוב אליי",
-    "קרוב אלי",
-    "כאן",
-    "כאן ועכשיו",
     "where am i",
-    "near me",
-    "around me",
-    "here",
     "current location"
   ]);
 }
