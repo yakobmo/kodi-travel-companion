@@ -1216,6 +1216,8 @@ if (
 
 if (
   -not $placesSearchSource.Contains("hasLocationRestriction") -or
+  -not $placesSearchSource.Contains("buildViewportFromRadius") -or
+  -not $placesSearchSource.Contains("rectangle") -or
   -not $serverSource.Contains("externalPlacesSearchRequest") -or
   -not $serverSource.Contains('req.query.restrictToLocation === "true"') -or
   -not $serverSource.Contains("includesHebrewLiveLocationCue") -or

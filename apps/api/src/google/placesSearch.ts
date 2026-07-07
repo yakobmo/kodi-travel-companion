@@ -96,6 +96,24 @@ function normalizeTimeoutMs(value: string | undefined) {
   return Math.min(Math.max(Math.round(timeoutMs), 800), 8000);
 }
 
+function buildViewportFromRadius(lat: number, lng: number, radiusMeters: number) {
+  const latDelta = radiusMeters / 111_320;
+  const lngDelta = radiusMeters / (111_320 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
+
+  return {
+    rectangle: {
+      low: {
+        latitude: Math.max(lat - latDelta, -90),
+        longitude: Math.max(lng - lngDelta, -180)
+      },
+      high: {
+        latitude: Math.min(lat + latDelta, 90),
+        longitude: Math.min(lng + lngDelta, 180)
+      }
+    }
+  };
+}
+
 function buildTextSearchBody(input: GooglePlacesTextSearchInput, radiusMeters: number) {
   const body: Record<string, unknown> = {
     textQuery: input.query.trim(),
@@ -116,7 +134,9 @@ function buildTextSearchBody(input: GooglePlacesTextSearchInput, radiusMeters: n
         radius: radiusMeters
       }
     };
-    body[input.restrictToLocation ? "locationRestriction" : "locationBias"] = locationCircle;
+    body[input.restrictToLocation ? "locationRestriction" : "locationBias"] = input.restrictToLocation
+      ? buildViewportFromRadius(input.lat, input.lng, radiusMeters)
+      : locationCircle;
   }
 
   return body;
