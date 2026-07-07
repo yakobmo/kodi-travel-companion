@@ -204,6 +204,16 @@ if (actionableYouCan.payload.agentRuntime?.openAiStatus === "ready") {
   );
 }
 
+const broadTravelContext = await postAgent("קודי מה כדאי לדעת היום?");
+expectHealthyAgentResult("broad travel context", broadTravelContext);
+if (broadTravelContext.payload.agentRuntime?.openAiStatus !== "ready") {
+  assertCheck(
+    "broad travel context fallback not random attraction",
+    !String(broadTravelContext.payload.text ?? "").includes("ההמלצה שלי כרגע היא"),
+    String(broadTravelContext.payload.text ?? "").slice(0, 220)
+  );
+}
+
 const routeMap = await postAgent("קודי סמן לי על המפה את המסלול");
 expectHealthyAgentResult("route map", routeMap);
 assertCheck("route map intent", ["route_creation", "general"].includes(String(routeMap.payload.intent ?? "")));
@@ -264,6 +274,11 @@ console.log(
           elapsedMs: actionableYouCan.elapsedMs,
           source: actionableYouCan.payload.source,
           openAiStatus: actionableYouCan.payload.agentRuntime?.openAiStatus
+        },
+        broadTravelContext: {
+          elapsedMs: broadTravelContext.elapsedMs,
+          source: broadTravelContext.payload.source,
+          openAiStatus: broadTravelContext.payload.agentRuntime?.openAiStatus
         },
         routeMap: {
           elapsedMs: routeMap.elapsedMs,

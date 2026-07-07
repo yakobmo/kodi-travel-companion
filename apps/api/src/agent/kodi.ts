@@ -842,7 +842,10 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     };
   }
 
-  if (includesAny(message, ["מה כדאי", "מה לעשות", "לאן ללכת", "תמליץ", "המלצה", "הכי טוב", "משהו עם מים"])) {
+  if (
+    !includesAny(message, ["מה כדאי לדעת", "כדאי לדעת", "לדעת היום"]) &&
+    includesAny(message, ["מה כדאי לעשות", "מה כדאי לראות", "מה לעשות", "לאן ללכת", "תמליץ", "המלצה", "הכי טוב", "משהו עם מים"])
+  ) {
     const recommendation = selectRecommendedPlace(message, input.tripState);
     const best = recommendation.best;
 
