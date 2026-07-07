@@ -101,6 +101,59 @@ let agentTripStateCache:
     }
   | undefined;
 const processedWhatsAppMessageIds = new Set<string>();
+const recentWhatsAppWebhookDiagnostics: Array<{
+  receivedAt: string;
+  parsedTextMessages: number;
+  statusEvents: number;
+  messageTypes: string[];
+  textPreviews: string[];
+}> = [];
+
+function maskDiagnosticWhatsAppText(text: string) {
+  const trimmed = text.trim().replace(/\s+/g, " ");
+  return trimmed.length > 80 ? `${trimmed.slice(0, 80)}...` : trimmed;
+}
+
+function collectWhatsAppWebhookStatusCount(payload: unknown) {
+  if (typeof payload !== "object" || payload === null || !Array.isArray((payload as { entry?: unknown }).entry)) {
+    return 0;
+  }
+
+  let statusEvents = 0;
+  for (const entry of (payload as { entry: unknown[] }).entry) {
+    if (typeof entry !== "object" || entry === null || !Array.isArray((entry as { changes?: unknown }).changes)) {
+      continue;
+    }
+
+    for (const change of (entry as { changes: unknown[] }).changes) {
+      const value = (change as { value?: unknown })?.value;
+      if (typeof value !== "object" || value === null || !Array.isArray((value as { statuses?: unknown }).statuses)) {
+        continue;
+      }
+
+      statusEvents += (value as { statuses: unknown[] }).statuses.length;
+    }
+  }
+
+  return statusEvents;
+}
+
+function rememberWhatsAppWebhookDiagnostic(
+  payload: unknown,
+  messages: ReturnType<typeof parseWhatsAppWebhookPayload>
+) {
+  recentWhatsAppWebhookDiagnostics.push({
+    receivedAt: new Date().toISOString(),
+    parsedTextMessages: messages.length,
+    statusEvents: collectWhatsAppWebhookStatusCount(payload),
+    messageTypes: [...new Set(messages.map((message) => message.rawType))],
+    textPreviews: messages.map((message) => maskDiagnosticWhatsAppText(message.text))
+  });
+
+  if (recentWhatsAppWebhookDiagnostics.length > 20) {
+    recentWhatsAppWebhookDiagnostics.splice(0, recentWhatsAppWebhookDiagnostics.length - 20);
+  }
+}
 
 function rememberProcessedWhatsAppMessage(messageId: string) {
   processedWhatsAppMessageIds.add(messageId);
@@ -1398,6 +1451,13 @@ app.get("/api/whatsapp/readiness", (_req, res) => {
   res.json(getWhatsAppConnectorReadiness());
 });
 
+app.get("/api/whatsapp/diagnostics", (_req, res) => {
+  res.json({
+    connector: getWhatsAppConnectorReadiness(),
+    recentWebhooks: recentWhatsAppWebhookDiagnostics
+  });
+});
+
 app.get("/api/whatsapp/webhook", (req, res) => {
   const verification = verifyWhatsAppWebhook(req.query);
 
@@ -1415,6 +1475,7 @@ app.get("/api/whatsapp/webhook", (req, res) => {
 app.post("/api/whatsapp/webhook", async (req, res) => {
   const readiness = getWhatsAppConnectorReadiness();
   const messages = parseWhatsAppWebhookPayload(req.body);
+  rememberWhatsAppWebhookDiagnostic(req.body, messages);
 
   if (readiness.ready) {
     const results = [];
