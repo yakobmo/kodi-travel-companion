@@ -4,13 +4,14 @@ const baseUrl = (process.argv[2] || process.env.KODI_PUBLIC_URL || "https://kodi
 const messageId = `wamid.kodi-smoke-${Date.now()}`;
 
 async function fetchJson(path, init) {
+  const headers = {
+    accept: "application/json",
+    "content-type": "application/json",
+    ...(init?.headers || {})
+  };
   const response = await fetch(`${baseUrl}${path}`, {
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      ...(init?.headers || {})
-    },
-    ...init
+    ...init,
+    headers
   });
   const payload = await response.json().catch(() => undefined);
   return { response, payload };
