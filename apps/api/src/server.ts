@@ -158,6 +158,43 @@ function rememberWhatsAppWebhookDiagnostic(
   }
 }
 
+function getMetaGraphApiVersion() {
+  return process.env.WHATSAPP_GRAPH_API_VERSION?.trim() || "v20.0";
+}
+
+function getMaskedEnvValue(name: string) {
+  const value = process.env[name]?.trim() ?? "";
+  if (!value) {
+    return "";
+  }
+
+  return value.length <= 6 ? "set" : `${value.slice(0, 3)}...${value.slice(-3)}`;
+}
+
+async function fetchWhatsAppGraphDiagnostic(path: string) {
+  const accessToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim() ?? "";
+  if (!accessToken) {
+    return {
+      ok: false,
+      status: 0,
+      error: "missing WHATSAPP_ACCESS_TOKEN"
+    };
+  }
+
+  const response = await fetch(`https://graph.facebook.com/${getMetaGraphApiVersion()}${path}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+  const payload = (await response.json().catch(() => undefined)) as unknown;
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    payload
+  };
+}
+
 function rememberProcessedWhatsAppMessage(messageId: string) {
   processedWhatsAppMessageIds.add(messageId);
 
@@ -1458,6 +1495,41 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
   res.json({
     connector: getWhatsAppConnectorReadiness(),
     recentWebhooks: recentWhatsAppWebhookDiagnostics
+  });
+});
+
+app.get("/api/whatsapp/meta-diagnostics", async (_req, res) => {
+  const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID?.trim() ?? "";
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim() ?? "";
+
+  if (!businessAccountId) {
+    res.status(409).json({
+      ok: false,
+      error: "missing WHATSAPP_BUSINESS_ACCOUNT_ID",
+      connector: getWhatsAppConnectorReadiness()
+    });
+    return;
+  }
+
+  const [subscribedApps, phoneNumbers] = await Promise.all([
+    fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/subscribed_apps`),
+    fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/phone_numbers?fields=id,display_phone_number,verified_name`)
+  ]);
+
+  res.json({
+    ok: subscribedApps.ok,
+    connector: getWhatsAppConnectorReadiness(),
+    env: {
+      businessAccountId: getMaskedEnvValue("WHATSAPP_BUSINESS_ACCOUNT_ID"),
+      phoneNumberId: getMaskedEnvValue("WHATSAPP_PHONE_NUMBER_ID"),
+      phoneNumberIdMatchesConfigured:
+        Boolean(phoneNumberId) &&
+        JSON.stringify(phoneNumbers.payload ?? {}).includes(phoneNumberId)
+    },
+    graph: {
+      subscribedApps,
+      phoneNumbers
+    }
   });
 });
 
