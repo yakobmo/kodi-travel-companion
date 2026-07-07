@@ -1478,9 +1478,16 @@ app.post("/api/whatsapp/webhook", async (req, res) => {
   rememberWhatsAppWebhookDiagnostic(req.body, messages);
 
   if (readiness.ready) {
-    const results = [];
-    for (const message of messages) {
-      results.push(await processWhatsAppInboundMessage(message));
+    if (messages.length > 0) {
+      void (async () => {
+        for (const message of messages) {
+          try {
+            await processWhatsAppInboundMessage(message);
+          } catch (error) {
+            console.warn("WhatsApp inbound background processing failed", error);
+          }
+        }
+      })();
     }
 
     res.json({
@@ -1489,7 +1496,7 @@ app.post("/api/whatsapp/webhook", async (req, res) => {
       mode: "live",
       accepted: true,
       parsedMessages: messages.length,
-      results
+      processing: messages.length > 0 ? "queued" : "no_text_messages"
     });
     return;
   }
