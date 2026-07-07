@@ -191,6 +191,7 @@ interface ChatMessage {
   memberId?: string;
   source?: "member" | "agent" | "system";
   createdAt?: string;
+  locationRequest?: { pendingText: string };
 }
 
 interface UserShortcut {
@@ -2656,11 +2657,15 @@ export function App() {
     };
   }
 
-  async function requestKodiReply(text: string, nextMessages: ChatMessage[]) {
+  async function requestKodiReply(
+    text: string,
+    nextMessages: ChatMessage[],
+    currentLocationOverride?: CurrentLocationState | null
+  ) {
     let timeoutId: number | undefined;
 
     try {
-      const agentCurrentLocation = await getFreshCurrentLocationForAgent(text);
+      const agentCurrentLocation = currentLocationOverride ?? (await getFreshCurrentLocationForAgent(text));
       const agentTripState = buildAgentTripStateForKodi(agentCurrentLocation);
       const controller = new AbortController();
       timeoutId = window.setTimeout(() => controller.abort(), 24_000);
@@ -3255,6 +3260,92 @@ export function App() {
     }
   }
 
+  async function askKodiAndAppendReply(
+    text: string,
+    nextMessages: ChatMessage[],
+    speakReply?: boolean,
+    currentLocationOverride?: CurrentLocationState | null
+  ) {
+    setIsKodiThinking(true);
+    try {
+      const reply = await requestKodiReply(text, nextMessages, currentLocationOverride);
+      if (!reply) {
+        setMessages((currentMessages) => [...currentMessages, buildKodiConnectionErrorMessage()]);
+        return;
+      }
+
+      const localKodiMessage: ChatMessage = {
+        id: `local-kodi-${Date.now()}`,
+        author: "קודי",
+        text: reply,
+        source: "agent",
+        createdAt: new Date().toISOString()
+      };
+
+      setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
+      prefetchKodiSpeech(reply);
+      if (speakReply || shouldSpeakKodiReply(text)) {
+        speakKodiMessage(reply, localKodiMessage.id);
+      }
+
+      const savedKodiMessage = await persistChatMessage(localKodiMessage);
+      setMessages((currentMessages) =>
+        currentMessages.map((message) => (message.id === localKodiMessage.id ? savedKodiMessage : message))
+      );
+    } finally {
+      setIsKodiThinking(false);
+    }
+  }
+
+  async function shareLocationAndContinue(requestMessageId: string, pendingText: string) {
+    if (!("geolocation" in navigator)) {
+      return;
+    }
+
+    setLocationState("requesting");
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 8000
+        });
+      });
+      const nextLocation: CurrentLocationState = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracyMeters: position.coords.accuracy,
+        updatedAt: new Date().toISOString()
+      };
+
+      setCurrentLocation(nextLocation);
+      setLocationState("enabled");
+      setSetupDraft((draft) => ({ ...draft, locationConsentExplained: true }));
+
+      let remainingMessages: ChatMessage[] = [];
+      setMessages((currentMessages) => {
+        remainingMessages = currentMessages.filter((message) => message.id !== requestMessageId);
+        return remainingMessages;
+      });
+
+      await askKodiAndAppendReply(pendingText, remainingMessages, undefined, nextLocation);
+    } catch {
+      setLocationState("error");
+      setMessages((currentMessages) =>
+        currentMessages.map((message) =>
+          message.id === requestMessageId
+            ? {
+                ...message,
+                text: "לא הצלחתי לקבל את המיקום. אפשר לנסות שוב, או להמשיך בלי מיקום ואענה כללי יותר.",
+                locationRequest: undefined
+              }
+            : message
+        )
+      );
+    }
+  }
+
   async function submitChatText(
     rawText: string,
     options: {
@@ -3284,33 +3375,22 @@ export function App() {
     const savedUserMessagePromise = persistChatMessage(localUserMessage);
 
     if (shouldAskKodi) {
-      setIsKodiThinking(true);
-      try {
-        const reply = await requestKodiReply(text, nextMessages);
-        if (!reply) {
-          setMessages((currentMessages) => [...currentMessages, buildKodiConnectionErrorMessage()]);
-          return;
-        }
-        const localKodiMessage: ChatMessage = {
-          id: `local-kodi-${Date.now()}`,
+      const hasReliableLocation = Boolean(currentLocation) || locationState === "enabled";
+      const needsLocationShare =
+        "geolocation" in navigator && !hasReliableLocation && shouldRefreshLocationForKodi(text, hasReliableLocation);
+
+      if (needsLocationShare) {
+        const locationRequestMessage: ChatMessage = {
+          id: `local-location-request-${Date.now()}`,
           author: "קודי",
-          text: reply,
-          source: "agent",
-          createdAt: new Date().toISOString()
+          text: "כדי לענות טוב על זה אני צריך את המיקום שלך עכשיו. לשתף מיקום חד-פעמי לשאלה הזו?",
+          source: "system",
+          createdAt: new Date().toISOString(),
+          locationRequest: { pendingText: text }
         };
-
-        setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
-        prefetchKodiSpeech(reply);
-        if (options.speakReply || shouldSpeakKodiReply(text)) {
-          speakKodiMessage(reply, localKodiMessage.id);
-        }
-
-        const savedKodiMessage = await persistChatMessage(localKodiMessage);
-        setMessages((currentMessages) =>
-          currentMessages.map((message) => (message.id === localKodiMessage.id ? savedKodiMessage : message))
-        );
-      } finally {
-        setIsKodiThinking(false);
+        setMessages((currentMessages) => [...currentMessages, locationRequestMessage]);
+      } else {
+        await askKodiAndAppendReply(text, nextMessages, options.speakReply);
       }
     }
 
@@ -4532,6 +4612,22 @@ export function App() {
                 ) : null}
               </div>
               <p>{renderMessageText(message.text)}</p>
+              {message.locationRequest ? (
+                <button
+                  className="share-location-button"
+                  disabled={locationState === "requesting"}
+                  onClick={() =>
+                    shareLocationAndContinue(
+                      message.id ?? `${message.author}-${index}`,
+                      message.locationRequest!.pendingText
+                    )
+                  }
+                  type="button"
+                >
+                  <MapPin size={16} aria-hidden="true" />
+                  <span>{locationState === "requesting" ? "משתף מיקום..." : "שתף מיקום"}</span>
+                </button>
+              ) : null}
             </article>
           ))}
           {isKodiThinking ? (

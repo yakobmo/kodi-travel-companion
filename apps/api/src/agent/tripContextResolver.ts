@@ -175,10 +175,7 @@ export function resolveTripReferenceForMessage(message: string, tripState: TripS
     "בית מלון",
     "לינה",
     "hotel",
-    "lodging",
-    "׳׳׳•׳",
-    "׳‘׳™׳× ׳׳׳•׳",
-    "׳׳™׳ ׳”"
+    "lodging"
   ]);
 
   if (!origin) {

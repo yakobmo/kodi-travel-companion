@@ -329,14 +329,14 @@ function shouldUseReasoningModel(input: OpenAiKodiReplyInput) {
     "accessible",
     "next year",
     "plan",
-    "׳×׳§׳¦׳™׳‘",
-    "׳׳–׳•׳׳",
-    "׳׳–׳’",
-    "׳׳•׳•׳™׳¨",
-    "׳ ׳’׳™׳©",
-    "׳ ׳’׳™׳©׳•׳×",
-    "׳©׳ ׳” ׳”׳‘׳׳”",
-    "׳×׳›׳ ׳Ÿ"
+    "תקציב",
+    "מזומן",
+    "מזג",
+    "אוויר",
+    "נגיש",
+    "נגישות",
+    "שנה הבאה",
+    "תכנון"
   ].some((term) => text.includes(term));
 }
 

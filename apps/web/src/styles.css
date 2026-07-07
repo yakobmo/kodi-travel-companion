@@ -1714,6 +1714,39 @@ input {
   margin-bottom: 6px;
 }
 
+.share-location-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: #087f9d;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(7, 83, 107, 0.16);
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.share-location-button:hover {
+  background: #06697f;
+}
+
+.share-location-button:active {
+  transform: translateY(1px);
+}
+
+.share-location-button:disabled {
+  background: #7fb9c8;
+  cursor: default;
+}
+
 .speak-message-button {
   display: inline-flex;
   align-items: center;
