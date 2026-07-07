@@ -881,6 +881,8 @@ function shouldReverseGeocodeCurrentLocation(message: string) {
     "לידי",
     "לידינו",
     "בסביבה",
+    "באזור",
+    "באזור הנוכחי",
     "סביבה שלי",
     "באזור שלי",
     "אזור שלי",
