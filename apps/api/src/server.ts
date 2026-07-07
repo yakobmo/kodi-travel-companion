@@ -195,6 +195,96 @@ async function fetchWhatsAppGraphDiagnostic(path: string) {
   };
 }
 
+function getWhatsAppGraphErrorCode(result: Awaited<ReturnType<typeof fetchWhatsAppGraphDiagnostic>>) {
+  const payload = result.payload;
+  if (typeof payload !== "object" || payload === null) {
+    return undefined;
+  }
+
+  const error = (payload as { error?: unknown }).error;
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  const subcode = (error as { error_subcode?: unknown }).error_subcode;
+  const message = (error as { message?: unknown }).message;
+
+  return {
+    code: typeof code === "number" ? code : undefined,
+    subcode: typeof subcode === "number" ? subcode : undefined,
+    message: typeof message === "string" ? message : undefined
+  };
+}
+
+function classifyWhatsAppGraphToken(result: Awaited<ReturnType<typeof fetchWhatsAppGraphDiagnostic>>) {
+  if (result.ok) {
+    return "valid" as const;
+  }
+
+  if (result.error === "missing WHATSAPP_ACCESS_TOKEN") {
+    return "missing" as const;
+  }
+
+  const graphError = getWhatsAppGraphErrorCode(result);
+  if (graphError?.code === 190 || graphError?.message?.toLowerCase().includes("access token")) {
+    return "expired_or_invalid" as const;
+  }
+
+  return "unknown_error" as const;
+}
+
+function buildWhatsAppLiveReadinessReport(input: {
+  subscribedApps: Awaited<ReturnType<typeof fetchWhatsAppGraphDiagnostic>>;
+  phoneNumbers: Awaited<ReturnType<typeof fetchWhatsAppGraphDiagnostic>>;
+}) {
+  const connector = getWhatsAppConnectorReadiness();
+  const subscribedAppsTokenStatus = classifyWhatsAppGraphToken(input.subscribedApps);
+  const phoneNumbersTokenStatus = classifyWhatsAppGraphToken(input.phoneNumbers);
+  const accessTokenStatus =
+    subscribedAppsTokenStatus === "valid" || subscribedAppsTokenStatus === "unknown_error"
+      ? phoneNumbersTokenStatus
+      : subscribedAppsTokenStatus;
+  const phoneNumbersReachable = input.phoneNumbers.ok;
+  const liveReady = connector.ready && accessTokenStatus === "valid" && phoneNumbersReachable;
+  const blockers: string[] = [];
+
+  if (!connector.enabled) {
+    blockers.push("connector_disabled");
+  }
+
+  for (const missing of connector.missing) {
+    blockers.push(`missing_${missing.toLowerCase()}`);
+  }
+
+  if (accessTokenStatus === "missing") {
+    blockers.push("missing_access_token");
+  }
+
+  if (accessTokenStatus === "expired_or_invalid") {
+    blockers.push("expired_or_invalid_access_token");
+  }
+
+  if (accessTokenStatus === "unknown_error") {
+    blockers.push("meta_graph_access_error");
+  }
+
+  if (connector.ready && !phoneNumbersReachable) {
+    blockers.push("phone_numbers_not_reachable");
+  }
+
+  return {
+    liveReady,
+    stage: liveReady ? "live_ready" : connector.ready ? "configured_but_not_live" : connector.status,
+    accessTokenStatus,
+    phoneNumbersReachable,
+    blockers,
+    userMessage: liveReady
+      ? "WhatsApp connector is live-ready."
+      : "Webhook setup exists, but live WhatsApp messaging is not ready yet. Do not treat this as a working WhatsApp agent until the listed blockers are cleared."
+  };
+}
+
 function rememberProcessedWhatsAppMessage(messageId: string) {
   processedWhatsAppMessageIds.add(messageId);
 
@@ -1487,8 +1577,37 @@ async function processWhatsAppInboundMessage(message: ReturnType<typeof parseWha
   };
 }
 
-app.get("/api/whatsapp/readiness", (_req, res) => {
-  res.json(getWhatsAppConnectorReadiness());
+app.get("/api/whatsapp/readiness", async (_req, res) => {
+  const connector = getWhatsAppConnectorReadiness();
+  const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID?.trim() ?? "";
+
+  if (!connector.ready || !businessAccountId) {
+    res.json({
+      ...connector,
+      liveReady: false,
+      live: {
+        liveReady: false,
+        stage: connector.status,
+        accessTokenStatus: connector.missing.includes("WHATSAPP_ACCESS_TOKEN") ? "missing" : "not_checked",
+        blockers: connector.blockers,
+        userMessage: "WhatsApp connector is not fully configured."
+      }
+    });
+    return;
+  }
+
+  const [subscribedApps, phoneNumbers] = await Promise.all([
+    fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/subscribed_apps`),
+    fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/phone_numbers?fields=id,display_phone_number,verified_name`)
+  ]);
+  const live = buildWhatsAppLiveReadinessReport({ subscribedApps, phoneNumbers });
+
+  res.json({
+    ...connector,
+    liveReady: live.liveReady,
+    status: live.liveReady ? "configured_not_verified" : connector.status,
+    live
+  });
 });
 
 app.get("/api/whatsapp/diagnostics", (_req, res) => {
@@ -1515,9 +1634,11 @@ app.get("/api/whatsapp/meta-diagnostics", async (_req, res) => {
     fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/subscribed_apps`),
     fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/phone_numbers?fields=id,display_phone_number,verified_name`)
   ]);
+  const live = buildWhatsAppLiveReadinessReport({ subscribedApps, phoneNumbers });
 
   res.json({
-    ok: subscribedApps.ok,
+    ok: live.liveReady,
+    live,
     connector: getWhatsAppConnectorReadiness(),
     env: {
       businessAccountId: getMaskedEnvValue("WHATSAPP_BUSINESS_ACCOUNT_ID"),

@@ -2,9 +2,13 @@ export interface WhatsAppConnectorReadiness {
   provider: "whatsapp_cloud_api";
   enabled: boolean;
   ready: boolean;
+  readyScope: "disabled" | "missing_config" | "configuration_only";
+  liveReady: false;
   mode: "dry_run" | "webhook_ready";
-  status: "disabled" | "missing_config" | "ready";
+  status: "disabled" | "missing_config" | "configured_not_verified";
   missing: string[];
+  blockers: string[];
+  warnings: string[];
   webhookPath: "/api/whatsapp/webhook";
   readinessPath: "/api/whatsapp/readiness";
 }
@@ -114,9 +118,19 @@ export function getWhatsAppConnectorReadiness(): WhatsAppConnectorReadiness {
     provider: "whatsapp_cloud_api",
     enabled,
     ready,
+    readyScope: ready ? "configuration_only" : enabled ? "missing_config" : "disabled",
+    liveReady: false,
     mode: ready ? "webhook_ready" : "dry_run",
-    status: !enabled ? "disabled" : missing.length > 0 ? "missing_config" : "ready",
+    status: !enabled ? "disabled" : missing.length > 0 ? "missing_config" : "configured_not_verified",
     missing,
+    blockers: !enabled
+      ? ["connector_disabled"]
+      : missing.map((key) => `missing_${key.toLowerCase()}`),
+    warnings: ready
+      ? [
+          "Configuration exists, but live WhatsApp operation also requires a valid Meta Graph token and a production-capable Meta app."
+        ]
+      : [],
     webhookPath: "/api/whatsapp/webhook",
     readinessPath: "/api/whatsapp/readiness"
   };

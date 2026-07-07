@@ -64,9 +64,21 @@ V2 still treats WhatsApp as a transport. Kodi's permissions, trip context, Googl
 ## QA Rules
 
 - Readiness must work without Meta configuration.
+- Readiness must not treat configured Render variables as proof that WhatsApp is live. It must distinguish configuration readiness from live Meta Graph readiness.
+- If Meta Graph returns an expired or invalid access token, the public readiness contract must report a blocker such as `expired_or_invalid_access_token` instead of `ready`.
 - Webhook verification must reject invalid tokens.
 - POST webhook must parse text messages without writing to chat in V1.
 - When configured, POST webhook must use the same Kodi agent pipeline rather than a separate bot answer.
 - Outbound WhatsApp sending must use backend-only `WHATSAPP_ACCESS_TOKEN`.
 - The connector must not expose phone numbers except masked IDs.
 - The connector must not bypass owner/admin rules for operational actions.
+
+## Root-Cause Lesson - Meta Test vs Live WhatsApp
+
+Meta's dashboard can show webhook test events even while real WhatsApp traffic is not production-ready. The app must therefore report three separate states:
+
+1. webhook callback verified by Meta
+2. server-side Meta Graph token valid
+3. live WhatsApp message flow available for real users
+
+The connector is only live-ready when all three are true. A temporary Meta token that expires must be treated as a setup blocker, not as a Kodi agent failure.
