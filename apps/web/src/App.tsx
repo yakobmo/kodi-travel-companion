@@ -48,6 +48,7 @@ type PlaceListFilter = "route" | "nearby" | "all" | "lodging" | "attractions";
 type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
 const DEFAULT_NEARBY_MAP_RADIUS_KM = 40;
 const DEFAULT_VISIBLE_PLACE_LIMIT = 40;
+const LOCATION_FRESHNESS_MS = 2 * 60 * 1000;
 const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
 const LOCAL_REMOVED_PLACE_IDS_KEY = "kodi-removed-place-ids";
 const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
@@ -916,39 +917,68 @@ function isCurrentLocationQuestion(text: string) {
   );
 }
 
-function shouldRefreshLocationForKodi(text: string, hasKnownLocation: boolean) {
+function isFreshCurrentLocation(location: CurrentLocationState | null) {
+  if (!location?.updatedAt) {
+    return false;
+  }
+
+  const updatedAtMs = new Date(location.updatedAt).getTime();
+  return Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs <= LOCATION_FRESHNESS_MS;
+}
+
+function isLocationDependentKodiRequest(text: string) {
   const normalizedText = text.toLowerCase();
-  const locationDependentRequest =
+  return (
     isCurrentLocationQuestion(text) ||
     [
-      "לידי",
-      "לידינו",
-      "בסביבה",
-      "סביבה שלי",
-      "באזור שלי",
-      "אזור שלי",
-      "סביבי",
-      "קרוב אליי",
-      "קרוב אלינו",
-      "כאן",
-      "כאן ועכשיו",
-      "איפה יש",
-      "כמה זמן",
-      "עד המלון",
-      "שים בוויז",
-      "וויז",
-      "waze",
-      "google maps",
-      "מאפייה",
-      "מסעדה",
-      "טברנה",
-      "גלידה",
-      "דלק",
-      "שירותים",
-      "בית חב\"ד"
-    ].some((fragment) => normalizedText.includes(fragment.toLowerCase()));
+      "near",
+      "nearby",
+      "near me",
+      "around me",
+      "\u05dc\u05d9\u05d3\u05d9",
+      "\u05dc\u05d9\u05d3\u05d9\u05e0\u05d5",
+      "\u05d1\u05e1\u05d1\u05d9\u05d1\u05d4",
+      "\u05e1\u05d1\u05d9\u05d1\u05d4 \u05e9\u05dc\u05d9",
+      "\u05d1\u05d0\u05d6\u05d5\u05e8 \u05e9\u05dc\u05d9",
+      "\u05d0\u05d6\u05d5\u05e8 \u05e9\u05dc\u05d9",
+      "\u05e1\u05d1\u05d9\u05d1\u05d9",
+      "\u05e7\u05e8\u05d5\u05d1 \u05d0\u05dc\u05d9\u05d9",
+      "\u05e7\u05e8\u05d5\u05d1 \u05d0\u05dc\u05d9",
+      "\u05e7\u05e8\u05d5\u05d1 \u05d0\u05dc\u05d9\u05e0\u05d5",
+      "\u05db\u05d0\u05df",
+      "\u05db\u05d0\u05df \u05d5\u05e2\u05db\u05e9\u05d9\u05d5",
+      "\u05d0\u05d9\u05e4\u05d4 \u05d9\u05e9",
+      "\u05de\u05d0\u05e4\u05d9\u05d9\u05d4",
+      "\u05de\u05d0\u05e4\u05d9\u05d4",
+      "\u05d1\u05d9\u05ea \u05e7\u05e4\u05d4",
+      "\u05e7\u05e4\u05d4",
+      "\u05de\u05e1\u05e2\u05d3\u05d4",
+      "\u05d8\u05d1\u05e8\u05e0\u05d4",
+      "\u05d2\u05dc\u05d9\u05d3\u05d4",
+      "\u05d0\u05d8\u05e8\u05e7\u05e6\u05d9\u05d4",
+      "\u05d0\u05d8\u05e8\u05e7\u05e6\u05d9\u05d5\u05ea",
+      "\u05d7\u05d5\u05e3",
+      "\u05de\u05d9\u05dd",
+      "\u05d3\u05dc\u05e7",
+      "\u05e9\u05d9\u05e8\u05d5\u05ea\u05d9\u05dd",
+      "\u05d1\u05d9\u05ea \u05d7\u05d1\"\u05d3",
+      "\u05d7\u05d1\"\u05d3",
+      "cafe",
+      "coffee",
+      "restaurant",
+      "bakery",
+      "attraction",
+      "beach",
+      "fuel",
+      "toilets",
+      "pharmacy",
+      "atm"
+    ].some((fragment) => normalizedText.includes(fragment.toLowerCase()))
+  );
+}
 
-  return hasKnownLocation || locationDependentRequest;
+function shouldRefreshLocationForKodi(text: string, hasKnownLocation: boolean) {
+  return hasKnownLocation || isLocationDependentKodiRequest(text);
 }
 
 function buildSpeechText(text: string) {
@@ -3380,9 +3410,9 @@ export function App() {
     const savedUserMessagePromise = persistChatMessage(localUserMessage);
 
     if (shouldAskKodi) {
-      const hasReliableLocation = Boolean(currentLocation) || locationState === "enabled";
+      const hasReliableLocation = isFreshCurrentLocation(currentLocation);
       const needsLocationShare =
-        "geolocation" in navigator && !hasReliableLocation && shouldRefreshLocationForKodi(text, hasReliableLocation);
+        "geolocation" in navigator && !hasReliableLocation && isLocationDependentKodiRequest(text);
 
       if (needsLocationShare) {
         const locationRequestMessage: ChatMessage = {

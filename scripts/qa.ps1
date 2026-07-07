@@ -1198,7 +1198,10 @@ if (-not $serverSource.Contains("buildExternalPlacesQuery(focusedReferenceMessag
   throw "Kodi Google Places search must receive here-and-now context for live-location requests."
 }
 
-if (-not $serverSource.Contains('"באזור שלי"') -or -not $appSource.Contains('"באזור שלי"')) {
+if (
+  -not $serverSource.Contains('"באזור שלי"') -or
+  (-not $appSource.Contains('"באזור שלי"') -and -not $appSource.Contains("\u05d1\u05d0\u05d6\u05d5\u05e8 \u05e9\u05dc\u05d9"))
+) {
   throw "Kodi must treat 'באזור שלי' as a live-location request on both server and web."
 }
 
@@ -1258,10 +1261,18 @@ if (
 
 if (
   -not $appSource.Contains("function shouldRefreshLocationForKodi") -or
+  -not $appSource.Contains("function isFreshCurrentLocation") -or
+  -not $appSource.Contains("function isLocationDependentKodiRequest") -or
+  -not $appSource.Contains("LOCATION_FRESHNESS_MS") -or
+  -not $appSource.Contains("isFreshCurrentLocation(currentLocation)") -or
+  -not $appSource.Contains("isLocationDependentKodiRequest(text)") -or
+  -not $appSource.Contains("\u05d1\u05d9\u05ea \u05e7\u05e4\u05d4") -or
+  -not $appSource.Contains("\u05de\u05e1\u05e2\u05d3\u05d4") -or
+  -not $appSource.Contains("\u05d0\u05d8\u05e8\u05e7\u05e6\u05d9\u05d4") -or
   -not $appSource.Contains("getFreshCurrentLocationForAgent(text)") -or
   -not $appSource.Contains("currentLocation: agentCurrentLocation")
 ) {
-  throw "Web app must refresh or pass the freshest available location context before location-dependent Kodi calls."
+  throw "Web app must request or refresh a fresh current location before location-dependent Kodi recommendations."
 }
 
 if (
