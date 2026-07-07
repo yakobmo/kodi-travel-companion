@@ -433,6 +433,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         text: { format: { type: "json_object" } },
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: JSON.stringify({
+          responseFormat: "json_object",
           member: input.member,
           message: input.message,
           recentMessages: input.recentMessages?.slice(-20),
