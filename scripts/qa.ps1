@@ -1217,9 +1217,12 @@ if (
 if (
   -not $placesSearchSource.Contains("hasLocationRestriction") -or
   -not $serverSource.Contains("externalPlacesSearchRequest") -or
-  -not $serverSource.Contains('req.query.restrictToLocation === "true"')
+  -not $serverSource.Contains('req.query.restrictToLocation === "true"') -or
+  -not $serverSource.Contains("includesHebrewLiveLocationCue") -or
+  -not $serverSource.Contains("includesConcreteGooglePlacesCue") -or
+  -not $serverSource.Contains("\u05d1\u05d0\u05d6\u05d5\u05e8")
 ) {
-  throw "Kodi Places diagnostics must expose whether live searches use a hard location restriction."
+  throw "Kodi Places diagnostics and Hebrew intent detection must be encoding-safe and expose hard location restriction."
 }
 
 if (-not $serverSource.Contains('options.hereAndNow ? "cafe"') -or -not $serverSource.Contains('options.hereAndNow ? "bakery"')) {

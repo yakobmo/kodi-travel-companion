@@ -394,6 +394,37 @@ function includesAnyTerm(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
 
+function includesHebrewLiveLocationCue(text: string) {
+  return [
+    /\u05d1\u05d0\u05d6\u05d5\u05e8(?:\s+\u05e9\u05dc\u05d9|\s+\u05d4\u05e0\u05d5\u05db\u05d7\u05d9)?/u,
+    /\u05d1\u05e1\u05d1\u05d9\u05d1\u05d4/u,
+    /\u05dc\u05d9\u05d3\u05d9/u,
+    /\u05dc\u05d9\u05d3\u05d9\u05e0\u05d5/u,
+    /\u05e7\u05e8\u05d5\u05d1\s+\u05d0\u05dc\u05d9(?:\u05d9)?/u,
+    /\u05d0\u05d9\u05e4\u05d4\s+\u05d0\u05e0\u05d9/u,
+    /\u05de\u05d9\u05e7\u05d5\u05dd\s+\u05e2\u05db\u05e9\u05d5\u05d5\u05d9/u,
+    /\u05db\u05d0\u05df\s+\u05d5\u05e2\u05db\u05e9\u05d9\u05d5/u
+  ].some((pattern) => pattern.test(text));
+}
+
+function includesConcreteGooglePlacesCue(text: string) {
+  return [
+    /\u05d1\u05d9\u05ea\s+\u05e7\u05e4\u05d4/u,
+    /\u05e7\u05e4\u05d4/u,
+    /\u05de\u05d0\u05e4(?:\u05d9\u05d9\u05d4|\u05d9\u05d4)/u,
+    /\u05de\u05e1\u05e2\u05d3\u05d4/u,
+    /\u05d2\u05dc\u05d9\u05d3\u05d4/u,
+    /\u05d0\u05d8\u05e8\u05e7\u05e6\u05d9\u05d4/u,
+    /\u05e9\u05d9\u05e8\u05d5\u05ea\u05d9\u05dd/u,
+    /\u05ea\u05d7\u05e0\u05ea\s+\u05d3\u05dc\u05e7/u,
+    /\u05d3\u05dc\u05e7/u,
+    /\u05d1\u05d9\u05ea\s+\u05de\u05e8\u05e7\u05d7\u05ea/u,
+    /\u05db\u05e1\u05e4\u05d5\u05de\u05d8/u,
+    /\u05e6'\u05d9\u05d9\u05e0\u05d2/u,
+    /\u05e6\u05f3\u05d9\u05d9\u05e0\u05d2/u
+  ].some((pattern) => pattern.test(text));
+}
+
 function shouldUseDeterministicRouteDiagram(message: string) {
   const normalizedMessage = message.toLowerCase();
 
@@ -420,6 +451,10 @@ function shouldUseDeterministicRouteDiagram(message: string) {
 
 function shouldUseExternalPlacesSearch(message: string) {
   const normalizedMessage = message.toLowerCase();
+
+  if (includesHebrewLiveLocationCue(message) || includesConcreteGooglePlacesCue(message)) {
+    return true;
+  }
 
   if (
     includesAnyTerm(normalizedMessage, [
@@ -528,6 +563,10 @@ function shouldUseRouteEstimate(message: string) {
 function shouldUseFastConcretePlacesReply(message: string, rulesReply: AgentMessageResponse, externalPlacesSearch?: GooglePlacesTextSearchResult) {
   if (rulesReply.intent !== "place_recommendation" || externalPlacesSearch?.status !== "ready" || externalPlacesSearch.places.length === 0) {
     return false;
+  }
+
+  if (includesConcreteGooglePlacesCue(message)) {
+    return true;
   }
 
   return includesAnyTerm(message.toLowerCase(), [
@@ -911,6 +950,10 @@ function shouldUsePreciseLocationIdentity(message: string) {
 }
 
 function shouldUseHereAndNowContext(message: string) {
+  if (includesHebrewLiveLocationCue(message)) {
+    return true;
+  }
+
   return includesAnyTerm(message, [
     "כאן",
     "לידי",
