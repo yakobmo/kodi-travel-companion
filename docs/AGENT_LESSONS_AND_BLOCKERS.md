@@ -551,3 +551,29 @@ Decision:
 QA/automation:
 
 - `scripts/kodi-agent-regression.mjs` now checks that "בית קפה באזור" after stale family context does not return the old "נקודה קלה ליד" / "שלא מתאים לילדים" template.
+
+### 23. Live Google Places Searches Need Encoding-Safe Intent And Valid Restrictions
+
+What happened:
+
+Kodi still answered "בית קפה באזור" with a generic fallback even after the nearby-place rules were added. Public smoke initially looked like the server ignored Hebrew, but the test script itself was sending broken `???` text through PowerShell. After sending Unicode-safe Hebrew, Kodi correctly entered live-location mode, but Google Places returned `INVALID_ARGUMENT`.
+
+Why it happened:
+
+Two issues were stacked:
+
+- Critical Hebrew intent checks relied on plain source strings, which made debugging fragile across terminal/build encodings.
+- Google Places Text Search (New) accepts `circle` for `locationBias`, but `locationRestriction` accepts only a rectangular viewport. We sent a circle as a restriction, so Google rejected the request.
+
+Decision:
+
+- Critical here-and-now and concrete place intent checks use Unicode-regex guards in addition to regular Hebrew strings.
+- Live/current searches use `locationRestriction.rectangle`, not `locationRestriction.circle`.
+- Places diagnostics expose whether a search used bias or a hard restriction.
+- Public smoke for Hebrew must use Unicode escapes or a UTF-8 file, not ad hoc PowerShell here-strings.
+
+QA/automation:
+
+- `scripts/qa.ps1` requires encoding-safe intent helpers.
+- `scripts/qa.ps1` requires `hasLocationRestriction` diagnostics and viewport restriction support.
+- `scripts/kodi-agent-regression.mjs` verifies that live cafe requests use `live_location` and do not drift to Greece.
