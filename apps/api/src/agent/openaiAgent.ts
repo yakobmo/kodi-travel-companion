@@ -36,6 +36,14 @@ function getOpenAiClient() {
   return new OpenAI({ apiKey });
 }
 
+function getGeminiApiKey() {
+  return process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_AI_API_KEY?.trim() || "";
+}
+
+function getGeminiModel() {
+  return process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
+}
+
 function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
@@ -50,6 +58,12 @@ function isOpenAiTimeout(error: unknown) {
   return error instanceof Error && error.message === "openai_agent_timeout";
 }
 
+function isOpenAiQuotaError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+
+  return message.includes("429") || message.toLowerCase().includes("quota") || message.toLowerCase().includes("billing");
+}
+
 async function withAgentTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutId: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -62,6 +76,27 @@ async function withAgentTimeout<T>(operation: Promise<T>, timeoutMs: number): Pr
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
+  }
+}
+
+async function fetchJsonWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...init,
+      signal: controller.signal
+    });
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`gemini_agent_http_${response.status}: ${text.slice(0, 240)}`);
+    }
+
+    return JSON.parse(text) as unknown;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -415,6 +450,88 @@ function compactTripState(input: AgentMessageRequest["tripState"], options: { re
   };
 }
 
+function buildAgentPayload(input: OpenAiKodiReplyInput, options: { reasoningMode: boolean; webSearchEnabled: boolean }) {
+  return JSON.stringify({
+    responseFormat: "json_object",
+    member: input.member,
+    message: input.message,
+    recentMessages: input.recentMessages?.slice(-20),
+    selectedPlace: input.selectedPlace,
+    tripState: compactTripState(input.tripState, { reasoningMode: options.reasoningMode }),
+    externalPlacesSearch: input.externalPlacesSearch,
+    reverseGeocodedLocation: input.reverseGeocodedLocation,
+    routeEstimate: input.routeEstimate,
+    tripContextClarification: input.tripContextClarification,
+    permissionPolicy: input.permissionPolicy,
+    webSearchAvailableForThisQuestion: options.webSearchEnabled,
+    fallbackRulesReply: {
+      intent: input.rulesReply.intent,
+      requiresAdminApproval: input.rulesReply.requiresAdminApproval,
+      source: input.rulesReply.source
+    }
+  });
+}
+
+async function tryBuildKodiReplyWithGemini(input: OpenAiKodiReplyInput, options: { reasoningMode: boolean; timeoutMs: number }) {
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    return undefined;
+  }
+
+  const model = getGeminiModel();
+  const payload = buildAgentPayload(input, {
+    reasoningMode: options.reasoningMode,
+    webSearchEnabled: false
+  });
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const response = (await fetchJsonWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: buildInstructions() }]
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: payload }]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          maxOutputTokens: options.reasoningMode ? 750 : 420,
+          temperature: 0.4
+        }
+      })
+    },
+    options.timeoutMs
+  )) as {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{
+          text?: string;
+        }>;
+      };
+    }>;
+  };
+  const outputText =
+    response.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text ?? "")
+      .join("")
+      .trim() ?? "";
+
+  return {
+    status: "ready" as const,
+    model: `gemini:${model}`,
+    reply: toValidReply(extractJsonObject(outputText))
+  };
+}
+
 export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): Promise<OpenAiKodiReplyResult> {
   const client = getOpenAiClient();
   const model = getAgentModel(input);
@@ -424,30 +541,28 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   const timeoutMs = getAgentTimeoutMs();
 
   if (!client) {
+    try {
+      const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
+      if (geminiReply) {
+        return geminiReply;
+      }
+    } catch (error) {
+      return {
+        status: "error",
+        model: `gemini:${getGeminiModel()}`,
+        error: error instanceof Error ? error.message : "gemini_agent_failed"
+      };
+    }
+
     return { status: "not_configured", model };
   }
 
   const openAiClient = client;
 
   async function createKodiResponse(modelName: string, webSearchEnabled: boolean) {
-    const inputPayload = JSON.stringify({
-      responseFormat: "json_object",
-      member: input.member,
-      message: input.message,
-      recentMessages: input.recentMessages?.slice(-20),
-      selectedPlace: input.selectedPlace,
-      tripState: compactTripState(input.tripState, { reasoningMode }),
-      externalPlacesSearch: input.externalPlacesSearch,
-      reverseGeocodedLocation: input.reverseGeocodedLocation,
-      routeEstimate: input.routeEstimate,
-      tripContextClarification: input.tripContextClarification,
-      permissionPolicy: input.permissionPolicy,
-      webSearchAvailableForThisQuestion: webSearchEnabled,
-      fallbackRulesReply: {
-        intent: input.rulesReply.intent,
-        requiresAdminApproval: input.rulesReply.requiresAdminApproval,
-        source: input.rulesReply.source
-      }
+    const inputPayload = buildAgentPayload(input, {
+      reasoningMode,
+      webSearchEnabled
     });
 
     if (!webSearchEnabled) {
@@ -499,6 +614,22 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         break;
       }
 
+      if (isOpenAiQuotaError(error)) {
+        try {
+          const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
+          if (geminiReply) {
+            return {
+              ...geminiReply,
+              error: "openai_quota_fallback_to_gemini"
+            };
+          }
+        } catch (geminiError) {
+          lastError = geminiError;
+        }
+
+        break;
+      }
+
       if (!enableWebSearch) {
         continue;
       }
@@ -520,6 +651,18 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         lastError = retryError;
       }
     }
+  }
+
+  try {
+    const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
+    if (geminiReply) {
+      return {
+        ...geminiReply,
+        error: "openai_error_fallback_to_gemini"
+      };
+    }
+  } catch (geminiError) {
+    lastError = geminiError;
   }
 
   return {

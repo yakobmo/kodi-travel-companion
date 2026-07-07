@@ -620,3 +620,24 @@ Decision:
 QA/automation:
 
 - Public agent smoke must report whether OpenAI was ready or whether Kodi fell back to rules, so this failure mode remains visible.
+
+### 26. AI Provider Quota Must Not Kill Kodi
+
+What happened:
+
+Production returned `429 You exceeded your current quota` from OpenAI. Kodi still answered through rules, but the full agent personality was unavailable, which made the product feel broken.
+
+Why it happened:
+
+The agent runtime had one paid AI provider path. A billing/quota issue on that provider disabled the main agent and exposed the rules layer too much.
+
+Decision:
+
+- Keep OpenAI as the first provider when configured.
+- Add server-side Gemini fallback through `GEMINI_API_KEY` / `GOOGLE_AI_API_KEY`.
+- The browser and trip participants never receive provider keys.
+- The usage pool treats the AI agent as configured when either OpenAI or Gemini is available.
+
+QA/automation:
+
+- `scripts/qa.ps1` now requires Gemini fallback wiring and the `.env.example` Gemini contract.

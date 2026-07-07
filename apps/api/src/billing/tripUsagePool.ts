@@ -28,8 +28,12 @@ const providerByCapability: Record<TripUsageCapability, "openai" | "google" | "i
   google_oauth_sync: "google"
 };
 
+function hasAiAgentProvider() {
+  return Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY);
+}
+
 const enabledByCapability: Record<TripUsageCapability, boolean> = {
-  openai_agent: Boolean(process.env.OPENAI_API_KEY),
+  openai_agent: hasAiAgentProvider(),
   google_places: Boolean(process.env.GOOGLE_MAPS_API_KEY),
   google_routes: Boolean(process.env.GOOGLE_MAPS_API_KEY),
   google_oauth_sync: false
@@ -52,7 +56,7 @@ export function buildDemoTripUsagePool(input: {
     tripGroupId: input.tripGroupId,
     ownerMemberId: owner?.member.id ?? "unknown_owner",
     ownerDisplayName: owner?.member.displayName ?? "Trip owner",
-    status: process.env.OPENAI_API_KEY ? "active" : "not_configured",
+    status: hasAiAgentProvider() ? "active" : "not_configured",
     billingModel: "owner_managed",
     participantBillingRequired: false,
     backendMediated: true,

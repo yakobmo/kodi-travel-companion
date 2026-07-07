@@ -313,15 +313,18 @@ if (
   -not $tripUsagePoolSource.Contains("browserReceivesPrivateKeys: false") -or
   -not $tripUsagePoolSource.Contains("chargedTo: `"trip_usage_pool`"") -or
   -not $tripUsagePoolSource.Contains("quotaEnforcedServerSide: true") -or
-  -not $tripUsagePoolSource.Contains("openai_agent: Boolean(process.env.OPENAI_API_KEY)")
+  -not $tripUsagePoolSource.Contains("hasAiAgentProvider") -or
+  -not $tripUsagePoolSource.Contains("process.env.GEMINI_API_KEY")
 ) {
-  throw "Trip usage pool code must enforce owner-managed billing, backend mediation, and no participant secrets."
+  throw "Trip usage pool code must enforce owner-managed billing, backend mediation, AI provider fallback, and no participant secrets."
 }
 
 $openAiAgentSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts") -Raw
 if (
   -not $openAiAgentSource.Contains("OpenAI") -or
   -not $openAiAgentSource.Contains("OPENAI_API_KEY") -or
+  -not $openAiAgentSource.Contains("GEMINI_API_KEY") -or
+  -not $openAiAgentSource.Contains("GEMINI_AGENT_MODEL") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_MODEL") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_FAST_MODEL") -or
   -not $openAiAgentSource.Contains('"gpt-4.1-mini"') -or
@@ -338,6 +341,8 @@ if (
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
   -not $openAiAgentSource.Contains("web_search_retry_without_tool") -or
   -not $openAiAgentSource.Contains("chat.completions.create") -or
+  -not $openAiAgentSource.Contains("generateContent") -or
+  -not $openAiAgentSource.Contains("openai_quota_fallback_to_gemini") -or
   -not $openAiAgentSource.Contains("lodgingTimeline") -or
   -not $openAiAgentSource.Contains("tripArcHint") -or
   -not $openAiAgentSource.Contains("cash planning") -or
@@ -349,7 +354,7 @@ if (
   -not $openAiAgentSource.Contains("Return JSON only") -or
   -not $openAiAgentSource.Contains('source: "openai"')
 ) {
-  throw "OpenAI agent bridge must be backend-only, elite-agent grounded in Google/trip context, fast by default for normal chat, web-search capable for live questions, JSON validated, time-budgeted, and guarded by a fallback."
+  throw "AI agent bridge must be backend-only, elite-agent grounded in Google/trip context, fast by default for normal chat, Gemini-capable when OpenAI quota fails, web-search capable for live questions, JSON validated, time-budgeted, and guarded by a fallback."
 }
 
 $openAiSpeechSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiSpeech.ts") -Raw
@@ -1900,6 +1905,12 @@ foreach ($requiredGoogleEnvName in @("GOOGLE_MAPS_API_KEY=", "GOOGLE_OAUTH_CLIEN
 
 if (-not $envExampleSource.Contains("OPENAI_WEB_SEARCH_ENABLED=true")) {
   throw ".env.example must expose OPENAI_WEB_SEARCH_ENABLED for Kodi's agentic web-search capability."
+}
+
+foreach ($requiredAiFallbackEnvName in @("GEMINI_API_KEY=", "GEMINI_AGENT_MODEL=gemini-2.5-flash-lite")) {
+  if (-not $envExampleSource.Contains($requiredAiFallbackEnvName)) {
+    throw ".env.example is missing Gemini fallback environment contract: $requiredAiFallbackEnvName"
+  }
 }
 
 if (-not $envExampleSource.Contains("MIGRATION_ADMIN_TOKEN=")) {
