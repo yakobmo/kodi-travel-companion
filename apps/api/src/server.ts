@@ -1031,8 +1031,16 @@ function withRequestCurrentLocation(
 function getSearchLocationFromTripState(
   tripState: ReturnType<typeof buildDemoTripState>,
   timelineReference?: TripTimelineResolution,
-  forceLiveLocation = false
+  forceLiveLocation = false,
+  requestCurrentLocation?: { lat: number; lng: number }
 ) {
+  if (forceLiveLocation && requestCurrentLocation) {
+    return {
+      lat: requestCurrentLocation.lat,
+      lng: requestCurrentLocation.lng
+    };
+  }
+
   const visibleMembers = tripState.members.filter((item) => item.consent.state === "enabled" && item.liveLocation);
   const visibleMember = forceLiveLocation
     ? [...visibleMembers].sort((first, second) => {
@@ -2567,9 +2575,9 @@ app.post("/api/agent/message", async (req, res) => {
     : undefined;
   const externalPlacesSearch = placesUsageGate?.allowed
     ? await searchGooglePlacesText({
-        query: buildExternalPlacesQuery(focusedReferenceMessage, { hereAndNow: hereAndNowContext }),
-        ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext),
-        radiusMeters: shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120 : hereAndNowContext ? 1500 : 3000,
+      query: buildExternalPlacesQuery(focusedReferenceMessage, { hereAndNow: hereAndNowContext }),
+      ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext, requestCurrentLocation),
+      radiusMeters: shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120 : hereAndNowContext ? 1500 : 3000,
         languageCode: "he"
       })
     : undefined;
