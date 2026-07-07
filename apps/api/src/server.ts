@@ -2577,9 +2577,10 @@ app.post("/api/agent/message", async (req, res) => {
     ? await searchGooglePlacesText({
       query: buildExternalPlacesQuery(focusedReferenceMessage, { hereAndNow: hereAndNowContext }),
       ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext, requestCurrentLocation),
-      radiusMeters: shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120 : hereAndNowContext ? 1500 : 3000,
-        languageCode: "he"
-      })
+      radiusMeters: shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120 : hereAndNowContext ? 15000 : 3000,
+      restrictToLocation: hereAndNowContext,
+      languageCode: "he"
+    })
     : undefined;
   if (placesUsageGate?.allowed) {
     void safeRecordUsageGateEvent({

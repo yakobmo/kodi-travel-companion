@@ -389,9 +389,10 @@ if (
   -not $serverSource.Contains("deterministicLocationIdentity") -or
   -not $serverSource.Contains("!deterministicLocationIdentity") -or
   -not $serverSource.Contains("shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120") -or
-  -not $serverSource.Contains("hereAndNowContext ? 1500 : 3000")
+  -not $serverSource.Contains("hereAndNowContext ? 15000 : 3000") -or
+  -not $serverSource.Contains("restrictToLocation: hereAndNowContext")
 ) {
-  throw "Kodi live-location flow must pass GPS accuracy/timestamp, answer identity questions deterministically, reverse-geocode when possible, and keep useful Google Places radius for near-me searches."
+  throw "Kodi live-location flow must pass GPS accuracy/timestamp, answer identity questions deterministically, reverse-geocode when possible, and restrict here-and-now Google Places searches to a useful live-location radius."
 }
 
 if ($serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed")) {

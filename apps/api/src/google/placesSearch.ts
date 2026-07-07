@@ -7,6 +7,7 @@ export interface GooglePlacesTextSearchInput {
   radiusMeters?: number;
   languageCode?: string;
   regionCode?: string;
+  restrictToLocation?: boolean;
 }
 
 export interface GooglePlacesTextSearchPlace {
@@ -105,7 +106,7 @@ function buildTextSearchBody(input: GooglePlacesTextSearchInput, radiusMeters: n
   }
 
   if (typeof input.lat === "number" && typeof input.lng === "number") {
-    body.locationBias = {
+    const locationCircle = {
       circle: {
         center: {
           latitude: input.lat,
@@ -114,6 +115,7 @@ function buildTextSearchBody(input: GooglePlacesTextSearchInput, radiusMeters: n
         radius: radiusMeters
       }
     };
+    body[input.restrictToLocation ? "locationRestriction" : "locationBias"] = locationCircle;
   }
 
   return body;
