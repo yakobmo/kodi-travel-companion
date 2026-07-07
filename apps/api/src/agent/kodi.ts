@@ -2,6 +2,7 @@ import type { AgeGroup, MemberRole, TripPlace, TripState } from "../domain/types
 import type { GooglePlacesTextSearchResult } from "../google/placesSearch.js";
 import type { GoogleReverseGeocodeResult } from "../google/reverseGeocode.js";
 import type { GoogleRouteEstimateResult } from "../google/routes.js";
+import { buildTripTimelineFromGoogleMapOrder } from "./tripTimelineResolver.js";
 
 export interface ConversationMessage {
   author: string;
@@ -213,8 +214,71 @@ function isTripRouteDiagramRequest(message: string) {
   );
 }
 
-function placeRegionText(place: TripPlace) {
-  const text = `${place.name} ${place.address ?? ""} ${place.tags.join(" ")} ${place.note ?? ""}`.toLowerCase();
+function isLodgingOrderQuestion(message: string) {
+  const normalized = message.toLowerCase();
+  const asksAboutLodging = includesAny(normalized, [
+    "מלונות",
+    "מלון",
+    "לינות",
+    "לינה",
+    "איפה ישנים",
+    "איפה ישן",
+    "איפה נישן",
+    "איפה לנים",
+    "איפה לינה",
+    "sleep",
+    "hotel",
+    "lodging"
+  ]);
+  const asksForOrder = includesAny(normalized, [
+    "לפי הסדר",
+    "בסדר",
+    "הסדר",
+    "ראשון",
+    "אחרון",
+    "שרשרת",
+    "רצף",
+    "timeline",
+    "order"
+  ]);
+
+  return asksAboutLodging && (asksForOrder || includesAny(normalized, ["מה המלונות", "מקומות לינה", "איפה ישנים"]));
+}
+
+function buildLodgingOrderAnswer(memberName: string, message: string, tripState?: TripState) {
+  const timeline = tripState ? buildTripTimelineFromGoogleMapOrder(tripState) : [];
+  const normalized = message.toLowerCase();
+  const onlyAthens = includesAny(normalized, ["אתונה", "athens", "athina"]);
+  const athensSegments = timeline.filter((segment) => placeRegionText(segment.lodging) === "אתונה");
+  const relevantSegments = onlyAthens && athensSegments.length > 0 ? athensSegments : timeline;
+
+  if (relevantSegments.length === 0) {
+    return `${memberName}, אני לא רואה כרגע שרשרת לינות מסודרת מתוך מפת הטיול. כדי לענות אמין צריך שהסנכרון מגוגל יביא נקודות מסוג לינה עם סדר מקור מהמפה.`;
+  }
+
+  const rows = relevantSegments
+    .slice(0, 12)
+    .map((segment, index) => {
+      const region = placeRegionText(segment.lodging);
+      const address = segment.lodging.address ? ` - ${segment.lodging.address}` : "";
+      return `${index + 1}. ${segment.lodging.name} (${region})${address}`;
+    })
+    .join("\n");
+  const intro = onlyAthens && athensSegments.length > 0
+    ? "באזור אתונה, מתוך מפת הטיול, אני רואה את הלינה הזו:"
+    : onlyAthens
+      ? "לא מצאתי סימון לינה שמזוהה אצלי חד-משמעית כאתונה, אז אני מציג את שרשרת הלינות מהמפה לפי הסדר:"
+    : "לפי מפת הטיול והסדר שמגיע מגוגל, שרשרת הלינות שאני רואה היא:";
+
+  return [
+    `${memberName}, ${intro}`,
+    rows,
+    "אני מתייחס לזה כבסיס העבודה של המסלול; אם הסדר בגוגל משתנה, זה צריך להתעדכן בסנכרון הבא ולא דרך ניחוש."
+  ].join("\n\n");
+}
+
+function placeRegionText(place: Pick<TripPlace, "name" | "address" | "note"> & Partial<Pick<TripPlace, "tags">>) {
+  const text = `${place.name} ${place.address ?? ""} ${(place.tags ?? []).join(" ")} ${place.note ?? ""}`.toLowerCase();
   if (includesAny(text, ["athens", "אתונה", "averof"])) return "אתונה";
   if (includesAny(text, ["arta", "chanopoulo", "marathia", "tzoumerka", "צומרקה", "ארטה"])) return "צומרקה / ארטה";
   if (includesAny(text, ["zagori", "papingo", "voidomatis", "vikos", "זגור", "פפיגו", "ויקוס"])) return "זגוריה";
@@ -630,8 +694,6 @@ function buildCurrentLocationAnswer(
 
 export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMessageResponse {
   const message = input.message.trim();
-  const recentText = joinRecentMessages(input.recentMessages);
-  const allContext = `${recentText} ${message}`;
   const memberName = input.member?.displayName ?? "אני";
   const selected = input.selectedPlace?.name ?? "המלון הקרוב";
   const locationSummary = buildVisibleLocationSummary(input.tripState);
@@ -657,6 +719,16 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       requiresAdminApproval: false,
       source: "rules",
       text: buildWholeTripOverviewAnswer(memberName, input.tripState)
+    };
+  }
+
+  if (isLodgingOrderQuestion(message)) {
+    return {
+      author: "קודי",
+      intent: "general",
+      requiresAdminApproval: false,
+      source: "rules",
+      text: buildLodgingOrderAnswer(memberName, message, input.tripState)
     };
   }
 
@@ -893,7 +965,12 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     };
   }
 
-  if (!isConcreteNearbyPlaceNeed(message) && includesAny(allContext, ["גלידה", "לישון", "מלון", "עייפ", "ילדים"])) {
+  if (
+    !isConcreteNearbyPlaceNeed(message) &&
+    !isLodgingOrderQuestion(message) &&
+    !isWholeTripOverviewQuestion(message) &&
+    includesAny(message, ["גלידה", "לישון", "מלון", "עייפ", "ילדים"])
+  ) {
     return {
       author: "קודי",
       intent: "family_compromise",

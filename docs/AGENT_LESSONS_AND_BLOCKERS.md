@@ -577,3 +577,24 @@ QA/automation:
 - `scripts/qa.ps1` requires encoding-safe intent helpers.
 - `scripts/qa.ps1` requires `hasLocationRestriction` diagnostics and viewport restriction support.
 - `scripts/kodi-agent-regression.mjs` verifies that live cafe requests use `live_location` and do not drift to Greece.
+
+### 24. Trip Structure Questions Must Stay Inside The Imported Map
+
+What happened:
+
+Kodi treated questions such as "מה המלונות לפי הסדר?" or a correction like "לא..באתונה" as generic "איפה" searches. That triggered Google Places, sometimes attached unrelated navigation links, and if OpenAI timed out Kodi fell back to a stale family-compromise answer.
+
+Why it happened:
+
+The router used broad place-search triggers before distinguishing between two very different intents: finding an external place nearby versus reading the structure of the saved trip map.
+
+Decision:
+
+- Questions about lodging order, route structure, or whole-trip overview are answered from the imported Google map trip state.
+- These questions skip external Google Places search and skip OpenAI if a deterministic trip answer exists.
+- Navigation links are appended only when the selected reply is actually a place/navigation recommendation.
+- Family-compromise fallback may use only the current message, not stale old chat context.
+
+QA/automation:
+
+- `scripts/kodi-agent-regression.mjs` verifies lodging-order answers do not trigger external Places, do not mention random Acropolis results, and do not fall back to the old children/hotel template.

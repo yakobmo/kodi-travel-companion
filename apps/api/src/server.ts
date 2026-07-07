@@ -449,8 +449,45 @@ function shouldUseDeterministicRouteDiagram(message: string) {
   );
 }
 
+function shouldUseTripStructureAnswer(message: string) {
+  const normalizedMessage = message.toLowerCase();
+  const lodgingCue = includesAnyTerm(normalizedMessage, [
+    "מלונות",
+    "מלון",
+    "לינות",
+    "לינה",
+    "איפה ישנים",
+    "איפה ישן",
+    "איפה נישן",
+    "מקומות לינה",
+    "hotel",
+    "lodging"
+  ]);
+  const orderCue = includesAnyTerm(normalizedMessage, [
+    "לפי הסדר",
+    "בסדר",
+    "הסדר",
+    "ראשון",
+    "אחרון",
+    "רצף",
+    "שרשרת",
+    "timeline",
+    "order"
+  ]);
+
+  return (
+    shouldUseDeterministicRouteDiagram(message) ||
+    (lodgingCue && (orderCue || includesAnyTerm(normalizedMessage, ["מה המלונות", "איפה ישנים"]))) ||
+    includesAnyTerm(normalizedMessage, ["מה אופי הטיול", "אופי הטיול", "מה מצפה לנו", "מה מחכה לנו"])
+  );
+}
+
 function shouldUseExternalPlacesSearch(message: string) {
   const normalizedMessage = message.toLowerCase();
+
+  if (shouldUseTripStructureAnswer(message)) {
+    return false;
+  }
 
   if (includesHebrewLiveLocationCue(message) || includesConcreteGooglePlacesCue(message)) {
     return true;
@@ -2683,12 +2720,14 @@ app.post("/api/agent/message", async (req, res) => {
     }
   });
   const deterministicRouteDiagram = shouldUseDeterministicRouteDiagram(focusedReferenceMessage);
+  const deterministicTripStructure = shouldUseTripStructureAnswer(focusedReferenceMessage);
   const deterministicLocationIdentity = shouldUsePreciseLocationIdentity(focusedReferenceMessage);
   const fastConcretePlacesReply = shouldUseFastConcretePlacesReply(focusedReferenceMessage, rulesReply, externalPlacesSearch);
   const openAiReply =
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
     !deterministicRouteDiagram &&
+    !deterministicTripStructure &&
     !deterministicLocationIdentity &&
     !fastConcretePlacesReply
       ? await tryBuildKodiReplyWithOpenAi({
@@ -2707,6 +2746,7 @@ app.post("/api/agent/message", async (req, res) => {
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
     !deterministicRouteDiagram &&
+    !deterministicTripStructure &&
     !deterministicLocationIdentity &&
     !fastConcretePlacesReply &&
     openAiReply?.status === "ready"
@@ -2717,14 +2757,17 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
+  const selectedReply = openAiReply?.reply ?? rulesReply;
+  const shouldAppendExternalPlaceNavigation =
+    selectedReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
   const reply = enhanceKodiReplyWithNavigationLinks({
-    reply: openAiReply?.reply ?? rulesReply,
+    reply: selectedReply,
     tripState,
     externalPlacesSearch,
     tripDestination: tripReference.destination,
     selectedPlace: req.body?.selectedPlace,
     fallbackRecommendedPlaceId: rulesReply.recommendedPlaceId,
-    forceAppend: Boolean(rulesReply.recommendedPlaceId || routeEstimate?.route || externalPlacesSearch?.status === "ready")
+    forceAppend: Boolean(rulesReply.recommendedPlaceId || routeEstimate?.route || shouldAppendExternalPlaceNavigation)
   });
 
   res.json({

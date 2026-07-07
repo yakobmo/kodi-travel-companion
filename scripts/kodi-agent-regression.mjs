@@ -153,6 +153,47 @@ const tripNature = await postAgent("קודי מה אופי הטיול שלנו �
 expectHealthyAgentResult("trip nature", tripNature);
 assertCheck("trip nature mentions north Greece or Pelion", /צפון יוון|פיליון|זגוריה|צומרקה/.test(String(tripNature.payload.text ?? "")));
 
+const lodgingOrder = await postAgent("קודי מה המלונות לפי הסדר?");
+expectHealthyAgentResult("lodging order", lodgingOrder);
+assertCheck("lodging order mentions lodging order", /שרשרת הלינות|לינות|מלונות/.test(String(lodgingOrder.payload.text ?? "")));
+assertCheck("lodging order mentions known lodging", /Marathia|Pelion|Averof|Athens|אתונה/i.test(String(lodgingOrder.payload.text ?? "")));
+assertCheck(
+  "lodging order skips external Places",
+  !lodgingOrder.payload.contextSummary?.externalPlacesSearchStatus,
+  `places=${lodgingOrder.payload.contextSummary?.externalPlacesSearchStatus}`
+);
+assertCheck("lodging order not family template", !String(lodgingOrder.payload.text ?? "").includes("נקודה קלה ליד"));
+assertCheck("lodging order no random navigation", !String(lodgingOrder.payload.text ?? "").includes("Acropolis"));
+
+const athensLodgingCorrection = await postAgent("לא ..באתונה", {
+  recentMessages: [
+    {
+      author: "מנהל הטיול",
+      text: "קודי איפה ישנים לפי הסדר?",
+      source: "member",
+      memberId: "mom"
+    },
+    {
+      author: "מנהל הטיול",
+      text: "לא ..באתונה",
+      source: "member",
+      memberId: "mom"
+    }
+  ]
+});
+expectHealthyAgentResult("athens lodging correction", athensLodgingCorrection);
+assertCheck(
+  "athens lodging correction answers Athens",
+  /אתונה|Athens|Averof/i.test(String(athensLodgingCorrection.payload.text ?? "")),
+  String(athensLodgingCorrection.payload.text ?? "").slice(0, 260)
+);
+assertCheck(
+  "athens lodging correction skips external Places",
+  !athensLodgingCorrection.payload.contextSummary?.externalPlacesSearchStatus,
+  `places=${athensLodgingCorrection.payload.contextSummary?.externalPlacesSearchStatus}`
+);
+assertCheck("athens lodging correction no random Acropolis", !String(athensLodgingCorrection.payload.text ?? "").includes("Acropolis"));
+
 const actionableYouCan = await postAgent("קודי אתה יכול לעשות לי סדר במקומות לינה?");
 expectHealthyAgentResult("actionable you can", actionableYouCan);
 if (actionableYouCan.payload.agentRuntime?.openAiStatus === "ready") {
@@ -208,6 +249,16 @@ console.log(
           elapsedMs: tripNature.elapsedMs,
           source: tripNature.payload.source,
           openAiStatus: tripNature.payload.agentRuntime?.openAiStatus
+        },
+        lodgingOrder: {
+          elapsedMs: lodgingOrder.elapsedMs,
+          source: lodgingOrder.payload.source,
+          openAiStatus: lodgingOrder.payload.agentRuntime?.openAiStatus
+        },
+        athensLodgingCorrection: {
+          elapsedMs: athensLodgingCorrection.elapsedMs,
+          source: athensLodgingCorrection.payload.source,
+          openAiStatus: athensLodgingCorrection.payload.agentRuntime?.openAiStatus
         },
         actionableYouCan: {
           elapsedMs: actionableYouCan.elapsedMs,
