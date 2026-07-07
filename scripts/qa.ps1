@@ -334,6 +334,7 @@ if (
   -not $openAiAgentSource.Contains("road accessibility") -or
   -not $openAiAgentSource.Contains("Support a here-and-now mode") -or
   -not $openAiAgentSource.Contains("reverseGeocodedLocation") -or
+  -not $openAiAgentSource.Contains("Do not expose raw latitude/longitude as the user-facing answer") -or
   -not $openAiAgentSource.Contains("Do not claim private Google account sync") -or
   -not $openAiAgentSource.Contains("Return JSON only") -or
   -not $openAiAgentSource.Contains('source: "openai"')
@@ -377,10 +378,12 @@ if (
   -not $serverSource.Contains("accuracyMeters") -or
   -not $serverSource.Contains("updatedAt") -or
   -not $serverSource.Contains("reverseGeocodedLocation") -or
+  -not $serverSource.Contains("deterministicLocationIdentity") -or
+  -not $serverSource.Contains("!deterministicLocationIdentity") -or
   -not $serverSource.Contains("shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120") -or
   -not $serverSource.Contains("hereAndNowContext ? 1500 : 3000")
 ) {
-  throw "Kodi live-location flow must pass GPS accuracy/timestamp, reverse-geocode identity questions, and keep useful Google Places radius for near-me searches."
+  throw "Kodi live-location flow must pass GPS accuracy/timestamp, answer identity questions deterministically, reverse-geocode when possible, and keep useful Google Places radius for near-me searches."
 }
 
 if ($serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed")) {

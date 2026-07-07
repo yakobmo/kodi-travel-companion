@@ -2594,8 +2594,12 @@ app.post("/api/agent/message", async (req, res) => {
     }
   });
   const deterministicRouteDiagram = shouldUseDeterministicRouteDiagram(focusedReferenceMessage);
+  const deterministicLocationIdentity = shouldUsePreciseLocationIdentity(focusedReferenceMessage);
   const openAiReply =
-    openAiUsageGate.allowed && openAiUsageGate.providerConfigured && !deterministicRouteDiagram
+    openAiUsageGate.allowed &&
+    openAiUsageGate.providerConfigured &&
+    !deterministicRouteDiagram &&
+    !deterministicLocationIdentity
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
           message: focusedReferenceMessage,
@@ -2608,7 +2612,13 @@ app.post("/api/agent/message", async (req, res) => {
           rulesReply
         })
       : undefined;
-  if (openAiUsageGate.allowed && openAiUsageGate.providerConfigured && !deterministicRouteDiagram && openAiReply?.status === "ready") {
+  if (
+    openAiUsageGate.allowed &&
+    openAiUsageGate.providerConfigured &&
+    !deterministicRouteDiagram &&
+    !deterministicLocationIdentity &&
+    openAiReply?.status === "ready"
+  ) {
     void safeRecordUsageGateEvent({
       usageGate: openAiUsageGate,
       actorName: String(normalizedMember.displayName),
