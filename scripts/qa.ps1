@@ -240,6 +240,14 @@ if (
 }
 
 if (
+  -not $webAppEarlySource.Contains("menuBlock.classList.toggle(`"menu-block-open`")") -or
+  -not (Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw).Contains(".secondary-menu > .menu-block.menu-block-open") -or
+  -not (Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw).Contains("max-height: 48px")
+) {
+  throw "Hamburger menu sections must default to collapsed headings and expand only when selected."
+}
+
+if (
   -not $webAppEarlySource.Contains("enableHighAccuracy: true") -or
   -not $webAppEarlySource.Contains("maximumAge: 0") -or
   -not $webAppEarlySource.Contains("accuracyMeters: agentCurrentLocation.accuracyMeters") -or

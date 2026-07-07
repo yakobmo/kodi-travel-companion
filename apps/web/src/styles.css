@@ -1384,6 +1384,61 @@ input {
   padding-top: 12px;
 }
 
+.secondary-menu > .menu-block {
+  max-height: 48px;
+  overflow: hidden;
+  border: 1px solid #d7e4e7;
+  border-radius: 10px;
+  padding: 0;
+  background: #ffffff;
+  transition:
+    max-height 180ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.secondary-menu > .menu-block.menu-block-open {
+  max-height: none;
+  overflow: visible;
+  border-color: #9fd5df;
+  background: #f7fcfd;
+  padding-bottom: 12px;
+}
+
+.secondary-menu > .menu-block > strong {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  cursor: pointer;
+  color: #07394d;
+  font-size: 14px;
+}
+
+.secondary-menu > .menu-block > strong::after {
+  content: "+";
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e9f8fb;
+  color: #07536b;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.secondary-menu > .menu-block.menu-block-open > strong::after {
+  content: "-";
+}
+
+.secondary-menu > .menu-block > :not(strong) {
+  margin-inline: 12px;
+}
+
 .install-menu,
 .location-menu,
 .invite-menu,

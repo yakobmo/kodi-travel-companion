@@ -4224,7 +4224,21 @@ export function App() {
         </div>
       </section>
 
-      <aside className="secondary-menu" aria-label="ניהול הטיול">
+      <aside
+        className="secondary-menu"
+        aria-label="ניהול הטיול"
+        onClick={(event) => {
+          const target = event.target as HTMLElement;
+          const menuBlock = target.closest(".menu-block");
+          if (!menuBlock || !target.closest(".secondary-menu")) {
+            return;
+          }
+          if (target.closest("button, input, a, form, article, .place-filter-chips, .trip-place-list, .member-management-list, .external-shortcuts")) {
+            return;
+          }
+          menuBlock.classList.toggle("menu-block-open");
+        }}
+      >
         <div className="secondary-menu-header">
           <strong>ניהול</strong>
           <button onClick={() => setSecondaryMenuOpen(false)} type="button">
