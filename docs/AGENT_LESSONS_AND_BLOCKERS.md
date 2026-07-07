@@ -531,3 +531,23 @@ QA/automation:
 - `scripts/qa.ps1` rejects `buildKodiFallbackReply`.
 - `scripts/qa.ps1` requires explicit Kodi connection-error handling.
 - `scripts/qa.ps1` checks that live-location Google Places requests pass here-and-now context and clean cafe/bakery queries.
+
+### 22. Rules Are A Safety Net, Not Kodi's Brain
+
+What happened:
+
+Kodi answered a simple here-and-now request, "בית קפה באזור", with an old family-compromise template about a light stop near the hotel, children, water, and minimal walking.
+
+Why it happened:
+
+The OpenAI agent path was failing in production, so Kodi fell back to deterministic rules. Those rules still used stale recent-chat context and did not treat cafe/bakery requests as first-class Google Places needs. The result felt like a generic bot instead of an agent.
+
+Decision:
+
+- Concrete nearby needs such as cafe, bakery, restaurant, toilets, fuel, pharmacy, ATM, beach, and attraction must be handled from live Google Places around the current location before family-compromise templates.
+- Family-compromise rules must not override a concrete current request just because older chat context mentioned children, tiredness, hotel, or ice cream.
+- OpenAI Responses calls must use JSON mode and model fallback candidates so a model/env mismatch does not silently push Kodi back to rules.
+
+QA/automation:
+
+- `scripts/kodi-agent-regression.mjs` now checks that "בית קפה באזור" after stale family context does not return the old "נקודה קלה ליד" / "שלא מתאים לילדים" template.

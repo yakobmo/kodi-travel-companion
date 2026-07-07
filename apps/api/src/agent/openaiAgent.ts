@@ -354,6 +354,16 @@ function getAgentModel(input: OpenAiKodiReplyInput) {
   return shouldUseReasoningModel(input) ? reasoningModel : fastModel;
 }
 
+function getAgentModelCandidates(primaryModel: string) {
+  const configuredFallbacks =
+    process.env.OPENAI_AGENT_FALLBACK_MODELS?.split(",")
+      .map((model) => model.trim())
+      .filter(Boolean) ?? [];
+  const defaultFallbacks = ["gpt-5.5", "gpt-4.1-mini", "gpt-4o-mini"];
+
+  return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
+}
+
 function compactTripState(input: AgentMessageRequest["tripState"]) {
   if (!input) {
     return undefined;
@@ -404,6 +414,7 @@ function compactTripState(input: AgentMessageRequest["tripState"]) {
 export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): Promise<OpenAiKodiReplyResult> {
   const client = getOpenAiClient();
   const model = getAgentModel(input);
+  const modelCandidates = getAgentModelCandidates(model);
   const enableWebSearch = shouldEnableWebSearch(input);
   const timeoutMs = getAgentTimeoutMs();
 
@@ -413,12 +424,13 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
 
   const openAiClient = client;
 
-  async function createKodiResponse(webSearchEnabled: boolean) {
+  async function createKodiResponse(modelName: string, webSearchEnabled: boolean) {
     return withAgentTimeout(
       openAiClient.responses.create({
-        model,
+        model: modelName,
         instructions: buildInstructions(),
         max_output_tokens: 650,
+        text: { format: { type: "json_object" } },
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: JSON.stringify({
           member: input.member,
@@ -443,38 +455,41 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
     );
   }
 
-  try {
-    const response = await createKodiResponse(enableWebSearch);
+  let lastError: unknown;
 
-    return {
-      status: "ready",
-      model,
-      reply: toValidReply(extractJsonObject(response.output_text ?? ""))
-    };
-  } catch (error) {
-    if (enableWebSearch && !isOpenAiTimeout(error)) {
+  for (const modelCandidate of modelCandidates) {
+    try {
+      const response = await createKodiResponse(modelCandidate, enableWebSearch);
+
+      return {
+        status: "ready",
+        model: modelCandidate,
+        reply: toValidReply(extractJsonObject(response.output_text ?? ""))
+      };
+    } catch (error) {
+      lastError = error;
+      if (!enableWebSearch || isOpenAiTimeout(error)) {
+        continue;
+      }
+
       try {
-        const response = await createKodiResponse(false);
+        const response = await createKodiResponse(modelCandidate, false);
 
         return {
           status: "ready",
-          model,
+          model: modelCandidate,
           reply: toValidReply(extractJsonObject(response.output_text ?? "")),
           error: "web_search_retry_without_tool"
         };
       } catch (retryError) {
-        return {
-          status: "error",
-          model,
-          error: retryError instanceof Error ? retryError.message : "openai_agent_failed_after_web_search_retry"
-        };
+        lastError = retryError;
       }
     }
-
-    return {
-      status: "error",
-      model,
-      error: error instanceof Error ? error.message : "openai_agent_failed"
-    };
   }
+
+  return {
+    status: "error",
+    model,
+    error: lastError instanceof Error ? lastError.message : "openai_agent_failed"
+  };
 }
