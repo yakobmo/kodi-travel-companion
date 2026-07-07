@@ -111,6 +111,43 @@ if (liveCafe.payload.contextSummary?.externalPlacesSearchStatus === "ready") {
   assertCheck("live cafe includes Waze", String(liveCafe.payload.text ?? "").includes("Waze"));
 }
 assertCheck("live cafe does not drift to Greece", !/Almiros|Velestino|Amaliapoli|Chorefto|Pelion/i.test(String(liveCafe.payload.text ?? "")));
+assertCheck("live cafe not family compromise template", !String(liveCafe.payload.text ?? "").includes("נקודה קלה ליד"));
+assertCheck("live cafe not children template", !String(liveCafe.payload.text ?? "").includes("שלא מתאים לילדים"));
+
+const terseCafeAfterFamilyContext = await postAgent("בית קפה באזור", {
+  currentLocation: {
+    lat: 31.252973,
+    lng: 34.791462
+  },
+  recentMessages: [
+    {
+      author: "מנהל הטיול",
+      text: "בא לילדים משהו קל ליד המלון",
+      source: "member",
+      memberId: "mom"
+    },
+    {
+      author: "מנהל הטיול",
+      text: "בית קפה באזור",
+      source: "member",
+      memberId: "mom"
+    }
+  ]
+});
+expectHealthyAgentResult("terse cafe after family context", terseCafeAfterFamilyContext);
+assertCheck(
+  "terse cafe after family context not family compromise",
+  !String(terseCafeAfterFamilyContext.payload.text ?? "").includes("נקודה קלה ליד") &&
+    !String(terseCafeAfterFamilyContext.payload.text ?? "").includes("שלא מתאים לילדים"),
+  String(terseCafeAfterFamilyContext.payload.text ?? "").slice(0, 260)
+);
+if (terseCafeAfterFamilyContext.payload.contextSummary?.externalPlacesSearchStatus === "ready") {
+  assertCheck(
+    "terse cafe after family context uses places",
+    String(terseCafeAfterFamilyContext.payload.text ?? "").includes("Google Places") ||
+      String(terseCafeAfterFamilyContext.payload.text ?? "").includes("Google Maps")
+  );
+}
 
 const tripNature = await postAgent("קודי מה אופי הטיול שלנו ביוון?");
 expectHealthyAgentResult("trip nature", tripNature);

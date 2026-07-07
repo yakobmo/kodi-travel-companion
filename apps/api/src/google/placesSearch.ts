@@ -16,6 +16,8 @@ export interface GooglePlacesTextSearchPlace {
   googleMapsUri?: string;
   lat?: number;
   lng?: number;
+  rating?: number;
+  userRatingCount?: number;
   types: string[];
 }
 
@@ -50,6 +52,8 @@ interface GooglePlacesApiPlace {
     latitude?: number;
     longitude?: number;
   };
+  rating?: number;
+  userRatingCount?: number;
   types?: string[];
 }
 
@@ -64,7 +68,7 @@ interface GooglePlacesApiResponse {
 
 const GOOGLE_PLACES_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const GOOGLE_PLACES_FIELD_MASK =
-  "places.id,places.displayName,places.formattedAddress,places.googleMapsUri,places.location,places.types";
+  "places.id,places.displayName,places.formattedAddress,places.googleMapsUri,places.location,places.rating,places.userRatingCount,places.types";
 const DEFAULT_RADIUS_METERS = 5000;
 const DEFAULT_TIMEOUT_MS = 2500;
 
@@ -123,6 +127,8 @@ function mapGooglePlace(place: GooglePlacesApiPlace): GooglePlacesTextSearchPlac
     googleMapsUri: place.googleMapsUri,
     lat: place.location?.latitude,
     lng: place.location?.longitude,
+    rating: typeof place.rating === "number" ? place.rating : undefined,
+    userRatingCount: typeof place.userRatingCount === "number" ? place.userRatingCount : undefined,
     types: Array.isArray(place.types) ? place.types : []
   };
 }

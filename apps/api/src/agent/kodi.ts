@@ -439,6 +439,93 @@ function buildExternalPlacesContext(search?: GooglePlacesTextSearchResult) {
     : " קיבלתי תוצאות מ-Google Places, אבל הן חסרות שם או כתובת ברורים ולכן לא אציג אותן כהמלצה מובילה.";
 }
 
+function isConcreteNearbyPlaceNeed(message: string) {
+  return includesAny(message.toLowerCase(), [
+    "בית קפה",
+    "קפה",
+    "coffee",
+    "cafe",
+    "מאפייה",
+    "מאפיה",
+    "bakery",
+    "מסעדה",
+    "טברנה",
+    "restaurant",
+    "taverna",
+    "גלידה",
+    "ice cream",
+    "gelato",
+    "שירותים",
+    "toilet",
+    "toilets",
+    "דלק",
+    "fuel",
+    "בית מרקחת",
+    "pharmacy",
+    "כספומט",
+    "atm",
+    "חוף",
+    "beach",
+    "אטרקציה",
+    "attraction"
+  ]);
+}
+
+function buildWazeUrl(place: GooglePlacesTextSearchResult["places"][number]) {
+  if (typeof place.lat !== "number" || typeof place.lng !== "number") {
+    return undefined;
+  }
+
+  return `https://waze.com/ul?ll=${encodeURIComponent(`${place.lat},${place.lng}`)}&navigate=yes`;
+}
+
+function formatLivePlace(place: GooglePlacesTextSearchResult["places"][number], index: number) {
+  const name = place.displayName ?? "מקום ללא שם ברור";
+  const address = place.formattedAddress ? `, ${place.formattedAddress}` : "";
+  const rating =
+    typeof place.rating === "number"
+      ? `, דירוג ${place.rating}${typeof place.userRatingCount === "number" ? ` (${place.userRatingCount} ביקורות)` : ""}`
+      : "";
+  const maps = place.googleMapsUri ? ` Google Maps: ${place.googleMapsUri}` : "";
+  const wazeUrl = buildWazeUrl(place);
+  const waze = wazeUrl ? ` Waze: ${wazeUrl}` : "";
+
+  return `${index + 1}. ${name}${address}${rating}.${maps}${waze}`;
+}
+
+function buildConcreteLivePlacesAnswer(
+  memberName: string,
+  message: string,
+  search?: GooglePlacesTextSearchResult
+) {
+  if (!search || !search.configured) {
+    return `${memberName}, כדי לענות על זה נכון אני צריך תוצאות Google Places חיות סביב המיקום הנוכחי. כרגע החיפוש החי לא מוגדר, אז לא אמציא מקום.`;
+  }
+
+  if (search.status === "google_error") {
+    return `${memberName}, ניסיתי לבדוק ב-Google Places סביב המיקום הנוכחי, אבל Google החזיר שגיאה. לא אשלוף לך מקום לא אמין.`;
+  }
+
+  const places = search.places.filter((place) => place.displayName || place.formattedAddress).slice(0, 3);
+
+  if (places.length === 0) {
+    return `${memberName}, בדקתי ב-Google Places סביב המיקום הנוכחי ולא קיבלתי מקום מספיק ברור לשאלה הזו. אפשר לרענן מיקום ולנסות שוב.`;
+  }
+
+  const need = includesAny(message, ["בית קפה", "קפה", "coffee", "cafe"])
+    ? "בית קפה"
+    : includesAny(message, ["מאפייה", "מאפיה", "bakery"])
+      ? "מאפייה"
+      : includesAny(message, ["מסעדה", "טברנה", "restaurant", "taverna"])
+        ? "מסעדה"
+        : "מקום";
+
+  return (
+    `${memberName}, מצאתי ${need} לפי Google Places סביב המיקום הנוכחי. הייתי מתחיל מהאפשרות הראשונה, ואם היא לא מתאימה בודק את השנייה: ` +
+    places.map(formatLivePlace).join(" ")
+  );
+}
+
 function buildRouteEstimateContext(routeEstimate?: GoogleRouteEstimateResult) {
   if (!routeEstimate) {
     return "";
@@ -640,6 +727,20 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     };
   }
 
+  if (
+    isConcreteNearbyPlaceNeed(message) &&
+    input.externalPlacesSearch?.status === "ready" &&
+    input.externalPlacesSearch.places.length > 0
+  ) {
+    return {
+      author: "קודי",
+      intent: "place_recommendation",
+      requiresAdminApproval: false,
+      source: "rules",
+      text: buildConcreteLivePlacesAnswer(memberName, message, input.externalPlacesSearch)
+    };
+  }
+
   if (includesAny(message, ["כאן", "לידי", "לידינו", "בסביבה", "כאן ועכשיו", "באר שבע", "near me", "around me"])) {
     return {
       author: "קודי",
@@ -741,6 +842,10 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
       "השכר",
       "טברנה",
       "מסעדה",
+      "בית קפה",
+      "קפה",
+      "מאפייה",
+      "מאפיה",
       "סושי",
       "פיצה",
       "גלידה",
@@ -788,7 +893,7 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     };
   }
 
-  if (includesAny(allContext, ["גלידה", "לישון", "מלון", "עייפ", "ילדים"])) {
+  if (!isConcreteNearbyPlaceNeed(message) && includesAny(allContext, ["גלידה", "לישון", "מלון", "עייפ", "ילדים"])) {
     return {
       author: "קודי",
       intent: "family_compromise",
