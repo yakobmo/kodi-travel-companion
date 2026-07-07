@@ -523,6 +523,38 @@ function shouldUseRouteEstimate(message: string) {
   return asksForTimeOrDistance && hasDestinationHint;
 }
 
+function shouldUseFastConcretePlacesReply(message: string, rulesReply: AgentMessageResponse, externalPlacesSearch?: GooglePlacesTextSearchResult) {
+  if (rulesReply.intent !== "place_recommendation" || externalPlacesSearch?.status !== "ready" || externalPlacesSearch.places.length === 0) {
+    return false;
+  }
+
+  return includesAnyTerm(message.toLowerCase(), [
+    "בית קפה",
+    "קפה",
+    "coffee",
+    "cafe",
+    "מאפייה",
+    "מאפיה",
+    "bakery",
+    "מסעדה",
+    "טברנה",
+    "restaurant",
+    "taverna",
+    "גלידה",
+    "ice cream",
+    "gelato",
+    "שירותים",
+    "toilet",
+    "toilets",
+    "דלק",
+    "fuel",
+    "בית מרקחת",
+    "pharmacy",
+    "כספומט",
+    "atm"
+  ]);
+}
+
 function buildExternalPlacesQuery(message: string, options: { hereAndNow?: boolean } = {}) {
   const normalizedMessage = message
     .replace(/קודי[, ]*/g, "")
@@ -2606,11 +2638,13 @@ app.post("/api/agent/message", async (req, res) => {
   });
   const deterministicRouteDiagram = shouldUseDeterministicRouteDiagram(focusedReferenceMessage);
   const deterministicLocationIdentity = shouldUsePreciseLocationIdentity(focusedReferenceMessage);
+  const fastConcretePlacesReply = shouldUseFastConcretePlacesReply(focusedReferenceMessage, rulesReply, externalPlacesSearch);
   const openAiReply =
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
     !deterministicRouteDiagram &&
-    !deterministicLocationIdentity
+    !deterministicLocationIdentity &&
+    !fastConcretePlacesReply
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
           message: focusedReferenceMessage,
@@ -2628,6 +2662,7 @@ app.post("/api/agent/message", async (req, res) => {
     openAiUsageGate.providerConfigured &&
     !deterministicRouteDiagram &&
     !deterministicLocationIdentity &&
+    !fastConcretePlacesReply &&
     openAiReply?.status === "ready"
   ) {
     void safeRecordUsageGateEvent({
