@@ -29,6 +29,7 @@ export interface GooglePlacesTextSearchResult {
   query: string;
   request: {
     hasLocationBias: boolean;
+    hasLocationRestriction: boolean;
     radiusMeters: number;
     languageCode: string;
     regionCode?: string;
@@ -141,12 +142,14 @@ export async function searchGooglePlacesText(
   const query = input.query.trim();
   const apiKey = getGoogleMapsApiKey();
   const radiusMeters = normalizeRadiusMeters(input.radiusMeters);
-  const hasLocationBias = typeof input.lat === "number" && typeof input.lng === "number";
+  const hasLocation = typeof input.lat === "number" && typeof input.lng === "number";
+  const hasLocationRestriction = hasLocation && input.restrictToLocation === true;
   const base = {
     provider: "google_places_text_search" as const,
     query,
     request: {
-      hasLocationBias,
+      hasLocationBias: hasLocation && !hasLocationRestriction,
+      hasLocationRestriction,
       radiusMeters,
       languageCode: input.languageCode ?? "he",
       regionCode: input.regionCode,

@@ -366,6 +366,7 @@ if (
 }
 
 $serverSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw -Encoding UTF8
+$placesSearchSource = Get-Content (Join-Path $root "apps\api\src\google\placesSearch.ts") -Raw -Encoding UTF8
 if (
   -not $serverSource.Contains("shouldUseHereAndNowContext") -or
   -not $serverSource.Contains("getRequestCurrentLocation") -or
@@ -1206,9 +1207,19 @@ if (-not $serverSource.Contains("buildExternalPlacesQuery(focusedReferenceMessag
 
 if (
   -not $serverSource.Contains('"באזור שלי"') -or
+  -not $serverSource.Contains('"באזור"') -or
+  -not $serverSource.Contains('"באזור הנוכחי"') -or
   (-not $appSource.Contains('"באזור שלי"') -and -not $appSource.Contains("\u05d1\u05d0\u05d6\u05d5\u05e8 \u05e9\u05dc\u05d9"))
 ) {
-  throw "Kodi must treat 'באזור שלי' as a live-location request on both server and web."
+  throw "Kodi must treat 'באזור', 'באזור הנוכחי' and 'באזור שלי' as live-location requests."
+}
+
+if (
+  -not $placesSearchSource.Contains("hasLocationRestriction") -or
+  -not $serverSource.Contains("externalPlacesSearchRequest") -or
+  -not $serverSource.Contains('req.query.restrictToLocation === "true"')
+) {
+  throw "Kodi Places diagnostics must expose whether live searches use a hard location restriction."
 }
 
 if (-not $serverSource.Contains('options.hereAndNow ? "cafe"') -or -not $serverSource.Contains('options.hereAndNow ? "bakery"')) {

@@ -340,6 +340,7 @@ function buildAgentContextSummary(input: {
   recentMessages: unknown[];
   tripState: ReturnType<typeof buildDemoTripState>;
   externalPlacesSearchStatus?: string;
+  externalPlacesSearchRequest?: GooglePlacesTextSearchResult["request"];
   routeEstimateStatus?: string;
   tripContextConfidence?: string;
   tripContextReason?: string;
@@ -365,6 +366,7 @@ function buildAgentContextSummary(input: {
     hasTripState: true,
     visibleLiveLocationMembers: visibleLiveLocationMembers.length,
     externalPlacesSearchStatus: input.externalPlacesSearchStatus,
+    externalPlacesSearchRequest: input.externalPlacesSearchRequest,
     routeEstimateStatus: input.routeEstimateStatus,
     tripContextConfidence: input.tripContextConfidence,
     tripContextReason: input.tripContextReason,
@@ -914,6 +916,8 @@ function shouldUseHereAndNowContext(message: string) {
     "לידי",
     "לידינו",
     "בסביבה",
+    "באזור",
+    "באזור הנוכחי",
     "סביבה שלי",
     "באזור שלי",
     "אזור שלי",
@@ -1241,6 +1245,7 @@ app.get("/api/google/places/text-search", async (req, res) => {
   const lat = typeof req.query.lat === "string" ? Number(req.query.lat) : undefined;
   const lng = typeof req.query.lng === "string" ? Number(req.query.lng) : undefined;
   const radiusMeters = typeof req.query.radiusMeters === "string" ? Number(req.query.radiusMeters) : undefined;
+  const restrictToLocation = req.query.restrictToLocation === "true";
 
   if ((lat !== undefined && Number.isNaN(lat)) || (lng !== undefined && Number.isNaN(lng))) {
     res.status(400).json({
@@ -1278,6 +1283,7 @@ app.get("/api/google/places/text-search", async (req, res) => {
       lat,
       lng,
       radiusMeters,
+      restrictToLocation,
       languageCode: typeof req.query.languageCode === "string" ? req.query.languageCode : "he",
       regionCode: typeof req.query.regionCode === "string" ? req.query.regionCode : undefined
     })),
@@ -2497,7 +2503,9 @@ app.post("/api/agent/message", async (req, res) => {
       : undefined;
 
   const requestCurrentLocation = getRequestCurrentLocation(context);
-  const hereAndNowContext = shouldUseHereAndNowContext(message);
+  const focusedReferenceMessage = buildFocusedReferenceMessage(message, recentMessages);
+  const hereAndNowContext =
+    shouldUseHereAndNowContext(message) || shouldUseHereAndNowContext(focusedReferenceMessage);
   const tripState = withRequestCurrentLocation(
     req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
     normalizedMember,
@@ -2508,7 +2516,6 @@ app.post("/api/agent/message", async (req, res) => {
     members: tripState.members
   });
 
-  const focusedReferenceMessage = buildFocusedReferenceMessage(message, recentMessages);
   const timelineReference = resolveTimelineReferenceForMessage(focusedReferenceMessage, tripState);
   const fastTripAnswer = buildFastTripAnswer({
     message: focusedReferenceMessage,
@@ -2539,6 +2546,7 @@ app.post("/api/agent/message", async (req, res) => {
         },
         recentMessages,
         tripState,
+        externalPlacesSearchRequest: undefined,
         timelineReferenceConfidence: hereAndNowContext ? "live_location" : timelineReference.confidence,
         timelineReferenceReason: hereAndNowContext
           ? "Here-and-now request: live/current location takes precedence over planned trip timeline."
@@ -2696,6 +2704,7 @@ app.post("/api/agent/message", async (req, res) => {
       recentMessages,
       tripState,
       externalPlacesSearchStatus: externalPlacesSearch?.status,
+      externalPlacesSearchRequest: externalPlacesSearch?.request,
       routeEstimateStatus: routeEstimate?.status,
       tripContextConfidence: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.confidence : undefined,
       tripContextReason: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.reason : undefined,
