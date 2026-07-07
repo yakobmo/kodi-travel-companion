@@ -79,6 +79,7 @@ import {
   getWhatsAppConnectorReadiness,
   parseWhatsAppWebhookPayload,
   sendWhatsAppTextMessage,
+  type WhatsAppSendResult,
   verifyWhatsAppWebhook
 } from "./whatsapp/connector.js";
 import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
@@ -108,6 +109,19 @@ const recentWhatsAppWebhookDiagnostics: Array<{
   statusEvents: number;
   messageTypes: string[];
   textPreviews: string[];
+}> = [];
+const recentWhatsAppProcessingDiagnostics: Array<{
+  receivedAt: string;
+  status: "dry_run" | "queued" | "duplicate" | "processed" | "failed";
+  providerMessageId: string;
+  fromMasked: string;
+  step?: string;
+  memberId?: string;
+  memberMessageId?: string;
+  kodiMessageId?: string;
+  outboundStatus?: WhatsAppSendResult["status"];
+  outboundRecipientMasked?: string;
+  error?: string;
 }> = [];
 
 function maskDiagnosticWhatsAppText(text: string) {
@@ -156,6 +170,25 @@ function rememberWhatsAppWebhookDiagnostic(
   if (recentWhatsAppWebhookDiagnostics.length > 20) {
     recentWhatsAppWebhookDiagnostics.splice(0, recentWhatsAppWebhookDiagnostics.length - 20);
   }
+}
+
+function maskDiagnosticError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/EAA[a-zA-Z0-9_-]{20,}/g, "EAA...masked").slice(0, 240);
+}
+
+function rememberWhatsAppProcessingDiagnostic(
+  entry: (typeof recentWhatsAppProcessingDiagnostics)[number]
+) {
+  recentWhatsAppProcessingDiagnostics.push(entry);
+
+  if (recentWhatsAppProcessingDiagnostics.length > 30) {
+    recentWhatsAppProcessingDiagnostics.splice(0, recentWhatsAppProcessingDiagnostics.length - 30);
+  }
+}
+
+function isWhatsAppWebhookDryRun(req: express.Request) {
+  return req.query.dryRun === "1" || req.header("x-kodi-webhook-dry-run") === "true";
 }
 
 function getMetaGraphApiVersion() {
@@ -1710,10 +1743,38 @@ app.get("/api/whatsapp/readiness", async (_req, res) => {
   });
 });
 
-app.get("/api/whatsapp/diagnostics", (_req, res) => {
+app.get("/api/whatsapp/diagnostics", async (_req, res) => {
+  const connector = getWhatsAppConnectorReadiness();
+  const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID?.trim() ?? "";
+  let live: ReturnType<typeof buildWhatsAppLiveReadinessReport> | undefined;
+  let subscriptionEnsure: Awaited<ReturnType<typeof ensureWhatsAppBusinessAccountSubscription>> | undefined;
+
+  if (connector.ready && businessAccountId) {
+    subscriptionEnsure = await ensureWhatsAppBusinessAccountSubscription();
+    const [subscribedApps, phoneNumbers] = await Promise.all([
+      fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/subscribed_apps`),
+      fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/phone_numbers?fields=id,display_phone_number,verified_name`)
+    ]);
+    live = buildWhatsAppLiveReadinessReport({ subscribedApps, phoneNumbers, subscriptionEnsure });
+  }
+
   res.json({
-    connector: getWhatsAppConnectorReadiness(),
-    recentWebhooks: recentWhatsAppWebhookDiagnostics
+    connector: {
+      ...connector,
+      liveReady: live?.liveReady ?? false,
+      status: live?.liveReady ? "configured_not_verified" : connector.status
+    },
+    live,
+    subscriptionEnsure: subscriptionEnsure
+      ? {
+          attempted: subscriptionEnsure.attempted,
+          ok: subscriptionEnsure.ok,
+          reason: subscriptionEnsure.reason,
+          status: subscriptionEnsure.result?.status
+        }
+      : undefined,
+    recentWebhooks: recentWhatsAppWebhookDiagnostics,
+    recentProcessing: recentWhatsAppProcessingDiagnostics
   });
 });
 
@@ -1779,16 +1840,57 @@ function handleWhatsAppWebhookVerification(req: express.Request, res: express.Re
 function handleWhatsAppWebhookPost(req: express.Request, res: express.Response) {
   const readiness = getWhatsAppConnectorReadiness();
   const messages = parseWhatsAppWebhookPayload(req.body);
+  const dryRun = isWhatsAppWebhookDryRun(req);
   rememberWhatsAppWebhookDiagnostic(req.body, messages, req.path);
 
   if (readiness.ready) {
-    if (messages.length > 0) {
+    if (messages.length > 0 && dryRun) {
+      for (const message of messages) {
+        rememberWhatsAppProcessingDiagnostic({
+          receivedAt: new Date().toISOString(),
+          status: "dry_run",
+          providerMessageId: message.messageId,
+          fromMasked: message.fromMasked,
+          step: "parse_only"
+        });
+      }
+    } else if (messages.length > 0) {
       void (async () => {
         for (const message of messages) {
+          rememberWhatsAppProcessingDiagnostic({
+            receivedAt: new Date().toISOString(),
+            status: "queued",
+            providerMessageId: message.messageId,
+            fromMasked: message.fromMasked,
+            step: "background_processing"
+          });
+
           try {
-            await processWhatsAppInboundMessage(message);
+            const result = await processWhatsAppInboundMessage(message);
+            const outbound = "outbound" in result ? result.outbound : undefined;
+            rememberWhatsAppProcessingDiagnostic({
+              receivedAt: new Date().toISOString(),
+              status: result.status,
+              providerMessageId: result.providerMessageId,
+              fromMasked: result.fromMasked,
+              step: result.status === "duplicate" ? "dedup" : "completed",
+              memberId: "memberId" in result ? result.memberId : undefined,
+              memberMessageId: "memberMessageId" in result ? result.memberMessageId : undefined,
+              kodiMessageId: "kodiMessageId" in result ? result.kodiMessageId : undefined,
+              outboundStatus: outbound?.status,
+              outboundRecipientMasked: outbound?.recipientMasked,
+              error: outbound?.error
+            });
           } catch (error) {
             console.warn("WhatsApp inbound background processing failed", error);
+            rememberWhatsAppProcessingDiagnostic({
+              receivedAt: new Date().toISOString(),
+              status: "failed",
+              providerMessageId: message.messageId,
+              fromMasked: message.fromMasked,
+              step: "background_processing",
+              error: maskDiagnosticError(error)
+            });
           }
         }
       })();
@@ -1800,7 +1902,7 @@ function handleWhatsAppWebhookPost(req: express.Request, res: express.Response) 
       mode: "live",
       accepted: true,
       parsedMessages: messages.length,
-      processing: messages.length > 0 ? "queued" : "no_text_messages"
+      processing: messages.length > 0 ? (dryRun ? "dry_run_not_queued" : "queued") : "no_text_messages"
     });
     return;
   }

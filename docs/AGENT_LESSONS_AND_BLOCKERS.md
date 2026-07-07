@@ -641,3 +641,24 @@ Decision:
 QA/automation:
 
 - `scripts/qa.ps1` now requires Gemini fallback wiring and the `.env.example` Gemini contract.
+
+### 27. WhatsApp Webhook Debugging Must Separate Delivery From Processing
+
+What happened:
+
+Real WhatsApp messages appeared in Meta's dashboard, but Kodi did not reliably answer. Repeated connector edits did not prove whether the message reached Render, was parsed, was written to chat, reached the agent, or failed during outbound WhatsApp sending.
+
+Why it happened:
+
+The previous diagnostics mixed configuration readiness with live delivery and did not expose the background processing result. A manual smoke POST could prove the route existed, but it also polluted the live trip with a fake member/message.
+
+Decision:
+
+- Keep `/api/whatsapp/readiness` focused on Meta configuration and live Graph checks.
+- Extend `/api/whatsapp/diagnostics` with `recentProcessing` so each inbound message can be traced as `dry_run`, `queued`, `duplicate`, `processed`, or `failed`.
+- Add `dryRun=1` webhook smoke for public testing without chat writes.
+- If dry-run succeeds but real phone messages are absent from `recentWebhooks`, stop editing connector code and investigate Meta delivery/app state, test-number rules, field subscription, or Render sleep.
+
+QA/automation:
+
+- `scripts/smoke-whatsapp-webhook-live.mjs` verifies public webhook parsing and diagnostics without creating a chat member.

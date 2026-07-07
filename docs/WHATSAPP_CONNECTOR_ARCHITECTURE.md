@@ -110,3 +110,25 @@ Readiness behavior:
 Meta can show dashboard webhook payloads while the WhatsApp Business Account is subscribed to a different app than Kodi. Seeing any item in `/{WABA_ID}/subscribed_apps` is therefore not enough. Readiness must verify that the Kodi app subscription can be ensured by the server-side token.
 
 The backend now calls `POST /{WABA_ID}/subscribed_apps` during WhatsApp readiness and startup. If Meta rejects that call, Kodi must report `configured_but_not_live` instead of pretending WhatsApp is ready. This keeps the failure visible as an account/app permission issue rather than turning it into another fake agent bug.
+
+## Root-Cause Lesson - Inbound Delivery vs Processing
+
+When WhatsApp messages do not appear in Kodi, do not guess whether the bug is Meta delivery, Render wake-up, webhook parsing, chat storage, Kodi agent execution, or outbound WhatsApp sending. The connector must expose each step separately.
+
+`/api/whatsapp/diagnostics` now reports:
+
+- live Meta readiness from Graph API checks
+- WABA subscription ensure status
+- recent webhook POST payload summaries
+- recent processing results: `dry_run`, `queued`, `duplicate`, `processed`, or `failed`
+- masked outbound send status/errors when Kodi tries to answer through WhatsApp
+
+The safe public smoke script is:
+
+```powershell
+node scripts/smoke-whatsapp-webhook-live.mjs https://kodi-travel-companion.onrender.com
+```
+
+It posts a realistic WhatsApp payload with `dryRun=1`, verifies that diagnostics recorded parsing, and confirms the message was not written to the group chat. This prevents test pollution such as fake smoke members while still proving the public webhook endpoint is reachable.
+
+If dry-run smoke succeeds but a real phone message does not appear under `recentWebhooks`, the confirmed failure is outside Kodi processing: Meta is not delivering the real message to the Render endpoint. Check app publish/test-number limits, webhook field subscription, phone allow-list, and Render sleep/instance behavior before editing connector code again.
