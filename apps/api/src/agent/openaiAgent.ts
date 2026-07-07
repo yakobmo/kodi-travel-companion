@@ -430,6 +430,41 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   const openAiClient = client;
 
   async function createKodiResponse(modelName: string, webSearchEnabled: boolean) {
+    const inputPayload = JSON.stringify({
+      responseFormat: "json_object",
+      member: input.member,
+      message: input.message,
+      recentMessages: input.recentMessages?.slice(-20),
+      selectedPlace: input.selectedPlace,
+      tripState: compactTripState(input.tripState, { reasoningMode }),
+      externalPlacesSearch: input.externalPlacesSearch,
+      reverseGeocodedLocation: input.reverseGeocodedLocation,
+      routeEstimate: input.routeEstimate,
+      tripContextClarification: input.tripContextClarification,
+      permissionPolicy: input.permissionPolicy,
+      webSearchAvailableForThisQuestion: webSearchEnabled,
+      fallbackRulesReply: {
+        intent: input.rulesReply.intent,
+        requiresAdminApproval: input.rulesReply.requiresAdminApproval,
+        source: input.rulesReply.source
+      }
+    });
+
+    if (!webSearchEnabled) {
+      return withAgentTimeout(
+        openAiClient.chat.completions.create({
+          model: modelName,
+          messages: [
+            { role: "system", content: buildInstructions() },
+            { role: "user", content: inputPayload }
+          ],
+          max_tokens: reasoningMode ? 750 : 420,
+          response_format: { type: "json_object" }
+        }),
+        timeoutMs
+      );
+    }
+
     return withAgentTimeout(
       openAiClient.responses.create({
         model: modelName,
@@ -437,25 +472,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         max_output_tokens: reasoningMode ? 750 : 420,
         text: { format: { type: "json_object" } },
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
-        input: JSON.stringify({
-          responseFormat: "json_object",
-          member: input.member,
-          message: input.message,
-          recentMessages: input.recentMessages?.slice(-20),
-          selectedPlace: input.selectedPlace,
-          tripState: compactTripState(input.tripState, { reasoningMode }),
-          externalPlacesSearch: input.externalPlacesSearch,
-          reverseGeocodedLocation: input.reverseGeocodedLocation,
-          routeEstimate: input.routeEstimate,
-          tripContextClarification: input.tripContextClarification,
-          permissionPolicy: input.permissionPolicy,
-          webSearchAvailableForThisQuestion: webSearchEnabled,
-          fallbackRulesReply: {
-            intent: input.rulesReply.intent,
-            requiresAdminApproval: input.rulesReply.requiresAdminApproval,
-            source: input.rulesReply.source
-          }
-        })
+        input: inputPayload
       }),
       timeoutMs
     );
@@ -466,11 +483,15 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   for (const modelCandidate of modelCandidates) {
     try {
       const response = await createKodiResponse(modelCandidate, enableWebSearch);
+      const outputText =
+        "choices" in response
+          ? response.choices[0]?.message?.content ?? ""
+          : response.output_text ?? "";
 
       return {
         status: "ready",
         model: modelCandidate,
-        reply: toValidReply(extractJsonObject(response.output_text ?? ""))
+        reply: toValidReply(extractJsonObject(outputText))
       };
     } catch (error) {
       lastError = error;
@@ -484,11 +505,15 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
 
       try {
         const response = await createKodiResponse(modelCandidate, false);
+        const outputText =
+          "choices" in response
+            ? response.choices[0]?.message?.content ?? ""
+            : response.output_text ?? "";
 
         return {
           status: "ready",
           model: modelCandidate,
-          reply: toValidReply(extractJsonObject(response.output_text ?? "")),
+          reply: toValidReply(extractJsonObject(outputText)),
           error: "web_search_retry_without_tool"
         };
       } catch (retryError) {

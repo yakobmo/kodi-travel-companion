@@ -337,6 +337,7 @@ if (
   -not $openAiAgentSource.Contains("web_search") -or
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
   -not $openAiAgentSource.Contains("web_search_retry_without_tool") -or
+  -not $openAiAgentSource.Contains("chat.completions.create") -or
   -not $openAiAgentSource.Contains("lodgingTimeline") -or
   -not $openAiAgentSource.Contains("tripArcHint") -or
   -not $openAiAgentSource.Contains("cash planning") -or

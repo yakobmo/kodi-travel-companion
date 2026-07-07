@@ -612,6 +612,7 @@ The default fast-agent model was too slow in the hosted path for ordinary chat. 
 Decision:
 
 - Default normal chat to a faster OpenAI model.
+- Use the lighter Chat Completions JSON path for normal chat; reserve Responses/web-search for questions that actually need external live research.
 - Keep the heavier reasoning model for questions that truly need deeper planning, live research, budget, weather, road/accessibility analysis, or broader synthesis.
 - Send compact trip context for normal chat and reserve the larger map payload for reasoning mode, so Kodi does not burn the whole time budget just reading raw places.
 - Treat `openai_agent_timeout` on ordinary chat as a product regression, not as acceptable fallback behavior.
