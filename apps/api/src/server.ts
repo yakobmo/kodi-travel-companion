@@ -269,9 +269,29 @@ function buildWhatsAppLiveReadinessReport(input: {
     blockers.push("meta_graph_access_error");
   }
 
-  if (connector.ready && !phoneNumbersReachable) {
+  if (connector.ready && accessTokenStatus === "valid" && !phoneNumbersReachable) {
     blockers.push("phone_numbers_not_reachable");
   }
+
+  const nextAction = !connector.enabled
+    ? "enable_whatsapp_connector"
+    : connector.missing.length > 0
+      ? "complete_render_whatsapp_environment"
+      : accessTokenStatus === "missing"
+        ? "set_whatsapp_access_token"
+        : accessTokenStatus === "expired_or_invalid"
+          ? "replace_whatsapp_access_token_with_permanent_system_user_token"
+          : accessTokenStatus === "unknown_error"
+            ? "inspect_meta_graph_error"
+            : !phoneNumbersReachable
+              ? "verify_whatsapp_business_account_phone_number_access"
+              : "none";
+
+  const userMessage = liveReady
+    ? "WhatsApp connector is live-ready."
+    : accessTokenStatus === "expired_or_invalid"
+      ? "The configured Meta access token is expired or invalid. Replace WHATSAPP_ACCESS_TOKEN in Render with a permanent system-user token before expecting WhatsApp replies."
+      : "Webhook setup exists, but live WhatsApp messaging is not ready yet. Do not treat this as a working WhatsApp agent until the listed blockers are cleared.";
 
   return {
     liveReady,
@@ -279,9 +299,8 @@ function buildWhatsAppLiveReadinessReport(input: {
     accessTokenStatus,
     phoneNumbersReachable,
     blockers,
-    userMessage: liveReady
-      ? "WhatsApp connector is live-ready."
-      : "Webhook setup exists, but live WhatsApp messaging is not ready yet. Do not treat this as a working WhatsApp agent until the listed blockers are cleared."
+    nextAction,
+    userMessage
   };
 }
 

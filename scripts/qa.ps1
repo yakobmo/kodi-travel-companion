@@ -214,6 +214,8 @@ if (
   -not $whatsAppEnvSource.Contains("WHATSAPP_GRAPH_API_VERSION=v20.0") -or
   -not $whatsAppServerSource.Contains('/api/whatsapp/readiness') -or
   -not $whatsAppServerSource.Contains('/api/whatsapp/webhook') -or
+  -not $whatsAppServerSource.Contains("replace_whatsapp_access_token_with_permanent_system_user_token") -or
+  -not $whatsAppServerSource.Contains("accessTokenStatus === `"valid`" && !phoneNumbersReachable") -or
   -not $whatsAppServerSource.Contains("processWhatsAppInboundMessage") -or
   -not $whatsAppServerSource.Contains("/api/agent/message") -or
   -not $whatsAppServerSource.Contains("sendWhatsAppTextMessage") -or

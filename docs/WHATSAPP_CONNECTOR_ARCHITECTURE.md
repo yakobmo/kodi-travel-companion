@@ -82,3 +82,24 @@ Meta's dashboard can show webhook test events even while real WhatsApp traffic i
 3. live WhatsApp message flow available for real users
 
 The connector is only live-ready when all three are true. A temporary Meta token that expires must be treated as a setup blocker, not as a Kodi agent failure.
+
+## Permanent Token Runbook
+
+Do not treat the Meta dashboard "Generate token" test token as production infrastructure. Meta's API setup panel can generate temporary user tokens for testing, and those tokens expire. When that happens, Kodi's WhatsApp bridge is allowed to receive dashboard webhook tests, but it cannot reliably answer real WhatsApp messages.
+
+Production readiness requires a permanent System User access token from Meta Business Settings, with WhatsApp permissions for the Kodi app and the connected WhatsApp Business Account.
+
+Operational path:
+
+1. In Meta Business Settings, create or use a System User for Kodi.
+2. Assign that System User access to the Kodi Meta app and WhatsApp Business Account.
+3. Generate a token for the Kodi app with WhatsApp messaging/management permissions.
+4. Replace Render `WHATSAPP_ACCESS_TOKEN` with that permanent token.
+5. Save, rebuild, and deploy the Render service.
+6. Run `npm run smoke:whatsapp` and confirm `live stage` is `live_ready`.
+
+Readiness behavior:
+
+- expired or invalid token: `nextAction=replace_whatsapp_access_token_with_permanent_system_user_token`
+- valid token but no phone access: `nextAction=verify_whatsapp_business_account_phone_number_access`
+- fully live: `nextAction=none`
