@@ -40,10 +40,10 @@ function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
   if (!Number.isFinite(value) || value <= 0) {
-    return 12_000;
+    return 7_000;
   }
 
-  return Math.min(Math.max(Math.round(value), 5_000), 18_000);
+  return Math.min(Math.max(Math.round(value), 4_000), 8_000);
 }
 
 function isOpenAiTimeout(error: unknown) {
