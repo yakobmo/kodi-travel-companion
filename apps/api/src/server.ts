@@ -78,6 +78,7 @@ import {
   buildWhatsAppKodiRoutingPlan,
   getWhatsAppConnectorReadiness,
   parseWhatsAppWebhookPayload,
+  sendWhatsAppTextMessage,
   verifyWhatsAppWebhook
 } from "./whatsapp/connector.js";
 import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
@@ -99,6 +100,18 @@ let agentTripStateCache:
       state: ReturnType<typeof buildDemoTripState>;
     }
   | undefined;
+const processedWhatsAppMessageIds = new Set<string>();
+
+function rememberProcessedWhatsAppMessage(messageId: string) {
+  processedWhatsAppMessageIds.add(messageId);
+
+  if (processedWhatsAppMessageIds.size > 500) {
+    const [oldest] = processedWhatsAppMessageIds;
+    if (oldest) {
+      processedWhatsAppMessageIds.delete(oldest);
+    }
+  }
+}
 
 function getAgentTripStateSnapshotTimeoutMs() {
   const timeoutMs = Number(process.env.AGENT_TRIP_STATE_TIMEOUT_MS);
@@ -1274,6 +1287,113 @@ app.get("/api/health", (_req, res) => {
   res.json(buildHealthPayload());
 });
 
+async function processWhatsAppInboundMessage(message: ReturnType<typeof parseWhatsAppWebhookPayload>[number]) {
+  if (processedWhatsAppMessageIds.has(message.messageId)) {
+    return {
+      status: "duplicate" as const,
+      providerMessageId: message.messageId,
+      fromMasked: message.fromMasked
+    };
+  }
+
+  rememberProcessedWhatsAppMessage(message.messageId);
+
+  const displayName = message.profileName?.trim() || `WhatsApp ${message.fromMasked}`;
+  const member = await addDemoTripMemberAsync({
+    displayName,
+    ageGroup: "adult",
+    role: "member"
+  });
+  const memberMessage = await appendDemoTripMessageAsync({
+    author: member.member.displayName,
+    text: message.text,
+    memberId: member.member.id,
+    source: "member"
+  });
+
+  await safeRecordTripEvent({
+    eventType: "message_created",
+    actorMemberId: member.member.id,
+    actorName: member.member.displayName,
+    relatedEntityId: memberMessage.id,
+    summary: `${member.member.displayName} sent a WhatsApp message into the trip group.`
+  });
+
+  void sendChatMessageNotifications({
+    messageId: memberMessage.id,
+    author: member.member.displayName,
+    text: memberMessage.text,
+    source: "member",
+    senderMemberId: member.member.id
+  }).catch((error) => {
+    console.warn("WhatsApp inbound push notification send failed", error);
+  });
+
+  const recentMessages = (await loadDemoTripMessagesAsync()).slice(-24);
+  const agentResponse = await fetch(`http://127.0.0.1:${port}/api/agent/message`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tripGroupId: "group_family_greece_demo",
+      message: message.text,
+      member: member.member,
+      recentMessages,
+      context: {
+        source: "whatsapp",
+        permissionPolicy: {
+          operationalChangesRequireAdmin: true,
+          canShareLiveLocation: false
+        }
+      }
+    })
+  });
+
+  if (!agentResponse.ok) {
+    const errorText = await agentResponse.text().catch(() => "");
+    throw new Error(`Kodi WhatsApp agent bridge failed: HTTP ${agentResponse.status} ${errorText.slice(0, 200)}`);
+  }
+
+  const agentPayload = (await agentResponse.json()) as AgentMessageResponse;
+  const kodiMessage = await appendDemoTripMessageAsync({
+    author: "קודי",
+    text: agentPayload.text,
+    source: "agent"
+  });
+
+  await safeRecordTripEvent({
+    eventType: "message_created",
+    actorName: "קודי",
+    relatedEntityId: kodiMessage.id,
+    summary: "Kodi replied to a WhatsApp-originated message."
+  });
+
+  void sendChatMessageNotifications({
+    messageId: kodiMessage.id,
+    author: "קודי",
+    text: kodiMessage.text,
+    source: "agent"
+  }).catch((error) => {
+    console.warn("WhatsApp Kodi reply push notification send failed", error);
+  });
+
+  const outbound = await sendWhatsAppTextMessage({
+    to: message.from,
+    text: agentPayload.text
+  });
+
+  return {
+    status: "processed" as const,
+    providerMessageId: message.messageId,
+    fromMasked: message.fromMasked,
+    memberId: member.member.id,
+    memberMessageId: memberMessage.id,
+    kodiMessageId: kodiMessage.id,
+    outbound
+  };
+}
+
 app.get("/api/whatsapp/readiness", (_req, res) => {
   res.json(getWhatsAppConnectorReadiness());
 });
@@ -1292,9 +1412,26 @@ app.get("/api/whatsapp/webhook", (req, res) => {
   res.status(200).send(verification.challenge);
 });
 
-app.post("/api/whatsapp/webhook", (req, res) => {
+app.post("/api/whatsapp/webhook", async (req, res) => {
   const readiness = getWhatsAppConnectorReadiness();
   const messages = parseWhatsAppWebhookPayload(req.body);
+
+  if (readiness.ready) {
+    const results = [];
+    for (const message of messages) {
+      results.push(await processWhatsAppInboundMessage(message));
+    }
+
+    res.json({
+      ok: true,
+      connector: readiness,
+      mode: "live",
+      accepted: true,
+      parsedMessages: messages.length,
+      results
+    });
+    return;
+  }
 
   res.json({
     ok: true,

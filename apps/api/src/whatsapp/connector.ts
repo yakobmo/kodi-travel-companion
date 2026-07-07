@@ -31,6 +31,13 @@ export interface WhatsAppKodiRoutingPlan {
   nextStep: "link_whatsapp_contact_to_trip_member";
 }
 
+export interface WhatsAppSendResult {
+  status: "sent" | "not_configured" | "failed";
+  recipientMasked: string;
+  providerMessageId?: string;
+  error?: string;
+}
+
 interface WhatsAppWebhookQuery {
   "hub.mode"?: unknown;
   "hub.verify_token"?: unknown;
@@ -56,6 +63,10 @@ function requiredConfig() {
     WHATSAPP_BUSINESS_ACCOUNT_ID: getEnvValue("WHATSAPP_BUSINESS_ACCOUNT_ID"),
     APP_BASE_URL: getEnvValue("APP_BASE_URL")
   };
+}
+
+function getWhatsAppApiVersion() {
+  return getEnvValue("WHATSAPP_GRAPH_API_VERSION") || "v20.0";
 }
 
 function asString(value: unknown) {
@@ -199,4 +210,74 @@ export function buildWhatsAppKodiRoutingPlan(message: WhatsAppIncomingTextMessag
     text: message.text,
     nextStep: "link_whatsapp_contact_to_trip_member"
   };
+}
+
+export async function sendWhatsAppTextMessage(input: {
+  to: string;
+  text: string;
+  timeoutMs?: number;
+}): Promise<WhatsAppSendResult> {
+  const readiness = getWhatsAppConnectorReadiness();
+  const config = requiredConfig();
+  const recipientMasked = maskWhatsAppId(input.to);
+
+  if (!readiness.ready) {
+    return {
+      status: "not_configured",
+      recipientMasked
+    };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), input.timeoutMs ?? 8000);
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${getWhatsAppApiVersion()}/${config.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.WHATSAPP_ACCESS_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: input.to,
+          type: "text",
+          text: {
+            preview_url: true,
+            body: input.text.slice(0, 3900)
+          }
+        }),
+        signal: controller.signal
+      }
+    );
+
+    const payload = (await response.json().catch(() => undefined)) as
+      | { messages?: Array<{ id?: string }>; error?: { message?: string } }
+      | undefined;
+
+    if (!response.ok) {
+      return {
+        status: "failed",
+        recipientMasked,
+        error: payload?.error?.message ?? `Meta WhatsApp API returned HTTP ${response.status}`
+      };
+    }
+
+    return {
+      status: "sent",
+      recipientMasked,
+      providerMessageId: payload?.messages?.[0]?.id
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      recipientMasked,
+      error: error instanceof Error ? error.message : "Unknown WhatsApp send error"
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

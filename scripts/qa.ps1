@@ -197,19 +197,26 @@ $whatsAppLinksSource = Get-Content (Join-Path $root "docs\ARCHITECTURE_LINKS.md"
 if (
   -not $whatsAppConnectorSource.Contains("WhatsApp is a transport channel") -or
   -not $whatsAppConnectorSource.Contains("V1 - Dry Connector") -or
+  -not $whatsAppConnectorSource.Contains("V2 - Live-Capable Bridge") -or
+  -not $whatsAppConnectorSource.Contains("/api/agent/message") -or
   -not $whatsAppConnectorSource.Contains("no real outbound WhatsApp messages") -or
   -not $whatsAppConnectorCodeSource.Contains("getWhatsAppConnectorReadiness") -or
   -not $whatsAppConnectorCodeSource.Contains("parseWhatsAppWebhookPayload") -or
   -not $whatsAppConnectorCodeSource.Contains("verifyWhatsAppWebhook") -or
+  -not $whatsAppConnectorCodeSource.Contains("sendWhatsAppTextMessage") -or
+  -not $whatsAppConnectorCodeSource.Contains("https://graph.facebook.com") -or
   -not $whatsAppConnectorCodeSource.Contains("maskWhatsAppId") -or
   -not $whatsAppEnvSource.Contains("WHATSAPP_CONNECTOR_ENABLED=false") -or
   -not $whatsAppEnvSource.Contains("WHATSAPP_VERIFY_TOKEN=") -or
   -not $whatsAppEnvSource.Contains("WHATSAPP_ACCESS_TOKEN=") -or
   -not $whatsAppEnvSource.Contains("WHATSAPP_PHONE_NUMBER_ID=") -or
   -not $whatsAppEnvSource.Contains("WHATSAPP_BUSINESS_ACCOUNT_ID=") -or
-  -not $whatsAppServerSource.Contains("app.get(`"/api/whatsapp/readiness`"") -or
-  -not $whatsAppServerSource.Contains("app.get(`"/api/whatsapp/webhook`"") -or
-  -not $whatsAppServerSource.Contains("app.post(`"/api/whatsapp/webhook`"") -or
+  -not $whatsAppEnvSource.Contains("WHATSAPP_GRAPH_API_VERSION=v20.0") -or
+  -not $whatsAppServerSource.Contains('/api/whatsapp/readiness') -or
+  -not $whatsAppServerSource.Contains('/api/whatsapp/webhook') -or
+  -not $whatsAppServerSource.Contains("processWhatsAppInboundMessage") -or
+  -not $whatsAppServerSource.Contains("/api/agent/message") -or
+  -not $whatsAppServerSource.Contains("sendWhatsAppTextMessage") -or
   -not $whatsAppLinksSource.Contains("docs/WHATSAPP_CONNECTOR_ARCHITECTURE.md")
 ) {
   throw "WhatsApp connector V1 must stay documented, dry-run only, and exposed through safe readiness/webhook endpoints without secrets."
