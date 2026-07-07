@@ -40,10 +40,10 @@ function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
   if (!Number.isFinite(value) || value <= 0) {
-    return 7_000;
+    return 12_000;
   }
 
-  return Math.min(Math.max(Math.round(value), 4_000), 8_000);
+  return Math.min(Math.max(Math.round(value), 4_000), 18_000);
 }
 
 function isOpenAiTimeout(error: unknown) {
@@ -365,10 +365,13 @@ function getAgentModelCandidates(primaryModel: string) {
   return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
 }
 
-function compactTripState(input: AgentMessageRequest["tripState"]) {
+function compactTripState(input: AgentMessageRequest["tripState"], options: { reasoningMode: boolean }) {
   if (!input) {
     return undefined;
   }
+
+  const placeLimit = options.reasoningMode ? 90 : 36;
+  const noteLimit = options.reasoningMode ? 140 : 70;
 
   return {
     trip: input.trip,
@@ -397,7 +400,7 @@ function compactTripState(input: AgentMessageRequest["tripState"]) {
         lng: item.liveLocation?.lng,
         updatedAt: item.liveLocation?.updatedAt
       })),
-    places: input.places.slice(0, 120).map((place) => ({
+    places: input.places.slice(0, placeLimit).map((place) => ({
       id: place.id,
       name: place.name,
       type: place.type,
@@ -405,7 +408,7 @@ function compactTripState(input: AgentMessageRequest["tripState"]) {
       lat: place.lat,
       lng: place.lng,
       tags: place.tags,
-      note: place.note?.slice(0, 120),
+      note: place.note?.slice(0, noteLimit),
       visitState: place.visitState,
       sourceIndex: place.sourceIndex
     }))
@@ -417,6 +420,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   const model = getAgentModel(input);
   const modelCandidates = getAgentModelCandidates(model);
   const enableWebSearch = shouldEnableWebSearch(input);
+  const reasoningMode = shouldUseReasoningModel(input);
   const timeoutMs = getAgentTimeoutMs();
 
   if (!client) {
@@ -430,7 +434,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       openAiClient.responses.create({
         model: modelName,
         instructions: buildInstructions(),
-        max_output_tokens: 650,
+        max_output_tokens: reasoningMode ? 750 : 420,
         text: { format: { type: "json_object" } },
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: JSON.stringify({
@@ -439,7 +443,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
           message: input.message,
           recentMessages: input.recentMessages?.slice(-20),
           selectedPlace: input.selectedPlace,
-          tripState: compactTripState(input.tripState),
+          tripState: compactTripState(input.tripState, { reasoningMode }),
           externalPlacesSearch: input.externalPlacesSearch,
           reverseGeocodedLocation: input.reverseGeocodedLocation,
           routeEstimate: input.routeEstimate,
