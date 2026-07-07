@@ -1015,6 +1015,14 @@ if (-not $appSource.Contains("/api/trips/demo/messages") -or -not $appSource.Con
 }
 
 if (
+  -not $appSource.Contains("author: activeMember.name") -or
+  -not $appSource.Contains("memberId: activeMember.id") -or
+  -not $appSource.Contains("setMessages((currentMessages) => mergeChatMessages(currentMessages, data.messages))")
+) {
+  throw "Web group chat must send messages as the active participant and merge the shared group message list for everyone."
+}
+
+if (
   -not $appSource.Contains("chatRealtimeState") -or
   -not $appSource.Contains("/api/trips/demo/messages/stream") -or
   -not $appSource.Contains("trip-messages") -or
@@ -1531,9 +1539,11 @@ if (
   -not $serverSource.Contains("appendDemoTripMessage") -or
   -not $serverSource.Contains("resetDemoTripMessages") -or
   -not $serverSource.Contains("/api/trips/demo/messages/stream") -or
-  -not $serverSource.Contains("event: trip-messages")
+  -not $serverSource.Contains("event: trip-messages") -or
+  -not $serverSource.Contains('app.get("/api/trips/demo/messages"') -or
+  -not $serverSource.Contains("loadDemoTripMessagesAsync()")
 ) {
-  throw "API server must append, reset, and stream persisted demo group chat messages."
+  throw "API server must append, load, reset, and stream the shared persisted group chat messages for every participant."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/members/:memberId/location")) {
