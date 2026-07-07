@@ -469,7 +469,11 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       };
     } catch (error) {
       lastError = error;
-      if (!enableWebSearch || isOpenAiTimeout(error)) {
+      if (isOpenAiTimeout(error)) {
+        break;
+      }
+
+      if (!enableWebSearch) {
         continue;
       }
 
