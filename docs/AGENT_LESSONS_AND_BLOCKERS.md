@@ -598,3 +598,23 @@ Decision:
 QA/automation:
 
 - `scripts/kodi-agent-regression.mjs` verifies lodging-order answers do not trigger external Places, do not mention random Acropolis results, and do not fall back to the old children/hotel template.
+
+### 25. Normal Conversation Needs A Fast Agent Model
+
+What happened:
+
+Production smoke showed `openAiStatus=error` with `openai_agent_timeout` for normal conversation. Kodi technically responded, but through rules fallback, which made him feel like a dead or generic bot instead of the intelligent travel companion.
+
+Why it happened:
+
+The default fast-agent model was too slow in the hosted path for ordinary chat. When it timed out, Kodi dropped into deterministic rules, and the rules were never meant to be the main personality engine.
+
+Decision:
+
+- Default normal chat to a faster OpenAI model.
+- Keep the heavier reasoning model for questions that truly need deeper planning, live research, budget, weather, road/accessibility analysis, or broader synthesis.
+- Treat `openai_agent_timeout` on ordinary chat as a product regression, not as acceptable fallback behavior.
+
+QA/automation:
+
+- Public agent smoke must report whether OpenAI was ready or whether Kodi fell back to rules, so this failure mode remains visible.

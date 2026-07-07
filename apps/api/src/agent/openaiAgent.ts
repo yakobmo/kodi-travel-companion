@@ -348,8 +348,9 @@ function shouldUseReasoningModel(input: OpenAiKodiReplyInput) {
 }
 
 function getAgentModel(input: OpenAiKodiReplyInput) {
-  const fastModel = process.env.OPENAI_AGENT_FAST_MODEL?.trim() || "gpt-5.4-mini";
-  const reasoningModel = process.env.OPENAI_AGENT_REASONING_MODEL?.trim() || process.env.OPENAI_AGENT_MODEL?.trim() || fastModel;
+  const fastModel = process.env.OPENAI_AGENT_FAST_MODEL?.trim() || "gpt-4.1-mini";
+  const reasoningModel =
+    process.env.OPENAI_AGENT_REASONING_MODEL?.trim() || process.env.OPENAI_AGENT_MODEL?.trim() || "gpt-5.4-mini";
 
   return shouldUseReasoningModel(input) ? reasoningModel : fastModel;
 }
@@ -359,7 +360,7 @@ function getAgentModelCandidates(primaryModel: string) {
     process.env.OPENAI_AGENT_FALLBACK_MODELS?.split(",")
       .map((model) => model.trim())
       .filter(Boolean) ?? [];
-  const defaultFallbacks = ["gpt-5.5", "gpt-4.1-mini", "gpt-4o-mini"];
+  const defaultFallbacks = ["gpt-4o-mini", "gpt-5.4-mini", "gpt-5.5"];
 
   return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
 }

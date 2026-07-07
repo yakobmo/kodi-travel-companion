@@ -324,6 +324,7 @@ if (
   -not $openAiAgentSource.Contains("OPENAI_API_KEY") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_MODEL") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_FAST_MODEL") -or
+  -not $openAiAgentSource.Contains('"gpt-4.1-mini"') -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_REASONING_MODEL") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_TIMEOUT_MS") -or
   -not $openAiAgentSource.Contains("openai_agent_timeout") -or
@@ -347,7 +348,7 @@ if (
   -not $openAiAgentSource.Contains("Return JSON only") -or
   -not $openAiAgentSource.Contains('source: "openai"')
 ) {
-  throw "OpenAI agent bridge must be backend-only, elite-agent grounded in Google/trip context, web-search capable for live questions, JSON validated, time-budgeted, and guarded by a fallback."
+  throw "OpenAI agent bridge must be backend-only, elite-agent grounded in Google/trip context, fast by default for normal chat, web-search capable for live questions, JSON validated, time-budgeted, and guarded by a fallback."
 }
 
 $openAiSpeechSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiSpeech.ts") -Raw
