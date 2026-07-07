@@ -103,6 +103,7 @@ let agentTripStateCache:
 const processedWhatsAppMessageIds = new Set<string>();
 const recentWhatsAppWebhookDiagnostics: Array<{
   receivedAt: string;
+  path: string;
   parsedTextMessages: number;
   statusEvents: number;
   messageTypes: string[];
@@ -140,10 +141,12 @@ function collectWhatsAppWebhookStatusCount(payload: unknown) {
 
 function rememberWhatsAppWebhookDiagnostic(
   payload: unknown,
-  messages: ReturnType<typeof parseWhatsAppWebhookPayload>
+  messages: ReturnType<typeof parseWhatsAppWebhookPayload>,
+  path = "/api/whatsapp/webhook"
 ) {
   recentWhatsAppWebhookDiagnostics.push({
     receivedAt: new Date().toISOString(),
+    path,
     parsedTextMessages: messages.length,
     statusEvents: collectWhatsAppWebhookStatusCount(payload),
     messageTypes: [...new Set(messages.map((message) => message.rawType))],
@@ -1458,7 +1461,7 @@ app.get("/api/whatsapp/diagnostics", (_req, res) => {
   });
 });
 
-app.get("/api/whatsapp/webhook", (req, res) => {
+function handleWhatsAppWebhookVerification(req: express.Request, res: express.Response) {
   const verification = verifyWhatsAppWebhook(req.query);
 
   if (!verification.ok) {
@@ -1470,12 +1473,12 @@ app.get("/api/whatsapp/webhook", (req, res) => {
   }
 
   res.status(200).send(verification.challenge);
-});
+}
 
-app.post("/api/whatsapp/webhook", async (req, res) => {
+function handleWhatsAppWebhookPost(req: express.Request, res: express.Response) {
   const readiness = getWhatsAppConnectorReadiness();
   const messages = parseWhatsAppWebhookPayload(req.body);
-  rememberWhatsAppWebhookDiagnostic(req.body, messages);
+  rememberWhatsAppWebhookDiagnostic(req.body, messages, req.path);
 
   if (readiness.ready) {
     if (messages.length > 0) {
@@ -1509,7 +1512,12 @@ app.post("/api/whatsapp/webhook", async (req, res) => {
     parsedMessages: messages.length,
     routingPlans: messages.map((message) => buildWhatsAppKodiRoutingPlan(message))
   });
-});
+}
+
+for (const whatsAppWebhookPath of ["/api/whatsapp/webhook", "/whatsapp/webhook", "/api/webhook", "/webhook"]) {
+  app.get(whatsAppWebhookPath, handleWhatsAppWebhookVerification);
+  app.post(whatsAppWebhookPath, handleWhatsAppWebhookPost);
+}
 
 app.get("/api/config/maps", (_req, res) => {
   const browserKey =
