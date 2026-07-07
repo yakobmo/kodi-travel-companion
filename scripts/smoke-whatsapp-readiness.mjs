@@ -28,12 +28,18 @@ if (!readiness.response.ok || !readiness.payload) {
   console.log(`- live stage: ${live.stage || "unknown"}`);
   console.log(`- token status: ${live.accessTokenStatus || "unknown"}`);
   console.log(`- phone numbers reachable: ${String(Boolean(live.phoneNumbersReachable))}`);
+  console.log(`- WABA subscription ensured: ${String(live.subscriptionEnsured === true)}`);
   console.log(`- next action: ${live.nextAction || "unknown"}`);
   console.log(`- blockers: ${asList(live.blockers).join(", ") || "none"}`);
   console.log(`- message: ${live.userMessage || "none"}`);
 
   if (requireLive && !live.liveReady) {
     console.error("WhatsApp is not live-ready.");
+    process.exitCode = 1;
+  }
+
+  if (requireLive && live.subscriptionEnsured !== true) {
+    console.error("WhatsApp WABA subscription is not confirmed for the Kodi app.");
     process.exitCode = 1;
   }
 }

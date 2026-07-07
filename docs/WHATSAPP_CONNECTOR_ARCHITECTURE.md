@@ -102,4 +102,11 @@ Readiness behavior:
 
 - expired or invalid token: `nextAction=replace_whatsapp_access_token_with_permanent_system_user_token`
 - valid token but no phone access: `nextAction=verify_whatsapp_business_account_phone_number_access`
+- valid token and phone access but the WABA is not subscribed to the Kodi Meta app: `nextAction=connect_whatsapp_business_account_to_kodi_app`
 - fully live: `nextAction=none`
+
+## Root-Cause Lesson - WABA Subscribed App
+
+Meta can show dashboard webhook payloads while the WhatsApp Business Account is subscribed to a different app than Kodi. Seeing any item in `/{WABA_ID}/subscribed_apps` is therefore not enough. Readiness must verify that the Kodi app subscription can be ensured by the server-side token.
+
+The backend now calls `POST /{WABA_ID}/subscribed_apps` during WhatsApp readiness and startup. If Meta rejects that call, Kodi must report `configured_but_not_live` instead of pretending WhatsApp is ready. This keeps the failure visible as an account/app permission issue rather than turning it into another fake agent bug.

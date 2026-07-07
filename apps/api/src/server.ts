@@ -171,7 +171,7 @@ function getMaskedEnvValue(name: string) {
   return value.length <= 6 ? "set" : `${value.slice(0, 3)}...${value.slice(-3)}`;
 }
 
-async function fetchWhatsAppGraphDiagnostic(path: string) {
+async function fetchWhatsAppGraphDiagnostic(path: string, init?: RequestInit) {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN?.trim() ?? "";
   if (!accessToken) {
     return {
@@ -182,7 +182,9 @@ async function fetchWhatsAppGraphDiagnostic(path: string) {
   }
 
   const response = await fetch(`https://graph.facebook.com/${getMetaGraphApiVersion()}${path}`, {
+    ...init,
     headers: {
+      ...(init?.headers ?? {}),
       Authorization: `Bearer ${accessToken}`
     }
   });
@@ -192,6 +194,50 @@ async function fetchWhatsAppGraphDiagnostic(path: string) {
     ok: response.ok,
     status: response.status,
     payload
+  };
+}
+
+function getWhatsAppSubscribedAppIds(result: Awaited<ReturnType<typeof fetchWhatsAppGraphDiagnostic>>) {
+  const payload = result.payload;
+  if (typeof payload !== "object" || payload === null || !Array.isArray((payload as { data?: unknown }).data)) {
+    return [];
+  }
+
+  return (payload as { data: unknown[] }).data
+    .map((item) => {
+      if (typeof item !== "object" || item === null) {
+        return "";
+      }
+
+      const id = (item as { id?: unknown }).id;
+      const nested = (item as { whatsapp_business_api_data?: { id?: unknown } }).whatsapp_business_api_data;
+      return typeof id === "string" ? id : typeof nested?.id === "string" ? nested.id : "";
+    })
+    .filter(Boolean);
+}
+
+async function ensureWhatsAppBusinessAccountSubscription() {
+  const connector = getWhatsAppConnectorReadiness();
+  const businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID?.trim() ?? "";
+
+  if (!connector.ready || !businessAccountId) {
+    return {
+      attempted: false,
+      ok: false,
+      reason: "connector_not_ready",
+      result: undefined as Awaited<ReturnType<typeof fetchWhatsAppGraphDiagnostic>> | undefined
+    };
+  }
+
+  const result = await fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/subscribed_apps`, {
+    method: "POST"
+  });
+
+  return {
+    attempted: true,
+    ok: result.ok,
+    reason: result.ok ? "subscription_ensured" : "meta_graph_rejected_subscription",
+    result
   };
 }
 
@@ -237,6 +283,7 @@ function classifyWhatsAppGraphToken(result: Awaited<ReturnType<typeof fetchWhats
 function buildWhatsAppLiveReadinessReport(input: {
   subscribedApps: Awaited<ReturnType<typeof fetchWhatsAppGraphDiagnostic>>;
   phoneNumbers: Awaited<ReturnType<typeof fetchWhatsAppGraphDiagnostic>>;
+  subscriptionEnsure?: Awaited<ReturnType<typeof ensureWhatsAppBusinessAccountSubscription>>;
 }) {
   const connector = getWhatsAppConnectorReadiness();
   const subscribedAppsTokenStatus = classifyWhatsAppGraphToken(input.subscribedApps);
@@ -246,7 +293,15 @@ function buildWhatsAppLiveReadinessReport(input: {
       ? phoneNumbersTokenStatus
       : subscribedAppsTokenStatus;
   const phoneNumbersReachable = input.phoneNumbers.ok;
-  const liveReady = connector.ready && accessTokenStatus === "valid" && phoneNumbersReachable;
+  const subscribedAppIds = getWhatsAppSubscribedAppIds(input.subscribedApps);
+  const subscriptionReachable = input.subscribedApps.ok;
+  const subscriptionEnsured = input.subscriptionEnsure?.ok === true;
+  const liveReady =
+    connector.ready &&
+    accessTokenStatus === "valid" &&
+    phoneNumbersReachable &&
+    subscriptionReachable &&
+    subscriptionEnsured;
   const blockers: string[] = [];
 
   if (!connector.enabled) {
@@ -273,6 +328,20 @@ function buildWhatsAppLiveReadinessReport(input: {
     blockers.push("phone_numbers_not_reachable");
   }
 
+  if (connector.ready && accessTokenStatus === "valid" && !subscriptionReachable) {
+    blockers.push("whatsapp_business_account_subscription_not_reachable");
+  }
+
+  if (
+    connector.ready &&
+    accessTokenStatus === "valid" &&
+    subscriptionReachable &&
+    input.subscriptionEnsure?.attempted &&
+    !input.subscriptionEnsure.ok
+  ) {
+    blockers.push("whatsapp_business_account_subscription_failed");
+  }
+
   const nextAction = !connector.enabled
     ? "enable_whatsapp_connector"
     : connector.missing.length > 0
@@ -285,7 +354,9 @@ function buildWhatsAppLiveReadinessReport(input: {
             ? "inspect_meta_graph_error"
             : !phoneNumbersReachable
               ? "verify_whatsapp_business_account_phone_number_access"
-              : "none";
+              : !subscriptionReachable || (input.subscriptionEnsure?.attempted && !input.subscriptionEnsure.ok)
+                ? "connect_whatsapp_business_account_to_kodi_app"
+                : "none";
 
   const userMessage = liveReady
     ? "WhatsApp connector is live-ready."
@@ -298,6 +369,9 @@ function buildWhatsAppLiveReadinessReport(input: {
     stage: liveReady ? "live_ready" : connector.ready ? "configured_but_not_live" : connector.status,
     accessTokenStatus,
     phoneNumbersReachable,
+    subscriptionReachable,
+    subscriptionEnsured,
+    subscribedAppCount: subscribedAppIds.length,
     blockers,
     nextAction,
     userMessage
@@ -1615,17 +1689,24 @@ app.get("/api/whatsapp/readiness", async (_req, res) => {
     return;
   }
 
+  const subscriptionEnsure = await ensureWhatsAppBusinessAccountSubscription();
   const [subscribedApps, phoneNumbers] = await Promise.all([
     fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/subscribed_apps`),
     fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/phone_numbers?fields=id,display_phone_number,verified_name`)
   ]);
-  const live = buildWhatsAppLiveReadinessReport({ subscribedApps, phoneNumbers });
+  const live = buildWhatsAppLiveReadinessReport({ subscribedApps, phoneNumbers, subscriptionEnsure });
 
   res.json({
     ...connector,
     liveReady: live.liveReady,
     status: live.liveReady ? "configured_not_verified" : connector.status,
-    live
+    live,
+    subscriptionEnsure: {
+      attempted: subscriptionEnsure.attempted,
+      ok: subscriptionEnsure.ok,
+      reason: subscriptionEnsure.reason,
+      status: subscriptionEnsure.result?.status
+    }
   });
 });
 
@@ -1649,11 +1730,12 @@ app.get("/api/whatsapp/meta-diagnostics", async (_req, res) => {
     return;
   }
 
+  const subscriptionEnsure = await ensureWhatsAppBusinessAccountSubscription();
   const [subscribedApps, phoneNumbers] = await Promise.all([
     fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/subscribed_apps`),
     fetchWhatsAppGraphDiagnostic(`/${businessAccountId}/phone_numbers?fields=id,display_phone_number,verified_name`)
   ]);
-  const live = buildWhatsAppLiveReadinessReport({ subscribedApps, phoneNumbers });
+  const live = buildWhatsAppLiveReadinessReport({ subscribedApps, phoneNumbers, subscriptionEnsure });
 
   res.json({
     ok: live.liveReady,
@@ -1665,6 +1747,13 @@ app.get("/api/whatsapp/meta-diagnostics", async (_req, res) => {
       phoneNumberIdMatchesConfigured:
         Boolean(phoneNumberId) &&
         JSON.stringify(phoneNumbers.payload ?? {}).includes(phoneNumberId)
+    },
+    subscriptionEnsure: {
+      attempted: subscriptionEnsure.attempted,
+      ok: subscriptionEnsure.ok,
+      reason: subscriptionEnsure.reason,
+      status: subscriptionEnsure.result?.status,
+      payload: subscriptionEnsure.result?.payload
     },
     graph: {
       subscribedApps,
@@ -3348,4 +3437,15 @@ app.get(/.*/, (req, res, next) => {
 
 app.listen(port, () => {
   console.log(`AI Travel Companion API listening on port ${port}`);
+  void ensureWhatsAppBusinessAccountSubscription()
+    .then((result) => {
+      if (result.attempted) {
+        console.log(
+          `WhatsApp WABA app subscription ${result.ok ? "ensured" : "not ensured"}: ${result.reason}`
+        );
+      }
+    })
+    .catch((error) => {
+      console.error("WhatsApp WABA app subscription check failed", error);
+    });
 });
