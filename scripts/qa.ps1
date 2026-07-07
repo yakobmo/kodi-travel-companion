@@ -239,6 +239,15 @@ if (
   throw "Web app must expose a clear in-app install shortcut for adding Kodi to the phone home screen."
 }
 
+if (
+  -not $webAppEarlySource.Contains("enableHighAccuracy: true") -or
+  -not $webAppEarlySource.Contains("maximumAge: 0") -or
+  -not $webAppEarlySource.Contains("accuracyMeters: agentCurrentLocation.accuracyMeters") -or
+  -not $webAppEarlySource.Contains("updatedAt: agentCurrentLocation.updatedAt")
+) {
+  throw "Web app must request fresh high-accuracy GPS and send accuracy/timestamp to Kodi."
+}
+
 $ownershipModelSource = Get-Content (Join-Path $root "docs\TRIP_OWNERSHIP_AND_USAGE_MODEL.md") -Raw
 if (
   -not $ownershipModelSource.Contains("shared trip-space agent") -or
@@ -361,6 +370,17 @@ if (
   -not $serverSource.Contains("Here-and-now request: live/current location takes precedence")
 ) {
   throw "Agent server flow must support here-and-now mode by preferring request live location over the planned timeline."
+}
+
+if (
+  -not $serverSource.Contains("shouldUsePreciseLocationIdentity") -or
+  -not $serverSource.Contains("accuracyMeters") -or
+  -not $serverSource.Contains("updatedAt") -or
+  -not $serverSource.Contains("reverseGeocodedLocation") -or
+  -not $serverSource.Contains("shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120") -or
+  -not $serverSource.Contains("hereAndNowContext ? 1500 : 3000")
+) {
+  throw "Kodi live-location flow must pass GPS accuracy/timestamp, reverse-geocode identity questions, and keep useful Google Places radius for near-me searches."
 }
 
 if ($serverSource.Contains("!shouldReverseGeocodeCurrentLocation(message) && openAiUsageGate.allowed")) {
@@ -1684,6 +1704,17 @@ if ($serverSource.Contains("agent_not_implemented") -or $serverSource.Contains("
 $kodiSource = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -Encoding utf8
 if (-not $kodiSource.Contains("buildVisibleLocationSummary")) {
   throw "Kodi agent is missing TripState-based location summary logic."
+}
+
+if (
+  -not $kodiSource.Contains("buildCurrentLocationAnswer") -or
+  -not $kodiSource.Contains("reverseGeocodedLocation") -or
+  -not $kodiSource.Contains("getNearbyReadablePlace") -or
+  -not $kodiSource.Contains("באיזה יישוב") -or
+  -not $kodiSource.Contains("מה הכתובת") -or
+  -not $kodiSource.Contains("איזה רחוב")
+) {
+  throw "Kodi must answer current-location identity questions with Google reverse geocode / nearby place context, not raw coordinates only."
 }
 
 if (

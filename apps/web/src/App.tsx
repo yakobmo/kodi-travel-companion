@@ -2692,7 +2692,12 @@ export function App() {
               canShareLiveLocation: false
             },
             currentLocation: agentCurrentLocation
-              ? { lat: agentCurrentLocation.lat, lng: agentCurrentLocation.lng }
+              ? {
+                  lat: agentCurrentLocation.lat,
+                  lng: agentCurrentLocation.lng,
+                  accuracyMeters: agentCurrentLocation.accuracyMeters,
+                  updatedAt: agentCurrentLocation.updatedAt
+                }
               : undefined
           },
           selectedPlace: shouldAttachSelectedPlaceToAgent(text) ? selectedPlace : undefined

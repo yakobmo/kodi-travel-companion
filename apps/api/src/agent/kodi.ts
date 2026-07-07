@@ -573,7 +573,21 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
     };
   }
 
-  if (includesAny(message, ["איפה אני", "איפה אני עכשיו", "מיקום נוכחי", "אתה רואה אותי", "איפה אנחנו"])) {
+  if (
+    includesAny(message, [
+      "איפה אני",
+      "איפה אני עכשיו",
+      "מיקום נוכחי",
+      "אתה רואה אותי",
+      "איפה אנחנו",
+      "באיזה יישוב",
+      "באיזה ישוב",
+      "איזה יישוב",
+      "איזה ישוב",
+      "מה הכתובת",
+      "איזה רחוב"
+    ])
+  ) {
     return {
       author: "קודי",
       intent: "group_location",

@@ -831,7 +831,50 @@ function shouldReverseGeocodeCurrentLocation(message: string) {
     "איפה אנחנו",
     "מיקום נוכחי",
     "אתה רואה אותי",
+    "יישוב",
+    "ישוב",
+    "כתובת",
+    "רחוב",
+    "לידי",
+    "לידינו",
+    "בסביבה",
+    "סביבה שלי",
+    "באזור שלי",
+    "אזור שלי",
+    "סביבי",
+    "קרוב אליי",
+    "קרוב אלי",
+    "כאן",
+    "כאן ועכשיו",
     "where am i",
+    "near me",
+    "around me",
+    "here",
+    "current location"
+  ]);
+}
+
+function shouldUsePreciseLocationIdentity(message: string) {
+  return includesAnyTerm(message, [
+    "איפה אני",
+    "איפה אני עכשיו",
+    "איפה אנחנו",
+    "מיקום נוכחי",
+    "אתה רואה אותי",
+    "באיזה יישוב",
+    "באיזה ישוב",
+    "איזה יישוב",
+    "איזה ישוב",
+    "מה הכתובת",
+    "איזו כתובת",
+    "איזה רחוב",
+    "שם הרחוב",
+    "יישוב מדויק",
+    "ישוב מדויק",
+    "כתובת מדויקת",
+    "רחוב מדויק",
+    "where am i",
+    "current address",
     "current location"
   ]);
 }
@@ -866,21 +909,25 @@ function getRequestCurrentLocation(context: unknown) {
     return undefined;
   }
 
-  const currentLocation = (context as { currentLocation?: { lat?: unknown; lng?: unknown } }).currentLocation;
+  const currentLocation = (
+    context as { currentLocation?: { lat?: unknown; lng?: unknown; accuracyMeters?: unknown; updatedAt?: unknown } }
+  ).currentLocation;
   if (typeof currentLocation?.lat !== "number" || typeof currentLocation.lng !== "number") {
     return undefined;
   }
 
   return {
     lat: currentLocation.lat,
-    lng: currentLocation.lng
+    lng: currentLocation.lng,
+    accuracyMeters: typeof currentLocation.accuracyMeters === "number" ? currentLocation.accuracyMeters : undefined,
+    updatedAt: typeof currentLocation.updatedAt === "string" ? currentLocation.updatedAt : undefined
   };
 }
 
 function withRequestCurrentLocation(
   tripState: ReturnType<typeof buildDemoTripState>,
   member: { id?: unknown; displayName?: unknown; role?: unknown },
-  currentLocation?: { lat: number; lng: number }
+  currentLocation?: { lat: number; lng: number; accuracyMeters?: number; updatedAt?: string }
 ) {
   if (!currentLocation) {
     return tripState;
@@ -917,7 +964,8 @@ function withRequestCurrentLocation(
         tripGroupId: item.member.tripGroupId,
         lat: currentLocation.lat,
         lng: currentLocation.lng,
-        updatedAt: now,
+        accuracyMeters: currentLocation.accuracyMeters,
+        updatedAt: currentLocation.updatedAt ?? now,
         source: "gps" as const
       },
       displayLabel: typeof member.displayName === "string" ? member.displayName : item.displayLabel,
@@ -2478,7 +2526,7 @@ app.post("/api/agent/message", async (req, res) => {
     ? await searchGooglePlacesText({
         query: buildExternalPlacesQuery(focusedReferenceMessage, { hereAndNow: hereAndNowContext }),
         ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext),
-        radiusMeters: 3000,
+        radiusMeters: shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120 : hereAndNowContext ? 1500 : 3000,
         languageCode: "he"
       })
     : undefined;

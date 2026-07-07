@@ -35,6 +35,8 @@ Public-list import correction completed on 2026-07-07: the saved Google Maps sha
 
 Location architecture correction: product-wise, Kodi is connected to the Google Maps context. The app should feel like normal Google Maps with Kodi over it. Implementation-wise, the browser still requires device/location permission before the app can use the user's live location; Kodi cannot silently inherit private live location from the user's Google Maps app or account.
 
+Live-location precision correction: Kodi must not answer location questions with raw coordinates when Google can translate the point. The web app now sends the fresh GPS reading with `accuracyMeters` and `updatedAt`; identity questions such as "where am I / which settlement / address / street" trigger Google reverse geocoding and a tight identity lookup, while "near me" recommendations keep a practical Google Places radius so Kodi can find useful nearby bakeries, attractions, food, fuel, or services.
+
 Trip-order correction: the default current trip target is derived from the ordered Google Maps trip points, not from a stale stored group destination. Group destination/route controls must be explicit admin actions and must not appear as a default block in the hamburger.
 
 Trip-list UX correction: the hamburger trip list is intentionally coarse. It defaults to `המסלול שלנו` and exposes only `קרוב אלינו`, `הכל`, `מקומות לינה`, and `אטרקציות`; finer grouping should be handled conversationally by Kodi instead of adding more visible filters.
