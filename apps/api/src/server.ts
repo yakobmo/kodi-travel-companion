@@ -74,6 +74,12 @@ import { buildKodiReplyFromContext, type AgentMessageResponse } from "./agent/ko
 import { tryBuildKodiReplyWithOpenAi } from "./agent/openaiAgent.js";
 import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
 import { reverseGeocodeLocation } from "./google/reverseGeocode.js";
+import {
+  buildWhatsAppKodiRoutingPlan,
+  getWhatsAppConnectorReadiness,
+  parseWhatsAppWebhookPayload,
+  verifyWhatsAppWebhook
+} from "./whatsapp/connector.js";
 import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
 import {
   buildTripTimelineFromGoogleMapOrder,
@@ -1266,6 +1272,38 @@ app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
   res.json(buildHealthPayload());
+});
+
+app.get("/api/whatsapp/readiness", (_req, res) => {
+  res.json(getWhatsAppConnectorReadiness());
+});
+
+app.get("/api/whatsapp/webhook", (req, res) => {
+  const verification = verifyWhatsAppWebhook(req.query);
+
+  if (!verification.ok) {
+    res.status(verification.status).json({
+      error: verification.reason,
+      connector: getWhatsAppConnectorReadiness()
+    });
+    return;
+  }
+
+  res.status(200).send(verification.challenge);
+});
+
+app.post("/api/whatsapp/webhook", (req, res) => {
+  const readiness = getWhatsAppConnectorReadiness();
+  const messages = parseWhatsAppWebhookPayload(req.body);
+
+  res.json({
+    ok: true,
+    connector: readiness,
+    mode: "dry_run",
+    accepted: readiness.ready,
+    parsedMessages: messages.length,
+    routingPlans: messages.map((message) => buildWhatsAppKodiRoutingPlan(message))
+  });
 });
 
 app.get("/api/config/maps", (_req, res) => {

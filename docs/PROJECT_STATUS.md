@@ -23,6 +23,8 @@ Shared-media product decision: group trip photos are a planned extension after t
 
 Message-notification product decision: Kodi should eventually support WhatsApp/Telegram-style mobile notifications for new group messages. This requires true Web Push/PWA infrastructure, not only an in-app badge. Notifications are opt-in per participant device, exclude the sender, avoid sensitive lock-screen details, and depend on browser/device support.
 
+WhatsApp connector direction: WhatsApp is a future transport channel into the same Kodi/group context, not a separate bot brain. V1 dry connector added on 2026-07-07 with safe readiness and webhook endpoints, parser for Meta WhatsApp Cloud API text payloads, masked phone identifiers, and dry routing plans only. It does not write messages into the group chat or send real outbound WhatsApp replies until Meta credentials, member linking, and sender backend are added deliberately.
+
 Product-language decision: Kodi should not present a trial mode to users. The product starts with a real trip account setup: manager account, Google trip source, manager location, invite link, and participant permissions. Any remaining legacy endpoint/model names are internal technical identifiers until a rename migration is completed.
 
 Map architecture correction: Google Maps is the product map engine. Kodi does not recreate Google Maps behaviors; it adds the agent/group/trip layer on top of Google Maps and uses fallback rendering only when a browser-visible Google Maps key is not configured.

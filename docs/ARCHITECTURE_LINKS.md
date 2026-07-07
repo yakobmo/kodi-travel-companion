@@ -16,5 +16,6 @@ Source planning docs:
 - `docs/KODI_AGENT_SPEC.md`
 - `docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md`
 - `docs/CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md`
+- `docs/WHATSAPP_CONNECTOR_ARCHITECTURE.md`
 
 This product core should stay aligned with those docs.

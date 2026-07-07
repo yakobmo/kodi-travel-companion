@@ -18,6 +18,7 @@ $requiredFiles = @(
   "docs/TRIP_OWNERSHIP_AND_USAGE_MODEL.md",
   "docs/SHARED_TRIP_MEDIA_ARCHITECTURE.md",
   "docs/CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md",
+  "docs/WHATSAPP_CONNECTOR_ARCHITECTURE.md",
   "scripts/apply-supabase-schema.mjs",
   "scripts/apply-supabase-schema.ps1",
   "scripts/apply-supabase-grants.mjs",
@@ -36,6 +37,7 @@ $requiredFiles = @(
   "apps/api/src/agent/openaiSpeech.ts",
   "apps/api/src/agent/tripContextResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
+  "apps/api/src/whatsapp/connector.ts",
   "apps/api/src/billing/tripUsagePool.ts",
   "apps/api/src/domain/types.ts",
   "apps/api/src/data/demoStorage.ts",
@@ -185,6 +187,32 @@ if (
   -not $pushNotificationsLinksSource.Contains("docs/CHAT_PUSH_NOTIFICATIONS_ARCHITECTURE.md")
 ) {
   throw "Chat push notifications must be documented across product UX, Web Push architecture, Supabase tables, deployment, and architecture links before implementation."
+}
+
+$whatsAppConnectorSource = Get-Content (Join-Path $root "docs\WHATSAPP_CONNECTOR_ARCHITECTURE.md") -Raw -Encoding UTF8
+$whatsAppConnectorCodeSource = Get-Content (Join-Path $root "apps\api\src\whatsapp\connector.ts") -Raw -Encoding UTF8
+$whatsAppEnvSource = Get-Content (Join-Path $root ".env.example") -Raw -Encoding UTF8
+$whatsAppServerSource = Get-Content (Join-Path $root "apps\api\src\server.ts") -Raw -Encoding UTF8
+$whatsAppLinksSource = Get-Content (Join-Path $root "docs\ARCHITECTURE_LINKS.md") -Raw -Encoding UTF8
+if (
+  -not $whatsAppConnectorSource.Contains("WhatsApp is a transport channel") -or
+  -not $whatsAppConnectorSource.Contains("V1 - Dry Connector") -or
+  -not $whatsAppConnectorSource.Contains("no real outbound WhatsApp messages") -or
+  -not $whatsAppConnectorCodeSource.Contains("getWhatsAppConnectorReadiness") -or
+  -not $whatsAppConnectorCodeSource.Contains("parseWhatsAppWebhookPayload") -or
+  -not $whatsAppConnectorCodeSource.Contains("verifyWhatsAppWebhook") -or
+  -not $whatsAppConnectorCodeSource.Contains("maskWhatsAppId") -or
+  -not $whatsAppEnvSource.Contains("WHATSAPP_CONNECTOR_ENABLED=false") -or
+  -not $whatsAppEnvSource.Contains("WHATSAPP_VERIFY_TOKEN=") -or
+  -not $whatsAppEnvSource.Contains("WHATSAPP_ACCESS_TOKEN=") -or
+  -not $whatsAppEnvSource.Contains("WHATSAPP_PHONE_NUMBER_ID=") -or
+  -not $whatsAppEnvSource.Contains("WHATSAPP_BUSINESS_ACCOUNT_ID=") -or
+  -not $whatsAppServerSource.Contains("app.get(`"/api/whatsapp/readiness`"") -or
+  -not $whatsAppServerSource.Contains("app.get(`"/api/whatsapp/webhook`"") -or
+  -not $whatsAppServerSource.Contains("app.post(`"/api/whatsapp/webhook`"") -or
+  -not $whatsAppLinksSource.Contains("docs/WHATSAPP_CONNECTOR_ARCHITECTURE.md")
+) {
+  throw "WhatsApp connector V1 must stay documented, dry-run only, and exposed through safe readiness/webhook endpoints without secrets."
 }
 
 $pushSchemaSource = Get-Content (Join-Path $root "supabase\schema.sql") -Raw -Encoding UTF8
