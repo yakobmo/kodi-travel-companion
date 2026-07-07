@@ -377,6 +377,17 @@ function buildAgentContextSummary(input: {
   };
 }
 
+function sanitizeProviderErrorForRuntime(error: string | undefined) {
+  if (!error) {
+    return undefined;
+  }
+
+  return error
+    .replace(/sk-[A-Za-z0-9_-]+/g, "[redacted-key]")
+    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [redacted-token]")
+    .slice(0, 220);
+}
+
 function includesAnyTerm(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
@@ -2640,6 +2651,7 @@ app.post("/api/agent/message", async (req, res) => {
     agentRuntime: {
       openAiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
       openAiModel: openAiReply?.model,
+      openAiError: sanitizeProviderErrorForRuntime(openAiReply?.error),
       fallbackUsed: reply.source === "rules",
       fastLane: false,
       latencyMs: Date.now() - agentStartedAt
