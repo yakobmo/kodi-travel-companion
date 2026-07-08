@@ -44,6 +44,10 @@ function getGeminiModel() {
   return process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
 }
 
+function hasGeminiProvider() {
+  return Boolean(getGeminiApiKey());
+}
+
 function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
@@ -627,6 +631,12 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
           lastError = geminiError;
         }
 
+        if (!hasGeminiProvider()) {
+          lastError = new Error(
+            "openai_quota_exceeded_and_gemini_fallback_not_configured: set GEMINI_API_KEY or GOOGLE_AI_API_KEY"
+          );
+        }
+
         break;
       }
 
@@ -668,6 +678,11 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   return {
     status: "error",
     model,
-    error: lastError instanceof Error ? lastError.message : "openai_agent_failed"
+    error:
+      lastError instanceof Error
+        ? lastError.message
+        : hasGeminiProvider()
+          ? "openai_agent_failed_after_gemini_fallback"
+          : "openai_agent_failed_and_gemini_fallback_not_configured"
   };
 }

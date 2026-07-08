@@ -662,3 +662,24 @@ Decision:
 QA/automation:
 
 - `scripts/smoke-whatsapp-webhook-live.mjs` verifies public webhook parsing and diagnostics without creating a chat member.
+
+### 28. Agent Provider Readiness Must Be A First-Class Smoke Test
+
+What happened:
+
+Kodi answered live open-ended travel questions through the deterministic rules layer while the actual AI provider path was failing. The user experienced this correctly as "Kodi is dead" or "Kodi became a dumb bot" because the UI still returned a polite answer instead of exposing that the agent brain was unavailable.
+
+Why it happened:
+
+Production returned an OpenAI `429` quota/billing error. Gemini fallback exists in code, but if `GEMINI_API_KEY` / `GOOGLE_AI_API_KEY` is not configured on Render, Kodi has no live AI provider and falls back to rules. The rules layer is useful for grounding and precise map operations, but it is not the product's agent intelligence.
+
+Decision:
+
+- Treat `source=rules` on a normal open-ended agent question as a provider-readiness failure, not as proof that Kodi works.
+- Keep the exact provider failure visible in `agentRuntime.openAiError`.
+- Add `scripts/smoke-agent-provider-readiness.mjs` and root script `smoke:agent-provider` so future debugging starts by proving whether the live answer came from the AI provider.
+- If live smoke reports OpenAI quota and no Gemini fallback, stop editing agent behavior and configure a backend AI provider secret in Render.
+
+QA/automation:
+
+- `node scripts/smoke-agent-provider-readiness.mjs --require-live` must pass before declaring the live agent healthy.

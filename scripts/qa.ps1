@@ -27,6 +27,7 @@ $requiredFiles = @(
   "scripts/dev-web.ps1",
   "scripts/smoke-google-places-live.mjs",
   "scripts/smoke-google-routes-live.mjs",
+  "scripts/smoke-agent-provider-readiness.mjs",
   "scripts/kodi-agent-regression.mjs",
   "scripts/smoke-local.mjs",
   "apps/api/package.json",
@@ -129,6 +130,10 @@ if (-not $packageSource.Contains("smoke:google-places-live")) {
 
 if (-not $packageSource.Contains("smoke:google-routes-live")) {
   throw "Root package.json must expose the live Google Routes smoke script."
+}
+
+if (-not $packageSource.Contains("smoke:agent-provider")) {
+  throw "Root package.json must expose the live Kodi agent provider smoke script."
 }
 
 $kodiAgentSpecSource = Get-Content (Join-Path $root "docs\KODI_AGENT_SPEC.md") -Raw -Encoding UTF8
