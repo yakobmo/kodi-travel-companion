@@ -8,12 +8,19 @@ const baseUrl = (baseArg || process.env.KODI_PUBLIC_URL || "https://kodi-travel-
 const probeMessage =
   "קודי, האם הטיול הזה מתאים למשפחה עם ילדים ומה היית משנה כדי שיהיה זורם יותר?";
 
-function classifyProviderIssue(runtime = {}) {
+function classifyProviderIssue(runtime = {}, source = "unknown") {
+  if (source === "openai" && runtime.openAiStatus === "ready" && !runtime.fallbackUsed) {
+    return {
+      kind: "none",
+      nextAction: "none"
+    };
+  }
+
   const error = String(runtime.openAiError || "");
   if (/429|quota|billing/i.test(error)) {
     return {
-      kind: "openai_quota",
-      nextAction: "Fix OpenAI billing/quota or configure GEMINI_API_KEY / GOOGLE_AI_API_KEY in Render."
+      kind: "ai_provider_quota",
+      nextAction: "Fix the configured AI provider billing/quota, or replace the backend AI key in Render."
     };
   }
   if (/gemini_fallback_not_configured|GEMINI_API_KEY|GOOGLE_AI_API_KEY/i.test(error)) {
@@ -73,7 +80,7 @@ async function main() {
   }
 
   const runtime = payload.agentRuntime || {};
-  const issue = classifyProviderIssue(runtime);
+  const issue = classifyProviderIssue(runtime, payload.source || "unknown");
   const summary = {
     baseUrl,
     source: payload.source || "unknown",

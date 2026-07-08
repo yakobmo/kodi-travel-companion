@@ -807,3 +807,4 @@ QA/automation:
 - Keep `scripts/smoke-agent-provider-readiness.mjs --require-live` as the live brain check.
 - Keep `/api/whatsapp/diagnostics` as the transport check.
 - Do not treat a healthy WhatsApp webhook as proof that Kodi's AI provider is healthy.
+- Do not write "agent ready" into status docs unless the live smoke returns an AI-provider source and `fallbackUsed=false`.
