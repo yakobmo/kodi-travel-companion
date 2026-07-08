@@ -171,6 +171,25 @@ function toValidReply(parsed: {
   };
 }
 
+function toReplyFromProviderOutput(
+  outputText: string,
+  fallbackIntent: AgentMessageResponse["intent"] = "general"
+): AgentMessageResponse {
+  try {
+    return toValidReply(extractJsonObject(outputText));
+  } catch (error) {
+    if (error instanceof Error && error.message !== "openai_response_missing_json") {
+      throw error;
+    }
+
+    return toValidReply({
+      text: outputText,
+      intent: fallbackIntent,
+      requiresAdminApproval: false
+    });
+  }
+}
+
 function buildInstructions() {
   return [
     "You are Kodi, an elite Hebrew AI travel companion inside a family/group trip chat.",
@@ -580,7 +599,7 @@ async function tryBuildKodiReplyWithGemini(input: OpenAiKodiReplyInput, options:
   return {
     status: "ready" as const,
     model: `gemini:${model}`,
-    reply: toValidReply(extractJsonObject(outputText))
+    reply: toReplyFromProviderOutput(outputText, input.rulesReply.intent)
   };
 }
 
@@ -676,7 +695,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       return {
         status: "ready",
         model: modelCandidate,
-        reply: toValidReply(extractJsonObject(outputText))
+        reply: toReplyFromProviderOutput(outputText, input.rulesReply.intent)
       };
     } catch (error) {
       lastError = error;
@@ -720,7 +739,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         return {
           status: "ready",
           model: modelCandidate,
-          reply: toValidReply(extractJsonObject(outputText)),
+          reply: toReplyFromProviderOutput(outputText, input.rulesReply.intent),
           error: "web_search_retry_without_tool"
         };
       } catch (retryError) {
