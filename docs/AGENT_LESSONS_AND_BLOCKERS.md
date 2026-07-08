@@ -784,3 +784,26 @@ QA/automation:
 
 - After every provider-adapter change, run build, QA, and public `scripts/smoke-agent-provider-readiness.mjs --require-live`.
 - The public smoke must show `source=openai` or another AI-provider source, `openAiStatus=ready`, and `fallbackUsed=false`.
+
+### 33. Provider Failure Must Be Visible, Not Disguised As Kodi
+
+What happened:
+
+Kodi looked alive in the UI but answered like a generic bot. WhatsApp delivery and webhook diagnostics were healthy, yet `/api/agent/message` could still return a deterministic rules reply when the configured AI provider failed. That made an infrastructure/model problem look like a bad travel-agent personality problem.
+
+Why it happened:
+
+The server used rules fallback as the final answer whenever the AI provider errored without a usable reply. This hid quota/auth/provider failures from the user and from QA. A configured AI provider failing is different from an intentionally unconfigured local development mode.
+
+Decision:
+
+- If no AI provider is configured, local rules can remain a development fallback.
+- If an AI provider is configured and fails, the response source must be `agent_unavailable`.
+- The user-facing answer must say Kodi is not connected to the AI model right now instead of inventing a travel answer.
+- Runtime diagnostics must expose `providerFailureVisible=true` so future QA can distinguish WhatsApp transport health from agent-brain health.
+
+QA/automation:
+
+- Keep `scripts/smoke-agent-provider-readiness.mjs --require-live` as the live brain check.
+- Keep `/api/whatsapp/diagnostics` as the transport check.
+- Do not treat a healthy WhatsApp webhook as proof that Kodi's AI provider is healthy.

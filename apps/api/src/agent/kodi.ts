@@ -34,7 +34,7 @@ export interface AgentMessageResponse {
   text: string;
   intent: "local_guide" | "route_creation" | "family_compromise" | "group_location" | "place_recommendation" | "general";
   requiresAdminApproval: boolean;
-  source: "rules" | "openai";
+  source: "rules" | "openai" | "agent_unavailable";
   recommendedPlaceId?: string;
 }
 

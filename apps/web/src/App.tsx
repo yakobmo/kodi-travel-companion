@@ -3945,7 +3945,7 @@ export function App() {
             <Sparkles size={42} aria-hidden="true" />
             <strong>לפני שיוצאים לדרך, קודי מפעיל את המערכת</strong>
             <span>
-              {setupState?.googleSource.importedPlacesCount ?? summary.total} נקודות טיול מוכנות · קבוצה משפחתית ·
+              {googleSourcePreview?.source.importedPlacesCount ?? setupState?.googleSource.importedPlacesCount ?? summary.total} נקודות טיול מוכנות · קבוצה משפחתית ·
               מיקום בהרשאה בלבד
             </span>
           </div>

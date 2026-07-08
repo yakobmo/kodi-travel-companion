@@ -785,6 +785,17 @@ function sanitizeProviderErrorForRuntime(error: string | undefined) {
     .slice(0, 220);
 }
 
+function buildAgentUnavailableReply(baseReply: AgentMessageResponse): AgentMessageResponse {
+  return {
+    ...baseReply,
+    text:
+      "קודי כרגע לא מחובר למודל ה-AI, ולכן אני לא רוצה להמציא תשובה. הווטסאפ והחיבור לאפליקציה עובדים, אבל צריך לתקן את מפתח/מכסת ה-AI בשרת ואז אחזור לענות כסוכן מלא.",
+    intent: "general",
+    requiresAdminApproval: false,
+    source: "agent_unavailable"
+  };
+}
+
 function includesAnyTerm(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
@@ -3236,6 +3247,16 @@ app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
 
   const googleSource = buildDemoGoogleSourcePreview();
   const refreshedTripState = await buildDemoTripStateAsync();
+  const syncedSetupState = {
+    ...setupState,
+    googleSource: {
+      ...setupState.googleSource,
+      state: googleSource.source.state,
+      displayName: googleSource.source.displayName,
+      importedPlacesCount: googleSource.source.importedPlacesCount,
+      lastCheckedAt: googleSource.source.lastCheckedAt ?? syncedAt
+    }
+  };
 
   agentTripStateCache = undefined;
 
@@ -3251,8 +3272,8 @@ app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
 
   res.json({
     ok: true,
-    tripGroupId: setupState.tripGroupId,
-    setupState,
+    tripGroupId: syncedSetupState.tripGroupId,
+    setupState: syncedSetupState,
     googleSource,
     tripState: refreshedTripState,
     pointsSync: {
@@ -3580,7 +3601,13 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
-  const selectedReply = openAiReply?.reply ?? rulesReply;
+  const providerFailed =
+    openAiUsageGate.allowed &&
+    openAiUsageGate.providerConfigured &&
+    !fastConcretePlacesReply &&
+    openAiReply?.status === "error" &&
+    !openAiReply.reply;
+  const selectedReply = openAiReply?.reply ?? (providerFailed ? buildAgentUnavailableReply(rulesReply) : rulesReply);
   const shouldAppendExternalPlaceNavigation =
     selectedReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
   const reply = enhanceKodiReplyWithNavigationLinks({
@@ -3599,7 +3626,8 @@ app.post("/api/agent/message", async (req, res) => {
       openAiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
       openAiModel: openAiReply?.model,
       openAiError: sanitizeProviderErrorForRuntime(openAiReply?.error),
-      fallbackUsed: reply.source === "rules",
+      fallbackUsed: reply.source !== "openai",
+      providerFailureVisible: reply.source === "agent_unavailable",
       fastLane: false,
       latencyMs: Date.now() - agentStartedAt
     },
