@@ -1027,17 +1027,11 @@ function shouldAttachSelectedPlaceToAgent(text: string) {
   ].some((term) => normalized.includes(term));
 }
 
-function isDirectFamilyChat(text: string) {
-  const normalized = text.trim().toLowerCase();
-  return ["אורייה", "אוריה", "עומרי", "אמא", "אבא", "נועה"].some((name) => normalized.includes(name));
-}
+const kodiWakeWordPattern = /(?:^|[\s,.;:!?()[\]{}"'\-])(kodi|\u05e7\u05d5\u05d3\u05d9)(?:$|[\s,.;:!?()[\]{}"'\-])/i;
 
 function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
   void currentMessages;
-  if (isDirectFamilyChat(text)) {
-    return false;
-  }
-  return true;
+  return kodiWakeWordPattern.test(text.normalize("NFKC").trim());
 }
 
 function getMapPosition(index: number, total: number) {

@@ -127,9 +127,9 @@ Kodi is a participant in one shared family/group chat.
 
 There is no separate "ask the bot" channel.
 
-Kodi is part of the group conversation. It is not limited to a wake word.
+Kodi is part of the group conversation, but it should not interrupt every normal family message.
 
-Kodi should receive normal trip/group messages and reason from context. Direct participant-to-participant chatter can remain group chatter.
+Kodi wakes when called by name (`קודי` / `Kodi`) or when the user uses an explicit Kodi action such as voice conversation or a place action button. Normal participant-to-participant chatter remains group chatter.
 
 When Kodi handles a message, it reads recent group context and then answers through the agent harness. Even a short call such as "קודי?" must not be intercepted by a hard-coded presence response.
 

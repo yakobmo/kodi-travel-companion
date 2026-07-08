@@ -64,12 +64,12 @@ Each layer has one job.
 
 ### 1. Conversation Routing Gate
 
-Kodi is not limited to a wake word. The default product behavior is:
+Kodi is a smart agent inside the group chat, but it should wake only when intentionally invited. The default product behavior is:
 
-- normal trip/group messages are routed to Kodi so the agent can reason from context
-- explicit calls such as `קודי`, `קודקס`, `Kodi`, or `Codex` are routed to Kodi
+- normal trip/group messages remain visible group chat and do not automatically wake Kodi
+- explicit calls such as `קודי` or `Kodi` are routed to Kodi
 - voice conversation mode routes to Kodi
-- direct participant-to-participant messages stay in the group
+- explicit Kodi UI actions route to Kodi
 
 Kodi must not be intercepted by a hard-coded presence response. The UI/backend should send the conversation event to the agent harness, not to canned `I am here` logic.
 

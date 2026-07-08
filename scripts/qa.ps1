@@ -977,16 +977,16 @@ $openAiSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts"
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
-  -not $appSource.Contains("return true;") -or
+  -not $appSource.Contains("kodiWakeWordPattern") -or
   -not $appSource.Contains("shouldWakeKodi(text, messages)")
 ) {
-  throw "Web app must route normal group messages to Kodi by default so the agent can reason from context."
+  throw "Web app must route Kodi wake-word messages to the agent while keeping normal group chat as group chat."
 }
 
 if (
-  -not $appSource.Contains("isDirectFamilyChat")
+  $appSource.Contains("isDirectFamilyChat")
 ) {
-  throw "Web app must keep only direct participant-to-participant chat out of Kodi's agent path."
+  throw "Web app must not rely on hard-coded family names to decide whether Kodi wakes."
 }
 
 if (-not $appSource.Contains("/api/trips/demo/state")) {
@@ -1316,18 +1316,17 @@ if (
 
 if (
   -not $appSource.Contains("function shouldWakeKodi") -or
-  -not $appSource.Contains("shouldAskKodi = shouldWakeKodi(text, messages)") -or
-  -not $appSource.Contains("isDirectFamilyChat") -or
-  -not $appSource.Contains("return true;")
+  -not $appSource.Contains("kodiWakeWordPattern") -or
+  -not $appSource.Contains("shouldAskKodi = options.forceKodi || shouldWakeKodi(text, messages)")
 ) {
-  throw "Web group chat must route messages to Kodi by default while direct participant-to-participant chat stays in the group."
+  throw "Web group chat must wake Kodi by name or explicit UI action, not by every normal group message."
 }
 
 if (
   -not $kodiAgentSpecSource.Contains("מה קורה אורייה") -or
-  -not $kodiAgentSpecSource.Contains("Kodi stays quiet")
+  -not $kodiAgentSpecSource.Contains("Kodi wakes when called")
 ) {
-  throw "Kodi agent spec must protect direct participant-to-participant messages while letting Kodi reason from normal trip chat."
+  throw "Kodi agent spec must document wake-word behavior for normal group chat."
 }
 
 if (

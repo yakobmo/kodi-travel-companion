@@ -583,7 +583,7 @@ async function sendChatMessageNotifications(input: {
 async function buildKodiMemberWelcomeMessage(memberName: string) {
   const setupState = await buildDemoTripSetupStateAsync();
   const tripName = setupState.setupSummary?.tripName?.trim() || "הטיול";
-  return `ברוך הבא ${memberName} לקבוצת הטיול ל${tripName} 🙂 שמחים שאתה איתנו. אני קודי, סוכן הטיול של הקבוצה, כאן כדי לעזור במסלול, במפה, בנקודות עניין, בניווט ובהמלצות בדרך.`;
+  return `ברוך הבא ${memberName} לקבוצת הטיול ל${tripName} 🙂 שמחים שאתה איתנו. אני קודי, סוכן הטיול של הקבוצה. כשתרצו להכניס אותי לשיחה, כתבו קודי ואני אעזור במסלול, במפה, בנקודות עניין, בניווט ובהמלצות בדרך.`;
 }
 
 async function buildAgentTripStateSnapshot() {
