@@ -762,3 +762,25 @@ Decision:
 QA/automation:
 
 - `scripts/qa.ps1` fails if the web client again treats `Boolean(currentLocation)` or `locationState === "enabled"` as fresh enough for near-me requests.
+
+### 32. Natural Provider Replies Must Not Fall Back To Rules
+
+What happened:
+
+The live agent provider was reachable, but Kodi still answered from deterministic rules. The public agent smoke reported `openAiStatus=error`, `openAiError=openai_response_missing_json`, `source=rules`, and `fallbackUsed=true`. The user experienced the result as a dead or dumb bot because the actual model answer was discarded before it could reach the chat.
+
+Why it happened:
+
+The adapter required every provider response to be wrapped as strict JSON. When Gemini/OpenAI returned a natural chat answer without JSON braces, the parser threw `openai_response_missing_json`. The server then silently used the rules layer. That turned a smart model into a scripted fallback, even though the product goal is an intelligent travel companion.
+
+Decision:
+
+- Accept valid structured JSON when the provider returns it.
+- If the provider returns natural text, preserve that natural answer instead of falling back to rules.
+- Keep the rules-derived intent as metadata so map/Waze/navigation affordances can still work.
+- Still fail on malformed JSON when the provider attempted JSON but returned an invalid object, because that is a real adapter error.
+
+QA/automation:
+
+- After every provider-adapter change, run build, QA, and public `scripts/smoke-agent-provider-readiness.mjs --require-live`.
+- The public smoke must show `source=openai` or another AI-provider source, `openAiStatus=ready`, and `fallbackUsed=false`.
