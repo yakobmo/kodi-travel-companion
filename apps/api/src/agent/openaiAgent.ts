@@ -41,7 +41,7 @@ function getGeminiApiKey() {
 }
 
 function getGeminiModel() {
-  return process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
+  return process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
 }
 
 function hasGeminiProvider() {
@@ -176,6 +176,7 @@ function buildInstructions() {
     "You are Kodi, an elite Hebrew AI travel companion inside a family/group trip chat.",
     "You are not a narrow FAQ bot. You reason like a capable travel agent: infer intent, inspect the trip map context, use recent conversation, ask a focused clarification when needed, and give practical next actions.",
     "You are the product's main value. Do not sound like a status panel, QA bot, setup wizard, or API wrapper. Answer the real travel question directly like a smart, warm, confident companion.",
+    "The current message is authoritative. Use recentMessages only to resolve pronouns, corrections, and direct follow-ups. Never answer an older question instead of the current message.",
     "Google Maps is the map engine and the trip knowledge anchor. Do not claim that you replace Google Maps, Waze, Booking, or Airbnb.",
     "Use the provided trip state, Google-imported places, lodging timeline, current/future trip context, Places results, Routes results, recent group chat, and visible member location.",
     "The app sends you the current Google Maps view context as tripState on every message when available: visible trip points, members, live/current location, selected place, active route, and Google source metadata. Treat that as the live app map layer and use it before saying you lack map access.",
@@ -217,7 +218,7 @@ function shouldEnableWebSearch(input: OpenAiKodiReplyInput) {
     return false;
   }
 
-  const text = `${input.message} ${input.recentMessages?.slice(-6).map((message) => message.text).join(" ") ?? ""}`.toLowerCase();
+  const text = input.message.toLowerCase();
 
   if (shouldPreferFastPlacesAnswer(input, text)) {
     return false;
@@ -376,7 +377,7 @@ function shouldUseReasoningModel(input: OpenAiKodiReplyInput) {
     return false;
   }
 
-  const text = `${input.message} ${input.recentMessages?.slice(-6).map((message) => message.text).join(" ") ?? ""}`.toLowerCase();
+  const text = input.message.toLowerCase();
 
   if (shouldPreferFastPlacesAnswer(input, text)) {
     return false;
@@ -469,12 +470,40 @@ function compactTripState(input: AgentMessageRequest["tripState"], options: { re
   };
 }
 
+function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMessages"]) {
+  const boilerplateFragments = [
+    "תשאלו אותי חופשי",
+    "אני כאן",
+    "אפשר לחפש נקודה קלה",
+    "אם מנהל מאשר",
+    "כשיהיה חיבור חי מלא"
+  ];
+
+  return (messages ?? [])
+    .filter((message) => typeof message.text === "string" && message.text.trim().length > 0)
+    .filter((message) => {
+      if (message.source !== "agent") {
+        return true;
+      }
+
+      return !boilerplateFragments.some((fragment) => message.text.includes(fragment));
+    })
+    .slice(-10)
+    .map((message) => ({
+      author: message.author,
+      text: message.text.slice(0, 700),
+      memberId: message.memberId,
+      source: message.source
+    }));
+}
+
 function buildAgentPayload(input: OpenAiKodiReplyInput, options: { reasoningMode: boolean; webSearchEnabled: boolean }) {
   return JSON.stringify({
     responseFormat: "json_object",
     member: input.member,
     message: input.message,
-    recentMessages: input.recentMessages?.slice(-20),
+    currentMessageIsAuthoritative: true,
+    recentMessages: sanitizeRecentMessagesForAgent(input.recentMessages),
     selectedPlace: input.selectedPlace,
     tripState: compactTripState(input.tripState, { reasoningMode: options.reasoningMode }),
     externalPlacesSearch: input.externalPlacesSearch,

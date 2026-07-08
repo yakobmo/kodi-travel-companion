@@ -436,13 +436,11 @@ if (
   -not $serverSource.Contains("accuracyMeters") -or
   -not $serverSource.Contains("updatedAt") -or
   -not $serverSource.Contains("reverseGeocodedLocation") -or
-  -not $serverSource.Contains("deterministicLocationIdentity") -or
-  -not $serverSource.Contains("!deterministicLocationIdentity") -or
-  -not $serverSource.Contains("shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120") -or
+  -not $serverSource.Contains("shouldUsePreciseLocationIdentity(currentMessage) ? 120") -or
   -not $serverSource.Contains("hereAndNowContext ? 15000 : 3000") -or
   -not $serverSource.Contains("restrictToLocation: hereAndNowContext")
 ) {
-  throw "Kodi live-location flow must pass GPS accuracy/timestamp, answer identity questions deterministically, reverse-geocode when possible, and restrict here-and-now Google Places searches to a useful live-location radius."
+  throw "Kodi live-location flow must pass GPS accuracy/timestamp, reverse-geocode when possible, and restrict here-and-now Google Places searches to a useful live-location radius without bypassing the agent."
 }
 
 $reverseGeocodeFunction = [regex]::Match($serverSource, "function shouldReverseGeocodeCurrentLocation\([\s\S]*?\n\}")
@@ -936,7 +934,7 @@ if (
   -not $serverSourceForContext.Contains("agentRuntime") -or
   -not $serverSourceForContext.Contains("fallbackUsed") -or
   -not $serverSourceForContext.Contains("buildFocusedReferenceMessage") -or
-  -not $serverSourceForContext.Contains("message: focusedReferenceMessage")
+  -not $serverSourceForContext.Contains("message: currentMessage")
 ) {
   throw "Kodi agent flow must use trip context and trip timeline resolvers before choosing destinations or external search anchors."
 }
@@ -1250,7 +1248,7 @@ if (-not $appSource.Contains("buildKodiConnectionErrorMessage")) {
   throw "Web app must show an explicit Kodi connection error when the agent call fails."
 }
 
-if (-not $serverSource.Contains("buildExternalPlacesQuery(focusedReferenceMessage, { hereAndNow: hereAndNowContext })")) {
+if (-not $serverSource.Contains("buildExternalPlacesQuery(currentMessage, { hereAndNow: hereAndNowContext })")) {
   throw "Kodi Google Places search must receive here-and-now context for live-location requests."
 }
 

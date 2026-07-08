@@ -169,6 +169,39 @@ const tripNature = await postAgent("קודי מה אופי הטיול שלנו �
 expectHealthyAgentResult("trip nature", tripNature);
 assertCheck("trip nature mentions north Greece or Pelion", /צפון יוון|פיליון|זגוריה|צומרקה/.test(String(tripNature.payload.text ?? "")));
 
+const tripNatureAfterStaleContext = await postAgent("קודי מה אופי הטיול שלנו ביוון?", {
+  recentMessages: [
+    {
+      author: "מנהל הטיול",
+      text: "אפשר נקודה קלה ליד Lake sources Louros River עם מינימום הליכה?",
+      source: "member",
+      memberId: "mom"
+    },
+    {
+      author: "קודי",
+      text: "אפשר לחפש נקודה קלה ליד Lake sources Louros River, עם מינימום הליכה ובלי לדחוף את כולם לכיוון שלא מתאים לילדים.",
+      source: "agent"
+    },
+    {
+      author: "מנהל הטיול",
+      text: "קודי מה אופי הטיול שלנו ביוון?",
+      source: "member",
+      memberId: "mom"
+    }
+  ]
+});
+expectHealthyAgentResult("trip nature ignores stale context", tripNatureAfterStaleContext);
+assertCheck(
+  "trip nature ignores stale lake context",
+  !/Lake sources|Louros/i.test(String(tripNatureAfterStaleContext.payload.text ?? "")),
+  String(tripNatureAfterStaleContext.payload.text ?? "").slice(0, 260)
+);
+assertCheck(
+  "trip nature after stale context mentions trip arc",
+  /Pelion|Zagori|Tzoumerka|Athens|Marathia|פיליון|זגוריה|צומרקה|אתונה/.test(String(tripNatureAfterStaleContext.payload.text ?? "")),
+  String(tripNatureAfterStaleContext.payload.text ?? "").slice(0, 260)
+);
+
 const lodgingOrder = await postAgent("קודי מה המלונות לפי הסדר?");
 expectHealthyAgentResult("lodging order", lodgingOrder);
 assertCheck("lodging order mentions lodging order", /שרשרת הלינות|לינות|מלונות/.test(String(lodgingOrder.payload.text ?? "")));

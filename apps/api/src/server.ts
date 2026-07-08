@@ -3299,9 +3299,10 @@ app.post("/api/agent/message", async (req, res) => {
       : undefined;
 
   const requestCurrentLocation = getRequestCurrentLocation(context);
-  const focusedReferenceMessage = buildFocusedReferenceMessage(message, recentMessages);
-  const hereAndNowContext =
-    shouldUseHereAndNowContext(message) || shouldUseHereAndNowContext(focusedReferenceMessage);
+  const currentMessage = message.trim();
+  const focusedReferenceMessage = buildFocusedReferenceMessage(currentMessage, recentMessages);
+  const referenceMessage = focusedReferenceMessage === currentMessage ? currentMessage : focusedReferenceMessage;
+  const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);
   const tripState = withRequestCurrentLocation(
     req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
     normalizedMember,
@@ -3312,7 +3313,7 @@ app.post("/api/agent/message", async (req, res) => {
     members: tripState.members
   });
 
-  const freshCurrentLocationRequired = shouldRequireFreshCurrentLocation(focusedReferenceMessage, {
+  const freshCurrentLocationRequired = shouldRequireFreshCurrentLocation(currentMessage, {
     hereAndNowContext,
     requestCurrentLocation
   });
@@ -3347,9 +3348,9 @@ app.post("/api/agent/message", async (req, res) => {
     return;
   }
 
-  const timelineReference = resolveTimelineReferenceForMessage(focusedReferenceMessage, tripState);
+  const timelineReference = resolveTimelineReferenceForMessage(referenceMessage, tripState);
   const fastTripAnswer = buildFastTripAnswer({
-    message: focusedReferenceMessage,
+    message: currentMessage,
     tripState,
     timelineReference
   });
@@ -3388,7 +3389,7 @@ app.post("/api/agent/message", async (req, res) => {
     });
     return;
   }
-  const placesUsageGate = shouldUseExternalPlacesSearch(focusedReferenceMessage)
+  const placesUsageGate = shouldUseExternalPlacesSearch(currentMessage)
     ? authorizeTripUsageCapability({
         usagePool,
         capability: "google_places",
@@ -3400,9 +3401,9 @@ app.post("/api/agent/message", async (req, res) => {
     : undefined;
   const externalPlacesSearch = placesUsageGate?.allowed
     ? await searchGooglePlacesText({
-      query: buildExternalPlacesQuery(focusedReferenceMessage, { hereAndNow: hereAndNowContext }),
+      query: buildExternalPlacesQuery(currentMessage, { hereAndNow: hereAndNowContext }),
       ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext, requestCurrentLocation),
-      radiusMeters: shouldUsePreciseLocationIdentity(focusedReferenceMessage) ? 120 : hereAndNowContext ? 15000 : 3000,
+      radiusMeters: shouldUsePreciseLocationIdentity(currentMessage) ? 120 : hereAndNowContext ? 15000 : 3000,
       restrictToLocation: hereAndNowContext,
       languageCode: "he"
     })
@@ -3415,7 +3416,7 @@ app.post("/api/agent/message", async (req, res) => {
     });
   }
   const reverseGeocodedLocation =
-    requestCurrentLocation && shouldReverseGeocodeCurrentLocation(message)
+    requestCurrentLocation && shouldReverseGeocodeCurrentLocation(currentMessage)
       ? await reverseGeocodeLocation({
           lat: requestCurrentLocation.lat,
           lng: requestCurrentLocation.lng,
@@ -3423,9 +3424,9 @@ app.post("/api/agent/message", async (req, res) => {
           regionCode: "il"
         })
       : undefined;
-  const tripReference = resolveTripReferenceForMessage(focusedReferenceMessage, tripState);
+  const tripReference = resolveTripReferenceForMessage(referenceMessage, tripState);
   const canEstimateRoute =
-    shouldUseRouteEstimate(focusedReferenceMessage) &&
+    shouldUseRouteEstimate(referenceMessage) &&
     tripReference.confidence !== "low" &&
     tripReference.origin &&
     tripReference.destination;
@@ -3444,7 +3445,7 @@ app.post("/api/agent/message", async (req, res) => {
     routeEstimate = await estimateGoogleRoute({
       origin: { lat: Number(tripReference.origin?.lat), lng: Number(tripReference.origin?.lng) },
       destination: { lat: Number(tripReference.destination?.lat), lng: Number(tripReference.destination?.lng) },
-      travelMode: includesAnyTerm(focusedReferenceMessage, ["הליכה", "ברגל"]) ? "WALK" : "DRIVE",
+      travelMode: includesAnyTerm(referenceMessage, ["הליכה", "ברגל"]) ? "WALK" : "DRIVE",
       languageCode: "he"
     });
     void safeRecordUsageGateEvent({
@@ -3455,12 +3456,12 @@ app.post("/api/agent/message", async (req, res) => {
   }
   const rulesReply = buildKodiReplyFromContext({
     ...req.body,
-    message: focusedReferenceMessage,
+    message: currentMessage,
     tripState,
     externalPlacesSearch,
     reverseGeocodedLocation,
     routeEstimate,
-    tripContextClarification: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.clarificationQuestion : undefined
+    tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined
   });
   const openAiUsageGate = authorizeTripUsageCapability({
     usagePool,
@@ -3470,25 +3471,21 @@ app.post("/api/agent/message", async (req, res) => {
       role: normalizedMember.role
     }
   });
-  const deterministicRouteDiagram = shouldUseDeterministicRouteDiagram(focusedReferenceMessage);
-  const deterministicTripStructure = shouldUseTripStructureAnswer(focusedReferenceMessage);
-  const deterministicLocationIdentity = shouldUsePreciseLocationIdentity(focusedReferenceMessage);
-  const fastConcretePlacesReply = shouldUseFastConcretePlacesReply(focusedReferenceMessage, rulesReply, externalPlacesSearch);
+  const deterministicRouteDiagram = shouldUseDeterministicRouteDiagram(currentMessage);
+  const fastConcretePlacesReply = shouldUseFastConcretePlacesReply(currentMessage, rulesReply, externalPlacesSearch);
   const openAiReply =
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
     !deterministicRouteDiagram &&
-    !deterministicTripStructure &&
-    !deterministicLocationIdentity &&
     !fastConcretePlacesReply
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
-          message: focusedReferenceMessage,
+          message: currentMessage,
           tripState,
           externalPlacesSearch,
           reverseGeocodedLocation,
           routeEstimate,
-          tripContextClarification: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.clarificationQuestion : undefined,
+          tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined,
           permissionPolicy,
           rulesReply
         })
@@ -3497,8 +3494,6 @@ app.post("/api/agent/message", async (req, res) => {
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
     !deterministicRouteDiagram &&
-    !deterministicTripStructure &&
-    !deterministicLocationIdentity &&
     !fastConcretePlacesReply &&
     openAiReply?.status === "ready"
   ) {
@@ -3508,7 +3503,7 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
-  const selectedReply = openAiReply?.reply ?? rulesReply;
+  const selectedReply = deterministicRouteDiagram ? rulesReply : openAiReply?.reply ?? rulesReply;
   const shouldAppendExternalPlaceNavigation =
     selectedReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
   const reply = enhanceKodiReplyWithNavigationLinks({
@@ -3543,8 +3538,8 @@ app.post("/api/agent/message", async (req, res) => {
       externalPlacesSearchStatus: externalPlacesSearch?.status,
       externalPlacesSearchRequest: externalPlacesSearch?.request,
       routeEstimateStatus: routeEstimate?.status,
-      tripContextConfidence: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.confidence : undefined,
-      tripContextReason: shouldUseRouteEstimate(focusedReferenceMessage) ? tripReference.reason : undefined,
+      tripContextConfidence: shouldUseRouteEstimate(referenceMessage) ? tripReference.confidence : undefined,
+      tripContextReason: shouldUseRouteEstimate(referenceMessage) ? tripReference.reason : undefined,
       timelineReferenceConfidence: hereAndNowContext ? "live_location" : timelineReference.confidence,
       timelineReferenceReason: hereAndNowContext
         ? "Here-and-now request: live/current location takes precedence over planned trip timeline."

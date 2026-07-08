@@ -56,6 +56,21 @@ Active technical direction:
 
 ## Recurring Blockers And Fixes
 
+### Agent Orchestration Must Stay Agent-First
+
+Problem:
+
+Kodi can look like a stupid bot even when the model provider is good if the server rewrites the user's current message with stale chat context, overuses deterministic fallback replies, or blocks the model behind "fast" rule paths.
+
+Decision:
+
+- The current user message is authoritative. Recent chat is context only for pronouns, corrections, and direct follow-ups.
+- Do not pass a rewritten/focused historical message as the model's `message`.
+- Use deterministic/rules replies only as fallback or for narrow direct actions, not as the primary answer path for broad travel reasoning.
+- Google Places/Routes enrich the answer; they do not replace the agent's reasoning.
+- Default Gemini should be a full fast agent model, not a lite model, unless explicitly changed by env.
+- Regression QA must include stale-context tests where an old location/topic must not hijack a new question.
+
 ### 0. Chat History Must Load The Latest Slice
 
 Problem:
