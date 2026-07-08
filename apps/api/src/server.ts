@@ -621,9 +621,73 @@ function isConversationMessage(value: unknown) {
   return typeof candidate.author === "string" && typeof candidate.text === "string";
 }
 
+function normalizeConversationText(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function isShortContextualFollowUp(message: string) {
+  const trimmed = message.trim();
+  const normalized = normalizeConversationText(trimmed);
+  if (trimmed.length > 56) {
+    return false;
+  }
+
+  return (
+    trimmed.length <= 24 ||
+    [
+      "מארתה",
+      "מאריתה",
+      "מרתה",
+      "מרתיה",
+      "marathia",
+      "כן",
+      "לא",
+      "אותו",
+      "אותה",
+      "שם",
+      "באתונה",
+      "אתונה",
+      "בפיליון",
+      "פיליון"
+    ].some((term) => normalized.includes(term))
+  );
+}
+
+function isRouteFollowUp(message: string) {
+  const normalized = normalizeConversationText(message);
+  return ["גשר", "אונטריו", "אנטיריו", "ריו", "חושך", "לפני החושך", "מסוכנת", "מסוכן", "הרים"].some((term) =>
+    normalized.includes(term)
+  );
+}
+
+function isUsefulPreviousQuestionForFollowUp(text: string) {
+  const normalized = normalizeConversationText(text);
+  return (
+    text.includes("?") ||
+    [
+      "איפה",
+      "מה",
+      "כמה",
+      "מתי",
+      "תן",
+      "סדר",
+      "מלון",
+      "מלונות",
+      "לינה",
+      "לינות",
+      "ישנים",
+      "מסלול",
+      "וויז",
+      "מפה",
+      "נגיע",
+      "נסיעה"
+    ].some((term) => normalized.includes(term))
+  );
+}
+
 function buildFocusedReferenceMessage(message: string, recentMessages: unknown[]) {
   const trimmed = message.trim();
-  const normalized = trimmed.toLowerCase();
+  const normalized = normalizeConversationText(trimmed);
   const shouldReset =
     normalized.includes("יצאת מהשיחה") ||
     normalized.includes("לא הבנת") ||
@@ -634,20 +698,11 @@ function buildFocusedReferenceMessage(message: string, recentMessages: unknown[]
     return trimmed;
   }
 
-  const needsPreviousQuestion =
-    trimmed.length <= 24 ||
-    ["מארתה", "מאריתה", "מרתה", "מרתיה", "marathia", "כן", "לא", "אותו", "אותה"].some((term) =>
-      normalized.includes(term)
-    );
-
-  const isRouteFollowUp = ["גשר", "אונטריו", "אנטיריו", "ריו", "חושך", "לפני החושך", "מסוכנת", "מסוכן", "הרים"].some(
-    (term) => normalized.includes(term)
-  );
-
-  if (!needsPreviousQuestion && !isRouteFollowUp) {
+  if (!isShortContextualFollowUp(trimmed) && !isRouteFollowUp(trimmed)) {
     return trimmed;
   }
 
+  const currentNormalized = normalizeConversationText(trimmed);
   const previousMemberMessages = recentMessages
     .filter(
       (item): item is { author: string; text: string; source?: string } =>
@@ -656,10 +711,20 @@ function buildFocusedReferenceMessage(message: string, recentMessages: unknown[]
         typeof (item as { text?: unknown }).text === "string" &&
         (item as { source?: unknown }).source !== "agent"
     )
-    .slice(-2)
-    .map((item) => item.text);
+    .map((item) => item.text.trim())
+    .filter((text) => text && normalizeConversationText(text) !== currentNormalized);
 
-  return [...previousMemberMessages, trimmed].join(" ");
+  const anchor =
+    previousMemberMessages
+      .slice()
+      .reverse()
+      .find((text) => isUsefulPreviousQuestionForFollowUp(text)) ?? previousMemberMessages.at(-1);
+
+  if (!anchor) {
+    return trimmed;
+  }
+
+  return `${anchor} ${trimmed}`;
 }
 
 function buildAgentContextSummary(input: {
@@ -727,7 +792,9 @@ function includesAnyTerm(text: string, terms: string[]) {
 function includesHebrewLiveLocationCue(text: string) {
   return [
     /\u05d1\u05d0\u05d6\u05d5\u05e8(?:\s+\u05e9\u05dc\u05d9|\s+\u05d4\u05e0\u05d5\u05db\u05d7\u05d9)?/u,
-    /\u05d1\u05e1\u05d1\u05d9\u05d1\u05d4/u,
+    /\u05d1\u05d0\u05d9\u05d6\u05d5\u05e8(?:\s+\u05e9\u05dc\u05d9|\s+\u05d4\u05e0\u05d5\u05db\u05d7\u05d9)?/u,
+    /\u05d1\u05e1\u05d1\u05d9\u05d1\u05d4(?:\s+\u05e9\u05dc\u05d9|\s+\u05d4\u05e0\u05d5\u05db\u05d7\u05d9)?/u,
+    /\u05e1\u05d1\u05d9\u05d1\u05d9/u,
     /\u05dc\u05d9\u05d3\u05d9/u,
     /\u05dc\u05d9\u05d3\u05d9\u05e0\u05d5/u,
     /\u05e7\u05e8\u05d5\u05d1\s+\u05d0\u05dc\u05d9(?:\u05d9)?/u,
@@ -928,6 +995,10 @@ function shouldUseRouteEstimate(message: string) {
 }
 
 function shouldUseFastConcretePlacesReply(message: string, rulesReply: AgentMessageResponse, externalPlacesSearch?: GooglePlacesTextSearchResult) {
+  if (process.env.KODI_FAST_PLACES_REPLY_ENABLED !== "true") {
+    return false;
+  }
+
   if (rulesReply.intent !== "place_recommendation" || externalPlacesSearch?.status !== "ready" || externalPlacesSearch.places.length === 0) {
     return false;
   }
@@ -1389,6 +1460,10 @@ function shouldRequireFreshCurrentLocation(
     return true;
   }
 
+  if (includesHebrewLiveLocationCue(message)) {
+    return true;
+  }
+
   return options.hereAndNowContext && !hasExplicitPlannedTripAreaCue(message);
 }
 
@@ -1399,7 +1474,7 @@ function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessa
     author: "קודי" as AgentMessageResponse["author"],
     text:
       `${greeting}כדי לענות על מקום קרוב אליך אני צריך מיקום נוכחי טרי מהמכשיר שלך. ` +
-      "לחץ על כפתור המיקום הנוכחי באפליקציה או אשר שיתוף מיקום, ואז שאל שוב. " +
+      "האפליקציה אמורה לבקש אותו אוטומטית; אם קפצה בקשת הרשאה, אשר שיתוף מיקום ושאל שוב. " +
       "אני לא אשתמש במיקום ישן כדי לא לשלוח אותך למקום לא רלוונטי.",
     intent: "group_location",
     requiresAdminApproval: false,
@@ -3302,6 +3377,10 @@ app.post("/api/agent/message", async (req, res) => {
   const currentMessage = message.trim();
   const focusedReferenceMessage = buildFocusedReferenceMessage(currentMessage, recentMessages);
   const referenceMessage = focusedReferenceMessage === currentMessage ? currentMessage : focusedReferenceMessage;
+  const actionMessage =
+    referenceMessage !== currentMessage && (isShortContextualFollowUp(currentMessage) || isRouteFollowUp(currentMessage))
+      ? referenceMessage
+      : currentMessage;
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);
   const tripState = withRequestCurrentLocation(
     req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
@@ -3350,7 +3429,7 @@ app.post("/api/agent/message", async (req, res) => {
 
   const timelineReference = resolveTimelineReferenceForMessage(referenceMessage, tripState);
   const fastTripAnswer = buildFastTripAnswer({
-    message: currentMessage,
+    message: actionMessage,
     tripState,
     timelineReference
   });
@@ -3456,7 +3535,7 @@ app.post("/api/agent/message", async (req, res) => {
   }
   const rulesReply = buildKodiReplyFromContext({
     ...req.body,
-    message: currentMessage,
+    message: actionMessage,
     tripState,
     externalPlacesSearch,
     reverseGeocodedLocation,
@@ -3476,11 +3555,10 @@ app.post("/api/agent/message", async (req, res) => {
   const openAiReply =
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
-    !deterministicRouteDiagram &&
     !fastConcretePlacesReply
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
-          message: currentMessage,
+          message: actionMessage,
           tripState,
           externalPlacesSearch,
           reverseGeocodedLocation,
@@ -3493,7 +3571,6 @@ app.post("/api/agent/message", async (req, res) => {
   if (
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
-    !deterministicRouteDiagram &&
     !fastConcretePlacesReply &&
     openAiReply?.status === "ready"
   ) {
@@ -3503,7 +3580,7 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
-  const selectedReply = deterministicRouteDiagram ? rulesReply : openAiReply?.reply ?? rulesReply;
+  const selectedReply = openAiReply?.reply ?? rulesReply;
   const shouldAppendExternalPlaceNavigation =
     selectedReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
   const reply = enhanceKodiReplyWithNavigationLinks({

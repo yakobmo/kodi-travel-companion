@@ -977,8 +977,8 @@ function isLocationDependentKodiRequest(text: string) {
   );
 }
 
-function shouldRefreshLocationForKodi(text: string, hasKnownLocation: boolean) {
-  return hasKnownLocation || isLocationDependentKodiRequest(text);
+function shouldRefreshLocationForKodi(text: string, hasFreshLocation: boolean) {
+  return !hasFreshLocation || isLocationDependentKodiRequest(text);
 }
 
 function buildSpeechText(text: string) {
@@ -2643,8 +2643,15 @@ export function App() {
   }
 
   async function getFreshCurrentLocationForAgent(text: string) {
-    if (!shouldRefreshLocationForKodi(text, Boolean(currentLocation) || locationState === "enabled") || !("geolocation" in navigator)) {
+    const needsLocation = isLocationDependentKodiRequest(text);
+    const hasFreshLocation = isFreshCurrentLocation(currentLocation);
+
+    if (!shouldRefreshLocationForKodi(text, hasFreshLocation)) {
       return currentLocation;
+    }
+
+    if (!("geolocation" in navigator)) {
+      return needsLocation && !hasFreshLocation ? null : currentLocation;
     }
 
     try {
@@ -2667,7 +2674,7 @@ export function App() {
       setSetupDraft((draft) => ({ ...draft, locationConsentExplained: true }));
       return nextLocation;
     } catch {
-      return currentLocation;
+      return needsLocation && !hasFreshLocation ? null : currentLocation;
     }
   }
 

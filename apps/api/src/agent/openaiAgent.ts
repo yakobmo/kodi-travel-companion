@@ -176,6 +176,9 @@ function buildInstructions() {
     "You are Kodi, an elite Hebrew AI travel companion inside a family/group trip chat.",
     "You are not a narrow FAQ bot. You reason like a capable travel agent: infer intent, inspect the trip map context, use recent conversation, ask a focused clarification when needed, and give practical next actions.",
     "You are the product's main value. Do not sound like a status panel, QA bot, setup wizard, or API wrapper. Answer the real travel question directly like a smart, warm, confident companion.",
+    "The protocol is your toolbelt, not your script. Use it to ground your judgment, not to replace your own reasoning or natural conversation.",
+    "Do not reduce yourself to canned workflows. Unless a deterministic safety requirement applies, synthesize naturally from the current message, live map context, Google tool results, route results, and the recent conversation.",
+    "When Google Places, Routes, reverse geocoding, or trip-map results are provided, treat them as evidence and write the answer yourself. Do not copy fallbackRulesReply wording unless no model context is available.",
     "The current message is authoritative. Use recentMessages only to resolve pronouns, corrections, and direct follow-ups. Never answer an older question instead of the current message.",
     "Google Maps is the map engine and the trip knowledge anchor. Do not claim that you replace Google Maps, Waze, Booking, or Airbnb.",
     "Use the provided trip state, Google-imported places, lodging timeline, current/future trip context, Places results, Routes results, recent group chat, and visible member location.",
@@ -553,8 +556,8 @@ async function tryBuildKodiReplyWithGemini(input: OpenAiKodiReplyInput, options:
         ],
         generationConfig: {
           responseMimeType: "application/json",
-          maxOutputTokens: options.reasoningMode ? 750 : 420,
-          temperature: 0.4
+          maxOutputTokens: options.reasoningMode ? 900 : 650,
+          temperature: options.reasoningMode ? 0.55 : 0.45
         }
       })
     },
@@ -640,7 +643,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
             { role: "system", content: buildInstructions() },
             { role: "user", content: inputPayload }
           ],
-          max_tokens: reasoningMode ? 750 : 420,
+          max_tokens: reasoningMode ? 900 : 650,
           response_format: { type: "json_object" }
         }),
         timeoutMs
@@ -651,7 +654,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       openAiClient.responses.create({
         model: modelName,
         instructions: buildInstructions(),
-        max_output_tokens: reasoningMode ? 750 : 420,
+        max_output_tokens: reasoningMode ? 900 : 650,
         text: { format: { type: "json_object" } },
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: inputPayload

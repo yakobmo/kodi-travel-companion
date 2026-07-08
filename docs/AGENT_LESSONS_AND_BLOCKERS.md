@@ -719,3 +719,46 @@ Decision:
 QA/automation:
 
 - After every agent-provider change, run local build first, then public `scripts/smoke-agent-provider-readiness.mjs --require-live` after Render deploy.
+
+### 30. Tools Must Ground Kodi, Not Replace Kodi
+
+What happened:
+
+Kodi kept feeling like a dumb bot even after Gemini/OpenAI provider work. Some server paths still answered normal travel questions from deterministic rules or fast lanes before the model was allowed to reason. That made Kodi repeat stale context, dodge map/route requests, and sound scripted even when Google context existed.
+
+Why it happened:
+
+The orchestration boundary was wrong. Google Places, Routes, reverse geocoding, trip-map imports, and fallback route diagrams are evidence/tooling. They are not the agent brain. When a rules answer becomes the primary answer for open-ended travel conversation, the product loses its main value.
+
+Decision:
+
+- Default architecture is agent-first: Gemini/OpenAI reasons and writes the reply.
+- Google Maps/Places/Routes/reverse geocoding are source-of-truth inputs for the agent.
+- Deterministic rules are fallback/guardrails only, except for explicit safety or admin-control decisions.
+- Fast Places and fast trip-context answers are opt-in only through environment flags.
+- Route-map requests must reach the model first; deterministic route diagrams are fallback grounding.
+
+QA/automation:
+
+- `scripts/qa.ps1` now protects the agent-first boundary and fails if route-map or fast trip paths become default model bypasses again.
+
+### 31. Location Context Must Be Fresh And Tool-Supplied
+
+What happened:
+
+Kodi could answer a "near me" question from an old stored GPS point because the web client treated any known location, or an enabled location state, as good enough. That made location-dependent questions feel random: the user might be in Dimona, but the agent could still reason from a previous coordinate.
+
+Why it happened:
+
+The boundary between product tools and agent reasoning was wrong. Gemini should remain the intelligent agent, but the app must supply fresh current-location evidence. Asking the user to manually send coordinates is bad product design and produces stale context.
+
+Decision:
+
+- For location-dependent questions, the web app must request fresh browser GPS automatically.
+- If fresh GPS is unavailable or permission is denied, the app must not send a stale location as if it were current.
+- The server may block a "near me" answer until a fresh current location is available, but the wording must explain that the app should request location automatically.
+- Gemini receives fresh location and Google evidence as tools/context; those tools ground the answer, they do not replace Gemini with canned logic.
+
+QA/automation:
+
+- `scripts/qa.ps1` fails if the web client again treats `Boolean(currentLocation)` or `locationState === "enabled"` as fresh enough for near-me requests.

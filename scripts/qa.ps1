@@ -549,9 +549,9 @@ if (
 
 if (
   -not $serverSource.Contains("shouldUseDeterministicRouteDiagram") -or
-  -not $serverSource.Contains("!deterministicRouteDiagram")
+  -not $serverSource.Contains("const selectedReply = openAiReply?.reply ?? rulesReply")
 ) {
-  throw "Kodi server flow must keep route-map/diagram requests deterministic so OpenAI cannot dodge or overwrite the built map answer."
+  throw "Kodi route-map/diagram requests must let the AI agent reason first; deterministic route diagrams are grounding fallback only."
 }
 
 if (
@@ -934,9 +934,17 @@ if (
   -not $serverSourceForContext.Contains("agentRuntime") -or
   -not $serverSourceForContext.Contains("fallbackUsed") -or
   -not $serverSourceForContext.Contains("buildFocusedReferenceMessage") -or
-  -not $serverSourceForContext.Contains("message: currentMessage")
+  -not $serverSourceForContext.Contains("const actionMessage") -or
+  -not $serverSourceForContext.Contains("message: actionMessage") -or
+  -not $serverSourceForContext.Contains("shouldUseExternalPlacesSearch(currentMessage)") -or
+  -not $serverSourceForContext.Contains("shouldRequireFreshCurrentLocation(currentMessage") -or
+  -not $serverSourceForContext.Contains("KODI_FAST_PLACES_REPLY_ENABLED")
 ) {
   throw "Kodi agent flow must use trip context and trip timeline resolvers before choosing destinations or external search anchors."
+}
+
+if ($serverSourceForContext.Contains("!deterministicRouteDiagram`n      ? await tryBuildKodiReplyWithOpenAi")) {
+  throw "Kodi must not skip the model for route-map requests; deterministic route diagrams are fallback grounding, not the agent."
 }
 
 $googleRoutesLiveSmokeSource = Get-Content (Join-Path $root "scripts\smoke-google-routes-live.mjs") -Raw
@@ -1256,6 +1264,8 @@ if (
   -not $serverSource.Contains('"באזור שלי"') -or
   -not $serverSource.Contains('"באזור"') -or
   -not $serverSource.Contains('"באזור הנוכחי"') -or
+  -not $serverSource.Contains("\u05d1\u05d0\u05d9\u05d6\u05d5\u05e8") -or
+  -not $serverSource.Contains("includesHebrewLiveLocationCue(message)") -or
   (-not $appSource.Contains('"באזור שלי"') -and -not $appSource.Contains("\u05d1\u05d0\u05d6\u05d5\u05e8 \u05e9\u05dc\u05d9"))
 ) {
   throw "Kodi must treat 'באזור', 'באזור הנוכחי' and 'באזור שלי' as live-location requests."
@@ -1280,6 +1290,14 @@ if (-not $serverSource.Contains('options.hereAndNow ? "cafe"') -or -not $serverS
 
 if (-not $openAiSource.Contains("Kodi speaks about himself in masculine Hebrew")) {
   throw "Kodi OpenAI prompt must keep Kodi's Hebrew self-reference masculine and consistent."
+}
+
+if (
+  -not $openAiSource.Contains("The protocol is your toolbelt, not your script") -or
+  -not $openAiSource.Contains("Do not reduce yourself to canned workflows") -or
+  -not $openAiSource.Contains("write the answer yourself")
+) {
+  throw "Kodi model prompt must preserve agent-first behavior: tools ground the answer, but the model reasons and writes naturally."
 }
 
 $agentTemplateLeaks = @(
@@ -1333,14 +1351,21 @@ if (
   -not $appSource.Contains("function isLocationDependentKodiRequest") -or
   -not $appSource.Contains("LOCATION_FRESHNESS_MS") -or
   -not $appSource.Contains("isFreshCurrentLocation(currentLocation)") -or
+  -not $appSource.Contains("shouldRefreshLocationForKodi(text, hasFreshLocation)") -or
+  -not $appSource.Contains("return !hasFreshLocation || isLocationDependentKodiRequest(text)") -or
   -not $appSource.Contains("isLocationDependentKodiRequest(text)") -or
   -not $appSource.Contains("\u05d1\u05d9\u05ea \u05e7\u05e4\u05d4") -or
   -not $appSource.Contains("\u05de\u05e1\u05e2\u05d3\u05d4") -or
   -not $appSource.Contains("\u05d0\u05d8\u05e8\u05e7\u05e6\u05d9\u05d4") -or
   -not $appSource.Contains("getFreshCurrentLocationForAgent(text)") -or
+  -not $appSource.Contains("return needsLocation && !hasFreshLocation ? null : currentLocation") -or
   -not $appSource.Contains("currentLocation: agentCurrentLocation")
 ) {
   throw "Web app must request or refresh a fresh current location before location-dependent Kodi recommendations."
+}
+
+if ($appSource.Contains('shouldRefreshLocationForKodi(text, Boolean(currentLocation) || locationState === "enabled")')) {
+  throw "Web app must not treat any old currentLocation or enabled location state as fresh enough for near-me Kodi requests."
 }
 
 if (
@@ -1529,11 +1554,11 @@ if (
 
 if (
   -not $serverSource.Contains("buildFastTripAnswer") -or
-  -not $serverSource.Contains("skipped_fast_lane") -or
+  -not $serverSource.Contains("KODI_FAST_TRIP_ANSWER_ENABLED") -or
   -not $serverSource.Contains("latencyMs") -or
   -not $serverSource.Contains("buildAgentTripStateSnapshot")
 ) {
-  throw "Kodi agent endpoint must keep a fast lane for simple trip-context answers before invoking the full AI agent."
+  throw "Kodi trip-context fast lane must be explicit opt-in so normal travel questions reach the full AI agent."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {
