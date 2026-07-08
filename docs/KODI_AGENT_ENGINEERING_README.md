@@ -7,6 +7,7 @@ It complements the product specs:
 - `docs/KODI_AGENT_SPEC.md`
 - `docs/KODI_AGENT_MASTER_SPEC_HE.md`
 - `docs/GOOGLE_INTEGRATION_PLAN.md`
+- `docs/GOOGLE_POWERED_KODI_ARCHITECTURE.md`
 - `docs/AGENT_LESSONS_AND_BLOCKERS.md`
 
 ## Why This Exists
@@ -41,6 +42,19 @@ Key lessons from the research:
 - State strategy must be explicit. Do not mix local chat replay, server-managed state, and hidden fallbacks without a contract.
 - Split specialists only when a different agent truly needs different tools, policies, or ownership. Otherwise keep Kodi as the main owner and call helper tools.
 - Debug with traces/logs/evals before changing prompts.
+
+## Provider And Source Boundary
+
+Kodi may use OpenAI, Gemini, or another approved model provider for reasoning. That provider is not the geographic source of truth.
+
+Google Maps Platform remains the geographic tool/source layer:
+
+- Places for nearby cafes, bakeries, restaurants, attractions, fuel, toilets, pharmacies, and reviews.
+- Routes for ETA and distance.
+- Geocoding / reverse geocoding for human-readable location.
+- Maps URLs and Waze links for handoff.
+
+The consumer Google Search / Google Maps AI answer box is not a supported backend dependency for Kodi. Do not build Kodi around scraping or proxying that UI. If Gemini is added, it must sit behind a provider adapter and run through the same context packet, tool policy, output contract, WhatsApp bridge, and regression suite.
 
 ## Kodi Agent Harness
 

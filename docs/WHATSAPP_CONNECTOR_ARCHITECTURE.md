@@ -132,3 +132,18 @@ node scripts/smoke-whatsapp-webhook-live.mjs https://kodi-travel-companion.onren
 It posts a realistic WhatsApp payload with `dryRun=1`, verifies that diagnostics recorded parsing, and confirms the message was not written to the group chat. This prevents test pollution such as fake smoke members while still proving the public webhook endpoint is reachable.
 
 If dry-run smoke succeeds but a real phone message does not appear under `recentWebhooks`, the confirmed failure is outside Kodi processing: Meta is not delivering the real message to the Render endpoint. Check app publish/test-number limits, webhook field subscription, phone allow-list, and Render sleep/instance behavior before editing connector code again.
+
+## Preservation Rule - WhatsApp Stays
+
+WhatsApp is a protected product surface for Kodi.
+
+Google, Gemini, OpenAI, Places, Routes, OAuth, map-sync, or agent-provider changes must not remove, bypass, or downgrade the WhatsApp connector. WhatsApp should remain an additional communication channel into the same Kodi/group-chat pipeline, not a separate simple bot and not a replacement for the app.
+
+When changing the agent:
+
+- keep inbound WhatsApp messages routed through the same Kodi agent pipeline as app chat,
+- keep readiness diagnostics for Meta delivery/token/subscription status,
+- do not edit connector code unless diagnostics show the connector processing layer is the root cause,
+- do not treat WhatsApp failures as proof that Kodi's agent prompt or provider is broken without delivery evidence.
+
+Related architecture decision: `docs/GOOGLE_POWERED_KODI_ARCHITECTURE.md`.

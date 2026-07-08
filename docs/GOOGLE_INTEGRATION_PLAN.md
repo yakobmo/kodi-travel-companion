@@ -243,3 +243,17 @@ Next implementation should deploy and public-smoke this path:
 - Google Maps URLs: https://developers.google.com/maps/documentation/urls/get-started
 - Places API Text Search: https://developers.google.com/maps/documentation/places/web-service/text-search
 - Routes API: https://developers.google.com/maps/documentation/routes
+
+## Architecture Decision - Google-Powered Kodi
+
+See `docs/GOOGLE_POWERED_KODI_ARCHITECTURE.md`.
+
+Kodi remains the travel agent. Google Maps Platform is the official geographic source/tool layer. The product must not depend on scraping or proxying the consumer Google Search / Google Maps AI answer box as if it were a backend API.
+
+Practical meaning:
+
+- Nearby practical questions use fresh location plus Google Places / Geocoding / Routes when configured.
+- Planned-trip questions use the Kodi trip layer, imported Google map points, lodging timeline, and Google Routes/Places as tools.
+- Google Maps account write-back remains OAuth-gated future work.
+- Gemini may be added later as a provider adapter, but it does not replace the Google Maps Platform tool layer.
+- WhatsApp remains a protected communication channel into the same Kodi agent pipeline.
