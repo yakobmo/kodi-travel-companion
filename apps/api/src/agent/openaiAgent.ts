@@ -24,7 +24,16 @@ export interface OpenAiKodiReplyResult {
   reply?: AgentMessageResponse;
   model?: string;
   error?: string;
+  providerAttempts?: string[];
 }
+
+type KodiProviderReadyReply = {
+  status: "ready";
+  model: string;
+  reply: AgentMessageResponse;
+  error?: string;
+  providerAttempts?: string[];
+};
 
 function getOpenAiClient() {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
@@ -41,7 +50,17 @@ function getGeminiApiKey() {
 }
 
 function getGeminiModel() {
-  return process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+  return process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
+}
+
+function getGeminiModelCandidates(primaryModel = getGeminiModel()) {
+  const configuredFallbacks =
+    process.env.GEMINI_AGENT_FALLBACK_MODELS?.split(",")
+      .map((model) => model.trim())
+      .filter(Boolean) ?? [];
+  const defaultFallbacks = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash-lite"];
+
+  return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
 }
 
 function hasGeminiProvider() {
@@ -542,14 +561,17 @@ function buildAgentPayload(input: OpenAiKodiReplyInput, options: { reasoningMode
   });
 }
 
-async function tryBuildKodiReplyWithGemini(input: OpenAiKodiReplyInput, options: { reasoningMode: boolean; timeoutMs: number }) {
+async function tryBuildKodiReplyWithGeminiModel(
+  input: OpenAiKodiReplyInput,
+  options: { reasoningMode: boolean; timeoutMs: number; model: string }
+): Promise<KodiProviderReadyReply | undefined> {
   const apiKey = getGeminiApiKey();
 
   if (!apiKey) {
     return undefined;
   }
 
-  const model = getGeminiModel();
+  const model = options.model;
   const payload = buildAgentPayload(input, {
     reasoningMode: options.reasoningMode,
     webSearchEnabled: false
@@ -603,6 +625,49 @@ async function tryBuildKodiReplyWithGemini(input: OpenAiKodiReplyInput, options:
   };
 }
 
+async function tryBuildKodiReplyWithGemini(
+  input: OpenAiKodiReplyInput,
+  options: { reasoningMode: boolean; timeoutMs: number }
+): Promise<KodiProviderReadyReply | undefined> {
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    return undefined;
+  }
+
+  const attempts: string[] = [];
+  let lastError: unknown;
+
+  for (const model of getGeminiModelCandidates()) {
+    try {
+      const reply = await tryBuildKodiReplyWithGeminiModel(input, { ...options, model });
+      if (reply) {
+        return attempts.length > 0
+          ? {
+              ...reply,
+              providerAttempts: [...attempts, `gemini:${model}:ready`]
+            }
+          : reply;
+      }
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error ?? "gemini_agent_failed");
+      attempts.push(`gemini:${model}:${message.slice(0, 140)}`);
+
+      if (isOpenAiTimeout(error)) {
+        break;
+      }
+
+      continue;
+    }
+  }
+
+  const errorMessage = lastError instanceof Error ? lastError.message : "gemini_agent_failed";
+  const error = new Error(errorMessage);
+  (error as Error & { providerAttempts?: string[] }).providerAttempts = attempts;
+  throw error;
+}
+
 export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): Promise<OpenAiKodiReplyResult> {
   const client = getOpenAiClient();
   const model = getAgentModel(input);
@@ -620,10 +685,12 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       }
     } catch (error) {
       if (!client) {
+        const providerAttempts = (error as Error & { providerAttempts?: string[] })?.providerAttempts;
         return {
           status: "error",
           model: `gemini:${getGeminiModel()}`,
-          error: error instanceof Error ? error.message : "gemini_agent_failed"
+          error: error instanceof Error ? error.message : "gemini_agent_failed",
+          providerAttempts
         };
       }
     }
@@ -636,10 +703,12 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         return geminiReply;
       }
     } catch (error) {
+      const providerAttempts = (error as Error & { providerAttempts?: string[] })?.providerAttempts;
       return {
         status: "error",
         model: `gemini:${getGeminiModel()}`,
-        error: error instanceof Error ? error.message : "gemini_agent_failed"
+        error: error instanceof Error ? error.message : "gemini_agent_failed",
+        providerAttempts
       };
     }
 
@@ -683,6 +752,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   }
 
   let lastError: unknown;
+  const providerAttempts: string[] = [];
 
   for (const modelCandidate of modelCandidates) {
     try {
@@ -699,6 +769,9 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       };
     } catch (error) {
       lastError = error;
+      providerAttempts.push(
+        `openai:${modelCandidate}:${error instanceof Error ? error.message.slice(0, 140) : String(error).slice(0, 140)}`
+      );
       if (isOpenAiTimeout(error)) {
         break;
       }
@@ -709,11 +782,13 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
           if (geminiReply) {
             return {
               ...geminiReply,
-              error: "openai_quota_fallback_to_gemini"
+              error: "openai_quota_fallback_to_gemini",
+              providerAttempts: [...providerAttempts, ...(geminiReply.providerAttempts ?? [])]
             };
           }
         } catch (geminiError) {
           lastError = geminiError;
+          providerAttempts.push(...((geminiError as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
         }
 
         if (!hasGeminiProvider()) {
@@ -744,6 +819,11 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         };
       } catch (retryError) {
         lastError = retryError;
+        providerAttempts.push(
+          `openai:${modelCandidate}:retry_without_web_search:${
+            retryError instanceof Error ? retryError.message.slice(0, 120) : String(retryError).slice(0, 120)
+          }`
+        );
       }
     }
   }
@@ -753,11 +833,13 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
     if (geminiReply) {
       return {
         ...geminiReply,
-        error: "openai_error_fallback_to_gemini"
+        error: "openai_error_fallback_to_gemini",
+        providerAttempts: [...providerAttempts, ...(geminiReply.providerAttempts ?? [])]
       };
     }
   } catch (geminiError) {
     lastError = geminiError;
+    providerAttempts.push(...((geminiError as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
   }
 
   return {
@@ -768,6 +850,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         ? lastError.message
         : hasGeminiProvider()
           ? "openai_agent_failed_after_gemini_fallback"
-          : "openai_agent_failed_and_gemini_fallback_not_configured"
+          : "openai_agent_failed_and_gemini_fallback_not_configured",
+    providerAttempts
   };
 }

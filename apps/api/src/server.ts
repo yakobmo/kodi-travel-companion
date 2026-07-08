@@ -3626,6 +3626,7 @@ app.post("/api/agent/message", async (req, res) => {
       openAiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
       openAiModel: openAiReply?.model,
       openAiError: sanitizeProviderErrorForRuntime(openAiReply?.error),
+      providerAttempts: openAiReply?.providerAttempts?.map((attempt) => sanitizeProviderErrorForRuntime(attempt)),
       fallbackUsed: reply.source !== "openai",
       providerFailureVisible: reply.source === "agent_unavailable",
       fastLane: false,
