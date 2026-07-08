@@ -667,6 +667,7 @@ function buildAgentContextSummary(input: {
   member: { id?: string; displayName?: string; role?: string };
   recentMessages: unknown[];
   tripState: ReturnType<typeof buildDemoTripState>;
+  freshCurrentLocationRequired?: boolean;
   externalPlacesSearchStatus?: string;
   externalPlacesSearchRequest?: GooglePlacesTextSearchResult["request"];
   routeEstimateStatus?: string;
@@ -693,6 +694,7 @@ function buildAgentContextSummary(input: {
     recentMessagesCount: input.recentMessages.length,
     hasTripState: true,
     visibleLiveLocationMembers: visibleLiveLocationMembers.length,
+    freshCurrentLocationRequired: input.freshCurrentLocationRequired,
     externalPlacesSearchStatus: input.externalPlacesSearchStatus,
     externalPlacesSearchRequest: input.externalPlacesSearchRequest,
     routeEstimateStatus: input.routeEstimateStatus,
@@ -1343,6 +1345,66 @@ function shouldUseHereAndNowContext(message: string) {
     "here",
     "current location"
   ]);
+}
+
+function hasExplicitPlannedTripAreaCue(message: string) {
+  return includesAnyTerm(message.toLowerCase(), [
+    "pilion",
+    "pelion",
+    "zagoria",
+    "tzoumerka",
+    "tsoumerka",
+    "athens",
+    "arta",
+    "marathia",
+    "averof",
+    "chorefto",
+    "damouchari",
+    "papingo",
+    "vikos",
+    "יוון",
+    "צפון יוון",
+    "פיליון",
+    "זגוריה",
+    "צומרקה",
+    "אתונה",
+    "ארטה",
+    "מלון",
+    "לינה"
+  ]);
+}
+
+function shouldRequireFreshCurrentLocation(
+  message: string,
+  options: {
+    hereAndNowContext: boolean;
+    requestCurrentLocation?: { lat: number; lng: number };
+  }
+) {
+  if (options.requestCurrentLocation) {
+    return false;
+  }
+
+  if (shouldReverseGeocodeCurrentLocation(message)) {
+    return true;
+  }
+
+  return options.hereAndNowContext && !hasExplicitPlannedTripAreaCue(message);
+}
+
+function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessageResponse {
+  const greeting = memberName ? `${memberName}, ` : "";
+
+  return {
+    author: "קודי" as AgentMessageResponse["author"],
+    text:
+      `${greeting}כדי לענות על מקום קרוב אליך אני צריך מיקום נוכחי טרי מהמכשיר שלך. ` +
+      "לחץ על כפתור המיקום הנוכחי באפליקציה או אשר שיתוף מיקום, ואז שאל שוב. " +
+      "אני לא אשתמש במיקום ישן כדי לא לשלוח אותך למקום לא רלוונטי.",
+    intent: "group_location",
+    requiresAdminApproval: false,
+    source: "rules"
+  };
 }
 
 function getRequestCurrentLocation(context: unknown) {
@@ -3249,6 +3311,41 @@ app.post("/api/agent/message", async (req, res) => {
     tripGroupId: tripState.trip.groupId,
     members: tripState.members
   });
+
+  const freshCurrentLocationRequired = shouldRequireFreshCurrentLocation(focusedReferenceMessage, {
+    hereAndNowContext,
+    requestCurrentLocation
+  });
+  if (freshCurrentLocationRequired) {
+    const reply = buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName));
+    res.json({
+      ...reply,
+      agentRuntime: {
+        openAiStatus: "skipped_fresh_location_required",
+        openAiModel: undefined,
+        fallbackUsed: false,
+        fastLane: true,
+        latencyMs: Date.now() - agentStartedAt
+      },
+      contextSummary: buildAgentContextSummary({
+        tripGroupId,
+        member: {
+          id: normalizedMember.id,
+          displayName: normalizedMember.displayName,
+          role: normalizedMember.role
+        },
+        recentMessages,
+        tripState,
+        freshCurrentLocationRequired: true,
+        externalPlacesSearchRequest: undefined,
+        timelineReferenceConfidence: "live_location_required",
+        timelineReferenceReason:
+          "Here-and-now request did not include a fresh request currentLocation, so Kodi must not reuse stale saved GPS.",
+        permissionPolicy
+      })
+    });
+    return;
+  }
 
   const timelineReference = resolveTimelineReferenceForMessage(focusedReferenceMessage, tripState);
   const fastTripAnswer = buildFastTripAnswer({

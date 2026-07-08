@@ -683,3 +683,24 @@ Decision:
 QA/automation:
 
 - `node scripts/smoke-agent-provider-readiness.mjs --require-live` must pass before declaring the live agent healthy.
+
+### 29. Gemini Key Must Actually Become The Primary Agent Brain
+
+What happened:
+
+Render had a Gemini key, but live Kodi still tried the OpenAI path first. When OpenAI returned missing/invalid JSON or timed out, Kodi fell back to deterministic rules. The user correctly experienced this as a dead or dumb agent, because the product answered without the real agent brain.
+
+Why it happened:
+
+Gemini was wired as a fallback, not as the preferred provider. With both providers present, a broken OpenAI path could still dominate the live answer path and hide Gemini behind slow failure behavior.
+
+Decision:
+
+- Prefer Gemini whenever `GEMINI_API_KEY` / `GOOGLE_AI_API_KEY` is configured.
+- Allow an explicit override only with `KODI_AGENT_PROVIDER=openai` or `AI_AGENT_PROVIDER=openai`.
+- Keep rules as a narrow deterministic guardrail, not as the normal open-ended travel agent.
+- Treat ordinary live answers from rules as a readiness failure until the agent-provider smoke proves otherwise.
+
+QA/automation:
+
+- After every agent-provider change, run local build first, then public `scripts/smoke-agent-provider-readiness.mjs --require-live` after Render deploy.

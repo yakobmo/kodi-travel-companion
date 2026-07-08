@@ -114,6 +114,22 @@ assertCheck("live cafe does not drift to Greece", !/Almiros|Velestino|Amaliapoli
 assertCheck("live cafe not family compromise template", !String(liveCafe.payload.text ?? "").includes("נקודה קלה ליד"));
 assertCheck("live cafe not children template", !String(liveCafe.payload.text ?? "").includes("שלא מתאים לילדים"));
 
+const noFreshLocationCafe = await postAgent("קודי איזה בית קפה יש באזור?");
+expectHealthyAgentResult("no fresh location cafe", noFreshLocationCafe);
+assertCheck(
+  "no fresh location cafe requests current location",
+  noFreshLocationCafe.payload.contextSummary?.freshCurrentLocationRequired === true &&
+    String(noFreshLocationCafe.payload.text ?? "").includes("מיקום נוכחי"),
+  String(noFreshLocationCafe.payload.text ?? "").slice(0, 260)
+);
+assertCheck(
+  "no fresh location cafe does not use Places",
+  !noFreshLocationCafe.payload.contextSummary?.externalPlacesSearchStatus,
+  `places=${noFreshLocationCafe.payload.contextSummary?.externalPlacesSearchStatus}`
+);
+assertCheck("no fresh location cafe has no stale Maps link", !String(noFreshLocationCafe.payload.text ?? "").includes("Google Maps"));
+assertCheck("no fresh location cafe has no stale Waze link", !String(noFreshLocationCafe.payload.text ?? "").includes("Waze"));
+
 const terseCafeAfterFamilyContext = await postAgent("בית קפה באזור", {
   currentLocation: {
     lat: 31.252973,
@@ -254,6 +270,12 @@ console.log(
           source: liveCafe.payload.source,
           openAiStatus: liveCafe.payload.agentRuntime?.openAiStatus,
           timeline: liveCafe.payload.contextSummary?.timelineReferenceConfidence
+        },
+        noFreshLocationCafe: {
+          elapsedMs: noFreshLocationCafe.elapsedMs,
+          source: noFreshLocationCafe.payload.source,
+          openAiStatus: noFreshLocationCafe.payload.agentRuntime?.openAiStatus,
+          freshCurrentLocationRequired: noFreshLocationCafe.payload.contextSummary?.freshCurrentLocationRequired
         },
         tripNature: {
           elapsedMs: tripNature.elapsedMs,

@@ -48,6 +48,21 @@ function hasGeminiProvider() {
   return Boolean(getGeminiApiKey());
 }
 
+function getPreferredAgentProvider() {
+  const configuredProvider =
+    process.env.KODI_AGENT_PROVIDER?.trim().toLowerCase() || process.env.AI_AGENT_PROVIDER?.trim().toLowerCase() || "";
+
+  if (configuredProvider === "openai") {
+    return "openai";
+  }
+
+  if (configuredProvider === "gemini" || configuredProvider === "google") {
+    return "gemini";
+  }
+
+  return hasGeminiProvider() ? "gemini" : "openai";
+}
+
 function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
@@ -489,6 +504,7 @@ async function tryBuildKodiReplyWithGemini(input: OpenAiKodiReplyInput, options:
     webSearchEnabled: false
   });
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const systemInstruction = buildInstructions();
   const response = (await fetchJsonWithTimeout(
     endpoint,
     {
@@ -498,7 +514,7 @@ async function tryBuildKodiReplyWithGemini(input: OpenAiKodiReplyInput, options:
       },
       body: JSON.stringify({
         systemInstruction: {
-          parts: [{ text: buildInstructions() }]
+          parts: [{ text: systemInstruction }]
         },
         contents: [
           {
@@ -543,6 +559,24 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   const enableWebSearch = shouldEnableWebSearch(input);
   const reasoningMode = shouldUseReasoningModel(input);
   const timeoutMs = getAgentTimeoutMs();
+  const preferredProvider = getPreferredAgentProvider();
+
+  if (preferredProvider === "gemini" && hasGeminiProvider()) {
+    try {
+      const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
+      if (geminiReply) {
+        return geminiReply;
+      }
+    } catch (error) {
+      if (!client) {
+        return {
+          status: "error",
+          model: `gemini:${getGeminiModel()}`,
+          error: error instanceof Error ? error.message : "gemini_agent_failed"
+        };
+      }
+    }
+  }
 
   if (!client) {
     try {
