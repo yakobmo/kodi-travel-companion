@@ -1242,8 +1242,11 @@ export function App() {
   const [mapsConfigLoaded, setMapsConfigLoaded] = useState(Boolean(buildTimeGoogleMapsApiKey));
   const googleMapElementRef = useRef<HTMLDivElement | null>(null);
   const googleMapInstanceRef = useRef<any | null>(null);
-  const googleMapMarkersRef = useRef<any[]>([]);
+  const googleMapPlaceMarkersRef = useRef<any[]>([]);
+  const googleMapDynamicMarkersRef = useRef<any[]>([]);
   const googleMapFitSignatureRef = useRef("");
+  const googleMapPlaceMarkerSignatureRef = useRef("");
+  const googleMapDynamicMarkerSignatureRef = useRef("");
   const locationWatchIdRef = useRef<number | null>(null);
   const autoLocationStartAttemptedRef = useRef(false);
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
@@ -1261,6 +1264,20 @@ export function App() {
   const speechRequestTokenRef = useRef(0);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const initialComposerRevealRef = useRef(false);
+  const sessionKodiReminderMessage = useMemo<ChatMessage>(
+    () => ({
+      id: "session-kodi-reminder",
+      author: "קודי",
+      source: "system",
+      text: 'אני כאן ברקע. אם תרצו להתייעץ, לשתף או לבקש עזרה, כתבו "קודי" ואני נכנס לשיחה.'
+    }),
+    []
+  );
+  const visibleChatMessages = useMemo(
+    () => [...messages, sessionKodiReminderMessage],
+    [messages, sessionKodiReminderMessage]
+  );
 
   useEffect(() => {
     voiceConversationActiveRef.current = voiceConversationActive;
@@ -1391,18 +1408,28 @@ export function App() {
       return;
     }
 
-    const hasNewMessage = messages.length > lastMessageCountRef.current;
+    const hasNewMessage = visibleChatMessages.length > lastMessageCountRef.current;
     const shouldScrollToLatest = hasNewMessage || shouldStickToLatestMessageRef.current;
-    lastMessageCountRef.current = messages.length;
+    lastMessageCountRef.current = visibleChatMessages.length;
 
     if (!shouldScrollToLatest) {
       return;
     }
 
-    window.requestAnimationFrame(() => {
+    const scrollToLatest = () => {
       container.scrollTop = container.scrollHeight;
-    });
-  }, [messages, isKodiThinking]);
+    };
+
+    window.requestAnimationFrame(scrollToLatest);
+
+    if (!initialComposerRevealRef.current) {
+      initialComposerRevealRef.current = true;
+      const timeoutId = window.setTimeout(scrollToLatest, 250);
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    return undefined;
+  }, [visibleChatMessages, isKodiThinking]);
 
   function updateMessageScrollIntent() {
     const container = messagesContainerRef.current;
@@ -2231,7 +2258,6 @@ export function App() {
     const center = { lat: Number(fallbackCenter.lat), lng: Number(fallbackCenter.lng) };
     let cancelled = false;
     const mapElement = googleMapElementRef.current;
-    const nextMarkers: any[] = [];
 
     async function renderGoogleMap() {
       try {
@@ -2254,11 +2280,44 @@ export function App() {
         });
         googleMapInstanceRef.current = map;
 
-        googleMapMarkersRef.current.forEach((marker) => marker.setMap?.(null));
-        googleMapMarkersRef.current = [];
+        const placeMarkerSignature = mapPlaces
+          .map((place) => `${place.id}:${place.lat ?? ""}:${place.lng ?? ""}:${place.name}`)
+          .join("|");
+        const dynamicMarkerSignature = [
+          currentLocation ? `self:${currentLocation.lat}:${currentLocation.lng}:${currentLocation.accuracyMeters ?? ""}` : "self:none",
+          ...visibleMembers.map((member) =>
+            member.liveLocation
+              ? `${member.id}:${member.liveLocation.lat}:${member.liveLocation.lng}:${member.name}`
+              : `${member.id}:none`
+          )
+        ].join("|");
 
         const bounds = new google.maps.LatLngBounds();
         let hasBounds = false;
+
+        if (googleMapPlaceMarkerSignatureRef.current !== placeMarkerSignature) {
+          googleMapPlaceMarkersRef.current.forEach((marker) => marker.setMap?.(null));
+          googleMapPlaceMarkersRef.current = [];
+
+          const nextPlaceMarkers: any[] = [];
+          mapPlaces.forEach((place) => {
+            if (typeof place.lat !== "number" || typeof place.lng !== "number") {
+              return;
+            }
+
+            const position = { lat: place.lat, lng: place.lng };
+            const marker = new google.maps.Marker({
+              map,
+              position,
+              title: place.name
+            });
+            marker.addListener("click", () => setSelectedPlaceId(place.id));
+            nextPlaceMarkers.push(marker);
+          });
+
+          googleMapPlaceMarkersRef.current = nextPlaceMarkers;
+          googleMapPlaceMarkerSignatureRef.current = placeMarkerSignature;
+        }
 
         mapPlaces.forEach((place) => {
           if (typeof place.lat !== "number" || typeof place.lng !== "number") {
@@ -2266,48 +2325,52 @@ export function App() {
           }
 
           const position = { lat: place.lat, lng: place.lng };
-          const marker = new google.maps.Marker({
-            map,
-            position,
-            title: place.name
-          });
-          marker.addListener("click", () => setSelectedPlaceId(place.id));
-          nextMarkers.push(marker);
           bounds.extend(position);
           hasBounds = true;
         });
 
+        if (googleMapDynamicMarkerSignatureRef.current !== dynamicMarkerSignature) {
+          googleMapDynamicMarkersRef.current.forEach((marker) => marker.setMap?.(null));
+          googleMapDynamicMarkersRef.current = [];
+
+          const nextDynamicMarkers: any[] = [];
+          if (currentLocation) {
+            nextDynamicMarkers.push(
+              new google.maps.Marker({
+                map,
+                position: { lat: currentLocation.lat, lng: currentLocation.lng },
+                title: "אני כאן"
+              })
+            );
+          }
+
+          visibleMembers.forEach((member) => {
+            if (!member.liveLocation) {
+              return;
+            }
+
+            nextDynamicMarkers.push(
+              new google.maps.Marker({
+                map,
+                position: { lat: member.liveLocation.lat, lng: member.liveLocation.lng },
+                title: member.name
+              })
+            );
+          });
+
+          googleMapDynamicMarkersRef.current = nextDynamicMarkers;
+          googleMapDynamicMarkerSignatureRef.current = dynamicMarkerSignature;
+        }
+
         if (currentLocation) {
-          const position = { lat: currentLocation.lat, lng: currentLocation.lng };
-          nextMarkers.push(
-            new google.maps.Marker({
-              map,
-              position,
-              title: "אני כאן"
-            })
-          );
-          bounds.extend(position);
+          bounds.extend({ lat: currentLocation.lat, lng: currentLocation.lng });
           hasBounds = true;
         }
 
-        visibleMembers.forEach((member) => {
-          if (!member.liveLocation) {
-            return;
-          }
-
-          nextMarkers.push(
-            new google.maps.Marker({
-              map,
-              position: { lat: member.liveLocation.lat, lng: member.liveLocation.lng },
-              title: member.name
-            })
-          );
-        });
         if (hasBounds && (!existingMap || googleMapFitSignatureRef.current !== mapFitSignature)) {
           map.fitBounds(bounds, 44);
           googleMapFitSignatureRef.current = mapFitSignature;
         }
-        googleMapMarkersRef.current = nextMarkers;
       } catch {
         // The fallback layer remains visible if Google Maps JS fails to load.
       }
@@ -2317,10 +2380,6 @@ export function App() {
 
     return () => {
       cancelled = true;
-      nextMarkers.forEach((marker) => marker.setMap?.(null));
-      if (googleMapMarkersRef.current === nextMarkers) {
-        googleMapMarkersRef.current = [];
-      }
     };
   }, [currentLocation, googleMapsApiKey, mapAnchorLocation, mapFitSignature, mapPlaces, selectedPlace, visibleMembers]);
 
@@ -2329,6 +2388,10 @@ export function App() {
       if (locationWatchIdRef.current !== null && "geolocation" in navigator) {
         navigator.geolocation.clearWatch(locationWatchIdRef.current);
       }
+      googleMapPlaceMarkersRef.current.forEach((marker) => marker.setMap?.(null));
+      googleMapDynamicMarkersRef.current.forEach((marker) => marker.setMap?.(null));
+      googleMapPlaceMarkersRef.current = [];
+      googleMapDynamicMarkersRef.current = [];
       speechRecognitionRef.current?.abort();
     },
     []
@@ -4827,7 +4890,7 @@ export function App() {
         </nav>
 
         <div className="messages" aria-live="polite" onScroll={updateMessageScrollIntent} ref={messagesContainerRef}>
-          {messages.map((message, index) => (
+          {visibleChatMessages.map((message, index) => (
             <article
               className={`message${message.author === "קודי" ? " kodi" : ""}${
                 message.author === activeMember.name ? " current-user" : ""

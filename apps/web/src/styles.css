@@ -1794,6 +1794,7 @@ input {
   padding: 18px;
   overflow: auto;
   overscroll-behavior: contain;
+  scroll-padding-bottom: 96px;
   scroll-behavior: smooth;
   background: #f3fbfd;
 }
@@ -2049,10 +2050,11 @@ input {
 }
 
 .composer {
-  position: sticky;
-  bottom: 0;
+  position: relative;
+  bottom: auto;
   z-index: 3;
   flex: 0 0 auto;
+  margin-top: auto;
   display: grid;
   direction: ltr;
   grid-template-columns: 72px 48px minmax(0, 1fr);
@@ -2429,8 +2431,8 @@ input {
   }
 
   .composer {
-    position: sticky;
-    bottom: 0;
+    position: relative;
+    bottom: auto;
     z-index: 6;
     min-height: calc(64px + env(safe-area-inset-bottom));
   }
