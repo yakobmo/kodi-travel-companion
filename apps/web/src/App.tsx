@@ -650,6 +650,7 @@ interface SetupDraft {
 interface JoinDraft {
   name: string;
   age: string;
+  whatsAppPhone: string;
 }
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : "");
@@ -1168,7 +1169,8 @@ export function App() {
   });
   const [joinDraft, setJoinDraft] = useState<JoinDraft>({
     name: "",
-    age: ""
+    age: "",
+    whatsAppPhone: ""
   });
   const [inviteCopyState, setInviteCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [inviteShareState, setInviteShareState] = useState<"idle" | "sharing" | "shared" | "copied" | "error">("idle");
@@ -3765,7 +3767,8 @@ export function App() {
         body: JSON.stringify({
           displayName: name,
           age: safeAge,
-          ageGroup: getAgeGroupFromDraft(joinDraft.age)
+          ageGroup: getAgeGroupFromDraft(joinDraft.age),
+          whatsAppPhone: joinDraft.whatsAppPhone.trim()
         })
       });
 
@@ -3777,6 +3780,11 @@ export function App() {
         member: TripMemberLocationResponse["members"][number];
         members: TripMemberLocationResponse["members"];
         welcomeMessage?: ChatMessage;
+        whatsappWelcome?: {
+          attempted: boolean;
+          status: string;
+          reason?: string;
+        };
       };
       joinedMember = mapMemberLocations([payload.member])[0] ?? nextMember;
       welcomeMessage = payload.welcomeMessage ?? null;
@@ -4068,6 +4076,16 @@ export function App() {
                 onChange={(event) => setJoinDraft((draft) => ({ ...draft, age: event.target.value }))}
                 placeholder="לא חובה"
                 value={joinDraft.age}
+              />
+            </label>
+            <label>
+              מספר ווטסאפ לקבלת הודעת ברוך הבא מקודי (לא חובה)
+              <input
+                aria-label="מספר ווטסאפ לקבלת הודעת ברוך הבא"
+                inputMode="tel"
+                onChange={(event) => setJoinDraft((draft) => ({ ...draft, whatsAppPhone: event.target.value }))}
+                placeholder="+972501234567"
+                value={joinDraft.whatsAppPhone}
               />
             </label>
             <button disabled={joinDraft.name.trim().length < 2} type="submit">

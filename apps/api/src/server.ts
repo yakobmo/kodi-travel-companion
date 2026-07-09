@@ -586,6 +586,88 @@ async function buildKodiMemberWelcomeMessage(memberName: string) {
   return `ברוך הבא ${memberName} לקבוצת הטיול ל${tripName} 🙂 שמחים שאתה איתנו. אני קודי, סוכן הטיול של הקבוצה. כשתרצו להכניס אותי לשיחה, כתבו קודי ואני אעזור במסלול, במפה, בנקודות עניין, בניווט ובהמלצות בדרך.`;
 }
 
+function normalizeWhatsAppJoinRecipient(value: unknown) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const digits = value.replace(/[^\d]/g, "");
+  if (digits.length < 8) {
+    return "";
+  }
+
+  if (digits.startsWith("00")) {
+    return digits.slice(2);
+  }
+
+  if (digits.startsWith("0")) {
+    return `972${digits.slice(1)}`;
+  }
+
+  return digits;
+}
+
+function getPublicAppUrlFromRequest(req: { get: (name: string) => string | undefined; protocol?: string }) {
+  const configuredUrl = process.env.PUBLIC_APP_URL?.trim() || process.env.RENDER_EXTERNAL_URL?.trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, "");
+  }
+
+  const host = req.get("host");
+  if (!host) {
+    return "https://kodi-travel-companion.onrender.com";
+  }
+
+  const protocol = req.get("x-forwarded-proto") ?? req.protocol ?? "https";
+  return `${protocol}://${host}`;
+}
+
+async function buildKodiWhatsAppMemberWelcomeMessage(input: { memberName: string; appUrl: string }) {
+  const setupState = await buildDemoTripSetupStateAsync();
+  const tripName = setupState.setupSummary?.tripName?.trim() || "הטיול";
+
+  return [
+    `ברוך הבא ${input.memberName} לקבוצת הטיול ${tripName} 🙂`,
+    "אני קודי, סוכן הטיול של הקבוצה.",
+    "אפשר לדבר איתי בצ'אט של האפליקציה, וגם כאן בווטסאפ כשהחיבור פעיל.",
+    "מומלץ לשמור אותי באנשי הקשר בשם: קודי - מלווה הטיול.",
+    `כניסה לאפליקציה: ${input.appUrl}`
+  ].join("\n");
+}
+
+async function sendKodiJoinWhatsAppWelcome(input: {
+  memberName: string;
+  rawRecipient: unknown;
+  appUrl: string;
+}) {
+  const recipient = normalizeWhatsAppJoinRecipient(input.rawRecipient);
+  if (!recipient) {
+    return {
+      attempted: false,
+      status: "skipped",
+      reason: "missing_or_invalid_whatsapp_phone"
+    };
+  }
+
+  const text = await buildKodiWhatsAppMemberWelcomeMessage({
+    memberName: input.memberName,
+    appUrl: input.appUrl
+  });
+  const result = await sendWhatsAppTextMessage({
+    to: recipient,
+    text,
+    timeoutMs: 6000
+  });
+
+  return {
+    attempted: true,
+    status: result.status,
+    recipientMasked: result.recipientMasked,
+    providerMessageId: result.providerMessageId,
+    error: result.error
+  };
+}
+
 async function buildAgentTripStateSnapshot() {
   const now = Date.now();
   if (agentTripStateCache && agentTripStateCacheMs > 0 && now - agentTripStateCache.loadedAt <= agentTripStateCacheMs) {
@@ -2229,7 +2311,7 @@ app.get("/api/trips/demo/members", async (_req, res) => {
 });
 
 app.post("/api/trips/demo/members", async (req, res) => {
-  const { displayName, age, ageGroup } = req.body ?? {};
+  const { displayName, age, ageGroup, whatsAppPhone } = req.body ?? {};
 
   if (typeof displayName !== "string" || displayName.trim().length < 2) {
     res.status(400).json({ error: "displayName is required" });
@@ -2251,6 +2333,11 @@ app.post("/api/trips/demo/members", async (req, res) => {
       tripGroupId: "group_family_greece_demo",
       member: existingMember,
       existingMember: true,
+      whatsappWelcome: {
+        attempted: false,
+        status: "skipped",
+        reason: "existing_member"
+      },
       members: currentMembers
     });
     return;
@@ -2277,11 +2364,17 @@ app.post("/api/trips/demo/members", async (req, res) => {
     memberId: member.member.id,
     source: "agent"
   });
+  const whatsappWelcome = await sendKodiJoinWhatsAppWelcome({
+    memberName: member.member.displayName,
+    rawRecipient: whatsAppPhone,
+    appUrl: getPublicAppUrlFromRequest(req)
+  });
 
   res.json({
     tripGroupId: "group_family_greece_demo",
     member,
     welcomeMessage,
+    whatsappWelcome,
     members: await loadDemoTripMembersAsync()
   });
 });
