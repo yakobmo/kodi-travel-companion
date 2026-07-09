@@ -49,6 +49,7 @@ type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
 const DEFAULT_NEARBY_MAP_RADIUS_KM = 40;
 const DEFAULT_VISIBLE_PLACE_LIMIT = 40;
 const LOCATION_FRESHNESS_MS = 2 * 60 * 1000;
+const LOCAL_LOCATION_AUTO_START_KEY = "kodi-location-auto-start";
 const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
 const LOCAL_REMOVED_PLACE_IDS_KEY = "kodi-removed-place-ids";
 const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
@@ -208,6 +209,8 @@ interface CurrentLocationState {
   updatedAt: string;
 }
 
+type LocationPermissionState = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
+
 interface DemoMember {
   id: string;
   name: string;
@@ -243,6 +246,39 @@ function rememberLocalSetupCompleted() {
   }
 
   window.localStorage.setItem(LOCAL_SETUP_COMPLETE_KEY, "true");
+}
+
+function rememberLocationAutoStart() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(LOCAL_LOCATION_AUTO_START_KEY, "true");
+  } catch {
+    // Private browsing or strict storage settings can block localStorage.
+  }
+}
+
+function shouldAutoStartLocation() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(LOCAL_LOCATION_AUTO_START_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function isPermissionDenied(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    Number((error as { code: unknown }).code) === 1
+  );
 }
 
 function getLocallyRemovedPlaceIds() {
@@ -1173,6 +1209,7 @@ export function App() {
   const [shortcutUrlDraft, setShortcutUrlDraft] = useState("");
   const [currentLocation, setCurrentLocation] = useState<CurrentLocationState | null>(null);
   const [locationState, setLocationState] = useState<"idle" | "requesting" | "enabled" | "error">("idle");
+  const [locationPermissionState, setLocationPermissionState] = useState<LocationPermissionState>("unknown");
   const [locationSyncState, setLocationSyncState] = useState<"idle" | "synced" | "blocked" | "error">("idle");
   const [memberRealtimeState, setMemberRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [chatRealtimeState, setChatRealtimeState] = useState<"idle" | "live" | "error">("idle");
@@ -1202,6 +1239,7 @@ export function App() {
   const googleMapMarkersRef = useRef<any[]>([]);
   const googleMapFitSignatureRef = useRef("");
   const locationWatchIdRef = useRef<number | null>(null);
+  const autoLocationStartAttemptedRef = useRef(false);
   const speechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const voiceTranscriptRef = useRef("");
   const voiceShouldSendRef = useRef(false);
@@ -2286,6 +2324,78 @@ export function App() {
     []
   );
 
+  useEffect(() => {
+    if (!("geolocation" in navigator)) {
+      setLocationPermissionState("unsupported");
+      return;
+    }
+
+    let cancelled = false;
+    let permissionStatus: PermissionStatus | null = null;
+
+    const maybeStartSavedLocation = (state: PermissionState | "unknown") => {
+      const hasSavedConsent = shouldAutoStartLocation() || setupDraft.locationConsentExplained;
+
+      if (
+        hasSavedConsent &&
+        state === "granted" &&
+        locationWatchIdRef.current === null &&
+        !autoLocationStartAttemptedRef.current
+      ) {
+        autoLocationStartAttemptedRef.current = true;
+        enablePersonalGps({ persistAutoStart: false });
+      }
+    };
+
+    const syncLocationPermission = async () => {
+      const permissionsApi = "permissions" in navigator ? navigator.permissions : undefined;
+
+      if (!permissionsApi?.query) {
+        setLocationPermissionState("unknown");
+        if (
+          shouldAutoStartLocation() &&
+          locationWatchIdRef.current === null &&
+          !autoLocationStartAttemptedRef.current
+        ) {
+          autoLocationStartAttemptedRef.current = true;
+          enablePersonalGps({ persistAutoStart: false });
+        }
+        return;
+      }
+
+      try {
+        permissionStatus = await permissionsApi.query({ name: "geolocation" as PermissionName });
+        if (cancelled) {
+          return;
+        }
+
+        setLocationPermissionState(permissionStatus.state);
+        maybeStartSavedLocation(permissionStatus.state);
+        permissionStatus.onchange = () => {
+          if (cancelled || !permissionStatus) {
+            return;
+          }
+
+          setLocationPermissionState(permissionStatus.state);
+          maybeStartSavedLocation(permissionStatus.state);
+        };
+      } catch {
+        if (!cancelled) {
+          setLocationPermissionState("unknown");
+        }
+      }
+    };
+
+    void syncLocationPermission();
+
+    return () => {
+      cancelled = true;
+      if (permissionStatus) {
+        permissionStatus.onchange = null;
+      }
+    };
+  }, [setupDraft.locationConsentExplained]);
+
   const normalizedGoogleLink = setupDraft.googleLink.trim().toLowerCase();
   const googleSourceRecognized =
     normalizedGoogleLink.includes("maps.app.goo.gl") || normalizedGoogleLink.includes("google.com/maps");
@@ -2303,6 +2413,18 @@ export function App() {
     hasLocationConsentExplained: setupDraft.locationConsentExplained,
     hasAiPlanExplained: setupDraft.aiPlanConfirmed
   };
+  const locationPermissionLabel =
+    locationPermissionState === "granted"
+      ? "הרשאת מיקום מאושרת. קודי ינסה להפעיל מיקום חי אוטומטית בכל פתיחה."
+      : locationPermissionState === "denied"
+        ? "הרשאת המיקום חסומה בדפדפן. צריך לפתוח את הרשאות האתר ולאפשר Location."
+        : locationPermissionState === "prompt"
+          ? "הדפדפן יבקש אישור מיקום בלחיצה על הפעלת מיקום."
+          : locationPermissionState === "unsupported"
+            ? "הדפדפן הזה לא תומך בשיתוף מיקום."
+            : shouldAutoStartLocation()
+              ? "נשמרה העדפה להפעלת מיקום. האפליקציה תנסה להפעיל אותו אוטומטית."
+              : "עדיין אין הרשאת מיקום קבועה למכשיר הזה.";
   const tripSourceStepReady = setupReadiness.hasOwner && setupReadiness.hasMembers && setupReadiness.hasGoogleSource;
   const activationSteps: Array<{ id: ActivationStep; label: string }> = [
     { id: "welcome", label: "קודי" },
@@ -2671,9 +2793,14 @@ export function App() {
 
       setCurrentLocation(nextLocation);
       setLocationState("enabled");
+      setLocationPermissionState("granted");
+      rememberLocationAutoStart();
       setSetupDraft((draft) => ({ ...draft, locationConsentExplained: true }));
       return nextLocation;
-    } catch {
+    } catch (error) {
+      if (isPermissionDenied(error)) {
+        setLocationPermissionState("denied");
+      }
       return needsLocation && !hasFreshLocation ? null : currentLocation;
     }
   }
@@ -3357,6 +3484,8 @@ export function App() {
 
       setCurrentLocation(nextLocation);
       setLocationState("enabled");
+      setLocationPermissionState("granted");
+      rememberLocationAutoStart();
       setSetupDraft((draft) => ({ ...draft, locationConsentExplained: true }));
 
       let remainingMessages: ChatMessage[] = [];
@@ -3366,8 +3495,11 @@ export function App() {
       });
 
       await askKodiAndAppendReply(pendingText, remainingMessages, undefined, nextLocation);
-    } catch {
+    } catch (error) {
       setLocationState("error");
+      if (isPermissionDenied(error)) {
+        setLocationPermissionState("denied");
+      }
       setMessages((currentMessages) =>
         currentMessages.map((message) =>
           message.id === requestMessageId
@@ -3416,15 +3548,21 @@ export function App() {
         "geolocation" in navigator && !hasReliableLocation && isLocationDependentKodiRequest(text);
 
       if (needsLocationShare) {
-        const locationRequestMessage: ChatMessage = {
-          id: `local-location-request-${Date.now()}`,
-          author: "קודי",
-          text: "כדי לענות טוב על זה אני צריך את המיקום שלך עכשיו. לשתף מיקום חד-פעמי לשאלה הזו?",
-          source: "system",
-          createdAt: new Date().toISOString(),
-          locationRequest: { pendingText: text }
-        };
-        setMessages((currentMessages) => [...currentMessages, locationRequestMessage]);
+        const freshLocation = await getFreshCurrentLocationForAgent(text);
+
+        if (freshLocation) {
+          await askKodiAndAppendReply(text, nextMessages, options.speakReply, freshLocation);
+        } else {
+          const locationRequestMessage: ChatMessage = {
+            id: `local-location-request-${Date.now()}`,
+            author: "קודי",
+            text: "כדי לענות טוב על זה אני צריך את המיקום שלך עכשיו. לשתף מיקום חד-פעמי לשאלה הזו?",
+            source: "system",
+            createdAt: new Date().toISOString(),
+            locationRequest: { pendingText: text }
+          };
+          setMessages((currentMessages) => [...currentMessages, locationRequestMessage]);
+        }
       } else {
         await askKodiAndAppendReply(text, nextMessages, options.speakReply);
       }
@@ -3763,9 +3901,10 @@ export function App() {
     }
   }
 
-  function enablePersonalGps() {
+  function enablePersonalGps(options: { persistAutoStart?: boolean } = {}) {
     if (!("geolocation" in navigator)) {
       setLocationState("error");
+      setLocationPermissionState("unsupported");
       return;
     }
 
@@ -3774,6 +3913,9 @@ export function App() {
     }
 
     setLocationState("requesting");
+    if (options.persistAutoStart !== false) {
+      rememberLocationAutoStart();
+    }
     locationWatchIdRef.current = navigator.geolocation.watchPosition(
       async (position) => {
         const nextLocation = {
@@ -3785,6 +3927,8 @@ export function App() {
 
         setCurrentLocation(nextLocation);
         setLocationState("enabled");
+        setLocationPermissionState("granted");
+        rememberLocationAutoStart();
         setSetupDraft((draft) => ({ ...draft, locationConsentExplained: true }));
 
         try {
@@ -3834,8 +3978,11 @@ export function App() {
           setLocationSyncState("error");
         }
       },
-      () => {
+      (error) => {
         setLocationState("error");
+        if (isPermissionDenied(error)) {
+          setLocationPermissionState("denied");
+        }
       },
       {
         enableHighAccuracy: true,
@@ -4100,14 +4247,14 @@ export function App() {
                   <button
                     disabled={locationState === "requesting"}
                     className="quiet-action"
-                    onClick={enablePersonalGps}
+                    onClick={() => enablePersonalGps()}
                     type="button"
                   >
                     {locationState === "requesting" ? "מרענן מיקום..." : "רענן מיקום"}
                   </button>
                 </>
               ) : (
-                <button disabled={locationState === "requesting"} className="primary-action" onClick={enablePersonalGps} type="button">
+                <button disabled={locationState === "requesting"} className="primary-action" onClick={() => enablePersonalGps()} type="button">
                   {locationState === "requesting" ? "מבקש הרשאת מיקום..." : "הפעל מיקום מנהל במפה"}
                 </button>
               )}
@@ -4168,7 +4315,7 @@ export function App() {
             aria-label="מיקום נוכחי"
             className={locationState === "enabled" || currentLocation ? "current-location-button active" : "current-location-button"}
             disabled={locationState === "requesting"}
-            onClick={enablePersonalGps}
+            onClick={() => enablePersonalGps()}
             title={currentLocation ? "עדכן מיקום נוכחי" : "הפעל מיקום נוכחי"}
             type="button"
           >
@@ -4240,7 +4387,7 @@ export function App() {
             ) : (
               <p>כבוי · נדרש אישור בדפדפן</p>
             )}
-            <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
+            <button disabled={locationState === "requesting"} onClick={() => enablePersonalGps()} type="button">
               {locationState === "requesting" ? "מבקש הרשאה..." : "הפעל מיקום במפה"}
             </button>
             {locationState === "error" ? <small>לא הצלחתי לקבל מיקום. אפשר להמשיך בלי לשתף מיקום.</small> : null}
@@ -4469,7 +4616,8 @@ export function App() {
         <section className="menu-block location-menu">
           <strong>מיקום בטלפון</strong>
           <p>{currentLocation ? `פעיל על Google Maps · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "כדי שקודי ידע איפה אתם, צריך לאשר מיקום במכשיר הזה."}</p>
-          <button disabled={locationState === "requesting"} onClick={enablePersonalGps} type="button">
+          <small>{locationPermissionLabel}</small>
+          <button disabled={locationState === "requesting"} onClick={() => enablePersonalGps()} type="button">
             {locationState === "requesting" ? "מבקש הרשאה..." : currentLocation ? "רענן מיקום" : "אשר מיקום"}
           </button>
         </section>
