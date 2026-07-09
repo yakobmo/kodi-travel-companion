@@ -50,7 +50,7 @@ function getGeminiApiKey() {
 }
 
 function getGeminiModel() {
-  return process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
+  return process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
 }
 
 function getGeminiModelCandidates(primaryModel = getGeminiModel()) {
@@ -58,7 +58,7 @@ function getGeminiModelCandidates(primaryModel = getGeminiModel()) {
     process.env.GEMINI_AGENT_FALLBACK_MODELS?.split(",")
       .map((model) => model.trim())
       .filter(Boolean) ?? [];
-  const defaultFallbacks = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash-lite"];
+  const defaultFallbacks = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"];
 
   return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
 }
@@ -71,7 +71,7 @@ function getPreferredAgentProvider() {
   const configuredProvider =
     process.env.KODI_AGENT_PROVIDER?.trim().toLowerCase() || process.env.AI_AGENT_PROVIDER?.trim().toLowerCase() || "";
 
-  if (configuredProvider === "openai") {
+  if (configuredProvider === "openai-only") {
     return "openai";
   }
 
@@ -194,10 +194,17 @@ function toReplyFromProviderOutput(
   outputText: string,
   fallbackIntent: AgentMessageResponse["intent"] = "general"
 ): AgentMessageResponse {
+  const trimmed = outputText.trim();
+  const looksLikeJson =
+    trimmed.startsWith("{") || trimmed.startsWith("```json") || trimmed.startsWith("```");
+
   try {
     return toValidReply(extractJsonObject(outputText));
   } catch (error) {
-    if (error instanceof Error && error.message !== "openai_response_missing_json") {
+    if (
+      looksLikeJson ||
+      (error instanceof Error && error.message !== "openai_response_missing_json")
+    ) {
       throw error;
     }
 
@@ -597,7 +604,7 @@ async function tryBuildKodiReplyWithGeminiModel(
         ],
         generationConfig: {
           responseMimeType: "application/json",
-          maxOutputTokens: options.reasoningMode ? 900 : 650,
+          maxOutputTokens: options.reasoningMode ? 1800 : 1400,
           temperature: options.reasoningMode ? 0.55 : 0.45
         }
       })
@@ -605,6 +612,7 @@ async function tryBuildKodiReplyWithGeminiModel(
     options.timeoutMs
   )) as {
     candidates?: Array<{
+      finishReason?: string;
       content?: {
         parts?: Array<{
           text?: string;
@@ -617,6 +625,11 @@ async function tryBuildKodiReplyWithGeminiModel(
       ?.map((part) => part.text ?? "")
       .join("")
       .trim() ?? "";
+  const finishReason = response.candidates?.[0]?.finishReason ?? "";
+
+  if (finishReason === "MAX_TOKENS") {
+    throw new Error("gemini_response_truncated_max_tokens");
+  }
 
   return {
     status: "ready" as const,
@@ -731,7 +744,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
             { role: "system", content: buildInstructions() },
             { role: "user", content: inputPayload }
           ],
-          max_tokens: reasoningMode ? 900 : 650,
+          max_tokens: reasoningMode ? 1800 : 1400,
           response_format: { type: "json_object" }
         }),
         timeoutMs
@@ -742,7 +755,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
       openAiClient.responses.create({
         model: modelName,
         instructions: buildInstructions(),
-        max_output_tokens: reasoningMode ? 900 : 650,
+        max_output_tokens: reasoningMode ? 1800 : 1400,
         text: { format: { type: "json_object" } },
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: inputPayload
