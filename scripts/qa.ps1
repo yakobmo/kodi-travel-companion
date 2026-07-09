@@ -605,7 +605,8 @@ if (
   -not $webAppSource.Contains('"voice-sent"') -or
   -not $webAppSource.Contains("submitChatText(spokenText,") -or
   -not $webAppSource.Contains("voiceConversationActive") -or
-  -not $webAppSource.Contains("voice-conversation-toggle") -or
+  -not $webAppSource.Contains("voice-conversation-inline-button") -or
+  -not $webAppSource.Contains("message-action-row") -or
   -not $webAppSource.Contains("scheduleVoiceConversationListening") -or
   -not $webAppSource.Contains('forceKodi: voiceMode === "conversation"') -or
   -not $webAppSource.Contains('speakReply: voiceMode === "conversation"') -or

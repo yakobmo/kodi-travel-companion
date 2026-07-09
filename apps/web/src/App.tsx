@@ -1,12 +1,16 @@
 import {
   Bell,
+  Camera,
   CheckCircle2,
   Download,
   ExternalLink,
+  Home,
   MapPin,
   Menu,
+  MessageCircle,
   Mic,
   Navigation,
+  Plus,
   Radio,
   ShieldCheck,
   Share2,
@@ -2178,6 +2182,10 @@ export function App() {
   const selectedPlace = places.find((place) => place.id === selectedPlaceId) ?? visiblePlaces[0] ?? places[0];
   const canNavigate = typeof selectedPlace?.lat === "number" && typeof selectedPlace?.lng === "number";
   const externalShortcuts = buildExternalAppShortcuts(selectedPlace);
+  const wazeShortcutHref =
+    typeof selectedPlace?.lat === "number" && typeof selectedPlace?.lng === "number"
+      ? `https://waze.com/ul?ll=${selectedPlace.lat},${selectedPlace.lng}&navigate=yes`
+      : `https://waze.com/ul?q=${encodeURIComponent(selectedPlace?.name ?? "travel")}`;
   const mapProviderStatus = getMapProviderStatus(googleMapsApiKey, mapsConfigLoaded);
   const mapFocusSummary =
     mapPlaces.length > 0
@@ -4556,6 +4564,23 @@ export function App() {
         <section className="menu-block members-menu" aria-label="ניהול חברי הקבוצה">
           <strong>חברי הקבוצה</strong>
           <p>הצטרפות פשוטה: שם, גיל ואישור מיקום מהמכשיר. הסוכן, המפה וההרשאות נשארים תחת מנהל הטיול.</p>
+          <div className="member-pills menu-member-pills" aria-label="חברי קבוצה">
+            {members.map((member, index) => (
+              <button
+                className={`${member.locationSharing === "enabled" ? "sharing-on" : "sharing-off"} ${
+                  activeMember.id === member.id ? "active-speaker" : ""
+                }`}
+                key={member.id}
+                onClick={() => setActiveMemberId(member.id)}
+                type="button"
+              >
+                {index === 0 ? <Users size={13} aria-hidden="true" /> : null}
+                {member.name}
+              </button>
+            ))}
+            <span className="kodi-pill">קודי</span>
+          </div>
+          <div className="active-speaker-note menu-active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
           <div className="member-management-list">
             {members.map((member) => (
               <article key={member.id}>
@@ -4655,8 +4680,8 @@ export function App() {
             <button type="submit">הוסף</button>
           </form>
         </section>
-        <section className="menu-block install-menu" aria-label="התקנת קודי במסך הבית">
-          <strong>קודי במסך הבית</strong>
+        <section className="menu-block install-menu" aria-label="הפוך את קודי למסך הבית">
+          <strong>הפוך את קודי למסך הבית</strong>
           <p>
             {installState === "installed"
               ? "קודי כבר פעיל כקיצור אפליקציה."
@@ -4666,7 +4691,7 @@ export function App() {
           </p>
           <button disabled={installState === "installed"} onClick={installKodiShortcut} type="button">
             <Download size={18} aria-hidden="true" />
-            {installState === "installed" ? "כבר מותקן" : "התקן את קודי"}
+            {installState === "installed" ? "כבר מותקן" : "הפוך את קודי למסך הבית"}
           </button>
         </section>
         <details className="advanced-menu">
@@ -4755,6 +4780,34 @@ export function App() {
           <div className="active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
         </header>
 
+        <nav className="dashboard-shortcuts" aria-label="קיצורי דרך לאפליקציות">
+          <a className="dashboard-shortcut" href="https://www.airbnb.com/" rel="noreferrer" target="_blank">
+            <Home size={18} aria-hidden="true" />
+            <span>Airbnb</span>
+          </a>
+          <a className="dashboard-shortcut" href="https://www.booking.com/" rel="noreferrer" target="_blank">
+            <ExternalLink size={18} aria-hidden="true" />
+            <span>Booking</span>
+          </a>
+          <a className="dashboard-shortcut" href="https://wa.me/" rel="noreferrer" target="_blank">
+            <MessageCircle size={18} aria-hidden="true" />
+            <span>WhatsApp</span>
+          </a>
+          <a className="dashboard-shortcut" href={wazeShortcutHref} rel="noreferrer" target="_blank">
+            <Navigation size={18} aria-hidden="true" />
+            <span>Waze</span>
+          </a>
+          <label className="dashboard-shortcut dashboard-shortcut-camera">
+            <Camera size={18} aria-hidden="true" />
+            <span>מצלמה</span>
+            <input accept="image/*" capture="environment" type="file" />
+          </label>
+          <button className="dashboard-shortcut" onClick={() => setSecondaryMenuOpen(true)} type="button">
+            <Plus size={18} aria-hidden="true" />
+            <span>הוסף</span>
+          </button>
+        </nav>
+
         <div className="messages" aria-live="polite" onScroll={updateMessageScrollIntent} ref={messagesContainerRef}>
           {messages.map((message, index) => (
             <article
@@ -4766,7 +4819,8 @@ export function App() {
               <div className="message-header">
                 <strong>{message.author}</strong>
                 {message.author === "קודי" ? (
-                  <button
+                  <div className="message-action-row">
+                    <button
                     aria-label={speakingMessageId === (message.id ?? `${message.author}-${index}`) ? "עצור הקראה" : "קודי הקריא בקול"}
                     aria-pressed={speakingMessageId === (message.id ?? `${message.author}-${index}`)}
                     className={
@@ -4806,7 +4860,27 @@ export function App() {
                         <span>הקרא</span>
                       </>
                     )}
-                  </button>
+                    </button>
+                    <button
+                      aria-pressed={voiceConversationActive}
+                      className={
+                        voiceConversationActive ? "voice-conversation-inline-button active" : "voice-conversation-inline-button"
+                      }
+                      disabled={speechState === "unsupported"}
+                      onClick={toggleVoiceConversation}
+                      title={
+                        speechState === "unsupported"
+                          ? "הדפדפן הזה לא תומך בדיבור"
+                          : voiceConversationActive
+                            ? "עצור שיחה קולית עם קודי"
+                            : "התחל שיחה קולית רציפה עם קודי"
+                      }
+                      type="button"
+                    >
+                      <Mic size={16} aria-hidden="true" />
+                      <span>{voiceConversationActive ? "עצור קולית" : "שיחה קולית"}</span>
+                    </button>
+                  </div>
                 ) : null}
               </div>
               <p>{renderMessageText(message.text)}</p>
@@ -4849,21 +4923,6 @@ export function App() {
           }`}
           onSubmit={sendMessageWithPersistence}
         >
-          <button
-            aria-pressed={voiceConversationActive}
-            className="voice-conversation-toggle"
-            onClick={toggleVoiceConversation}
-            title={
-              speechState === "unsupported"
-                ? "הדפדפן הזה לא תומך בדיבור"
-                : voiceConversationActive
-                  ? "עצור שיחה קולית עם קודי"
-                  : "התחל שיחה קולית רציפה עם קודי"
-            }
-            type="button"
-          >
-            <span>{voiceConversationActive ? "עצור קולית" : "שיחה קולית"}</span>
-          </button>
           {speechState === "listening" ? (
             <div className="voice-recording-indicator" aria-live="assertive" role="status">
               <span className="recording-dot" aria-hidden="true" />
