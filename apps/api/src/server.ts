@@ -883,6 +883,26 @@ function buildAgentUnavailableReply(baseReply: AgentMessageResponse): AgentMessa
   };
 }
 
+function enforceFreshCurrentLocationContract(
+  reply: AgentMessageResponse,
+  groundingReply: AgentMessageResponse
+): AgentMessageResponse {
+  if (reply.text.includes("\u05de\u05d9\u05e7\u05d5\u05dd \u05e0\u05d5\u05db\u05d7\u05d9")) {
+    return {
+      ...reply,
+      intent: reply.intent === "place_recommendation" ? "group_location" : reply.intent,
+      recommendedPlaceId: undefined
+    };
+  }
+
+  return {
+    ...reply,
+    text: `${reply.text.trim()}\n\n${groundingReply.text}`,
+    intent: "group_location",
+    recommendedPlaceId: undefined
+  };
+}
+
 function includesAnyTerm(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
@@ -3635,10 +3655,13 @@ app.post("/api/agent/message", async (req, res) => {
     openAiUsageGate.allowed &&
     (!openAiUsageGate.providerConfigured || (openAiReply?.status === "error" && !openAiReply.reply));
   const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply) : rulesReply);
+  const locationBoundReply = freshCurrentLocationRequired
+    ? enforceFreshCurrentLocationContract(selectedReply, rulesReply)
+    : selectedReply;
   const shouldAppendExternalPlaceNavigation =
-    selectedReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
+    locationBoundReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
   const reply = enhanceKodiReplyWithNavigationLinks({
-    reply: selectedReply,
+    reply: locationBoundReply,
     tripState,
     externalPlacesSearch,
     tripDestination: tripReference.destination,
