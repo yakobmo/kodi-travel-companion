@@ -1,12 +1,46 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 const baseUrl = process.env.KODI_AGENT_BASE_URL ?? process.env.KODI_PUBLIC_URL ?? "https://kodi-travel-companion.onrender.com";
 const timeoutMs = Number(process.env.KODI_AGENT_REGRESSION_TIMEOUT_MS ?? 45000);
 const maxLatencyMs = Number(process.env.KODI_AGENT_REGRESSION_MAX_LATENCY_MS ?? 18000);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..");
 
 function assertCheck(name, condition, details = "") {
   if (!condition) {
     throw new Error(`Kodi agent regression failed: ${name}${details ? `: ${details}` : ""}`);
   }
 }
+
+function readRepoFile(relativePath) {
+  return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
+}
+
+function countOccurrences(source, pattern) {
+  return (source.match(new RegExp(pattern, "g")) ?? []).length;
+}
+
+function assertAgentFirstSourceGuards() {
+  const serverSource = readRepoFile("apps/api/src/server.ts");
+  const openAiSource = readRepoFile("apps/api/src/agent/openaiAgent.ts");
+
+  assertCheck("agent-first no skipped fast lane", !serverSource.includes("skipped_fast_lane"));
+  assertCheck("agent-first no fast concrete provider bypass", !serverSource.includes("!fastConcretePlacesReply"));
+  assertCheck("agent-first no fast trip call site", !serverSource.includes("const fastTripAnswer = buildFastTripAnswer"));
+  assertCheck(
+    "agent-first no fast places pre-router call site",
+    countOccurrences(openAiSource, "shouldPreferFastPlacesAnswer") <= 1
+  );
+  assertCheck("agent-first expanded place context", openAiSource.includes("options.reasoningMode ? 180 : 120"));
+  assertCheck(
+    "agent-first expanded recent message context",
+    openAiSource.includes(".slice(-24)") && openAiSource.includes("message.text.slice(0, 1200)")
+  );
+}
+
+assertAgentFirstSourceGuards();
 
 async function readJson(response) {
   const text = await response.text();

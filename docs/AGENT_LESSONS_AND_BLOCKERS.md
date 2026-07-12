@@ -808,3 +808,27 @@ QA/automation:
 - Keep `/api/whatsapp/diagnostics` as the transport check.
 - Do not treat a healthy WhatsApp webhook as proof that Kodi's AI provider is healthy.
 - Do not write "agent ready" into status docs unless the live smoke returns an AI-provider source and `fallbackUsed=false`.
+
+### 34. Agent-First Means The Model Must See The Question
+
+What happened:
+
+Kodi's prompt was already agentic, but the orchestration around it accumulated "fast lanes" that could answer before the AI provider saw the user's message. Each shortcut looked reasonable in isolation: fast lodging answers, fast concrete Places answers, deterministic route diagrams, keyword pre-routing, and hidden fallbacks. Together they made Kodi feel like a scripted bot instead of an intelligent travel companion.
+
+Why it happened:
+
+The product boundary drifted. Google Maps, Places, Routes, reverse geocoding, route state, and trip points are grounding tools. They should feed the agent, not replace it. When string matching or deterministic shortcuts decide the answer before Gemini/OpenAI reasons over the message, the system loses the very intelligence the product is built around.
+
+Decision:
+
+- Kodi is agent-first for normal conversation.
+- Deterministic logic may block unsafe/stale operations, such as "near me" without fresh location, but must not replace an open-ended travel answer.
+- Places/Routes/Google evidence is passed to the agent as context and links, not used as a canned final response.
+- If a configured provider fails, expose `agent_unavailable` instead of silently falling back to rules.
+- The agent context budget must stay wide enough to understand the trip: more places, longer notes, and more recent chat history.
+
+QA/automation:
+
+- `scripts/kodi-agent-regression.mjs` now includes static guards for the agent-first boundary.
+- The regression fails if `skipped_fast_lane`, fast concrete provider bypasses, fast trip call sites, or fast Places pre-router call sites return.
+- Keep this guard before live tests so architectural regressions fail quickly even when public provider health is unstable.

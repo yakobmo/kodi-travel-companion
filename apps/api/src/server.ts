@@ -3542,46 +3542,6 @@ app.post("/api/agent/message", async (req, res) => {
   }
 
   const timelineReference = resolveTimelineReferenceForMessage(referenceMessage, tripState);
-  const fastTripAnswer = buildFastTripAnswer({
-    message: actionMessage,
-    tripState,
-    timelineReference
-  });
-  if (fastTripAnswer) {
-    const enhancedFastTripAnswer = enhanceKodiReplyWithNavigationLinks({
-      reply: fastTripAnswer,
-      tripState,
-      selectedPlace: req.body?.selectedPlace
-    });
-    res.json({
-      ...enhancedFastTripAnswer,
-      agentRuntime: {
-        openAiStatus: "skipped_fast_lane",
-        openAiModel: undefined,
-        fallbackUsed: false,
-        fastLane: true,
-        latencyMs: Date.now() - agentStartedAt
-      },
-      contextSummary: buildAgentContextSummary({
-        tripGroupId,
-        member: {
-          id: normalizedMember.id,
-          displayName: normalizedMember.displayName,
-          role: normalizedMember.role
-        },
-        recentMessages,
-        tripState,
-        externalPlacesSearchRequest: undefined,
-        timelineReferenceConfidence: hereAndNowContext ? "live_location" : timelineReference.confidence,
-        timelineReferenceReason: hereAndNowContext
-          ? "Here-and-now request: live/current location takes precedence over planned trip timeline."
-          : timelineReference.reason,
-        timelineSegmentTitle: hereAndNowContext ? undefined : timelineReference.segment?.title,
-        permissionPolicy
-      })
-    });
-    return;
-  }
   const placesUsageGate = shouldUseExternalPlacesSearch(currentMessage)
     ? authorizeTripUsageCapability({
         usagePool,
@@ -3664,12 +3624,9 @@ app.post("/api/agent/message", async (req, res) => {
       role: normalizedMember.role
     }
   });
-  const deterministicRouteDiagram = shouldUseDeterministicRouteDiagram(currentMessage);
-  const fastConcretePlacesReply = shouldUseFastConcretePlacesReply(currentMessage, rulesReply, externalPlacesSearch);
   const openAiReply =
     openAiUsageGate.allowed &&
-    openAiUsageGate.providerConfigured &&
-    !fastConcretePlacesReply
+    openAiUsageGate.providerConfigured
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
           message: actionMessage,
@@ -3685,7 +3642,6 @@ app.post("/api/agent/message", async (req, res) => {
   if (
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
-    !fastConcretePlacesReply &&
     openAiReply?.status === "ready"
   ) {
     void safeRecordUsageGateEvent({
@@ -3694,13 +3650,10 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
-  const providerFailed =
+  const providerUnavailable =
     openAiUsageGate.allowed &&
-    openAiUsageGate.providerConfigured &&
-    !fastConcretePlacesReply &&
-    openAiReply?.status === "error" &&
-    !openAiReply.reply;
-  const selectedReply = openAiReply?.reply ?? (providerFailed ? buildAgentUnavailableReply(rulesReply) : rulesReply);
+    (!openAiUsageGate.providerConfigured || (openAiReply?.status === "error" && !openAiReply.reply));
+  const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply) : rulesReply);
   const shouldAppendExternalPlaceNavigation =
     selectedReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
   const reply = enhanceKodiReplyWithNavigationLinks({

@@ -549,7 +549,7 @@ if (
 
 if (
   -not $serverSource.Contains("shouldUseDeterministicRouteDiagram") -or
-  -not $serverSource.Contains("const selectedReply = openAiReply?.reply ?? (providerFailed ? buildAgentUnavailableReply(rulesReply) : rulesReply)")
+  -not $serverSource.Contains("const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply) : rulesReply)")
 ) {
   throw "Kodi route-map/diagram requests must let the AI agent reason first; deterministic route diagrams are grounding fallback only."
 }
@@ -1558,12 +1558,24 @@ if (
 }
 
 if (
-  -not $serverSource.Contains("buildFastTripAnswer") -or
-  -not $serverSource.Contains("KODI_FAST_TRIP_ANSWER_ENABLED") -or
-  -not $serverSource.Contains("latencyMs") -or
-  -not $serverSource.Contains("buildAgentTripStateSnapshot")
+  $serverSource.Contains("skipped_fast_lane") -or
+  $serverSource.Contains("!fastConcretePlacesReply") -or
+  $serverSource.Contains("const fastTripAnswer = buildFastTripAnswer")
 ) {
-  throw "Kodi trip-context fast lane must be explicit opt-in so normal travel questions reach the full AI agent."
+  throw "Kodi must stay agent-first: normal travel questions must reach the AI provider instead of a fast-lane answer."
+}
+
+$fastPlacesMentions = ([regex]::Matches($openAiAgentSource, "shouldPreferFastPlacesAnswer")).Count
+if ($fastPlacesMentions -gt 1) {
+  throw "Kodi must not pre-route Places questions away from the model before the agent can reason."
+}
+
+if (
+  -not $openAiAgentSource.Contains("options.reasoningMode ? 180 : 120") -or
+  -not $openAiAgentSource.Contains(".slice(-24)") -or
+  -not $openAiAgentSource.Contains("message.text.slice(0, 1200)")
+) {
+  throw "Kodi agent context budget must remain wide enough for trip-scale reasoning."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {

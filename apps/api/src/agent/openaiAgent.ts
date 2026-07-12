@@ -268,10 +268,6 @@ function shouldEnableWebSearch(input: OpenAiKodiReplyInput) {
 
   const text = input.message.toLowerCase();
 
-  if (shouldPreferFastPlacesAnswer(input, text)) {
-    return false;
-  }
-
   const shouldFetchFreshData = [
     "check",
     "search",
@@ -427,10 +423,6 @@ function shouldUseReasoningModel(input: OpenAiKodiReplyInput) {
 
   const text = input.message.toLowerCase();
 
-  if (shouldPreferFastPlacesAnswer(input, text)) {
-    return false;
-  }
-
   return shouldEnableWebSearch(input) || [
     "budget",
     "cash",
@@ -473,8 +465,8 @@ function compactTripState(input: AgentMessageRequest["tripState"], options: { re
     return undefined;
   }
 
-  const placeLimit = options.reasoningMode ? 90 : 36;
-  const noteLimit = options.reasoningMode ? 140 : 70;
+  const placeLimit = options.reasoningMode ? 180 : 120;
+  const noteLimit = options.reasoningMode ? 360 : 220;
 
   return {
     trip: input.trip,
@@ -536,10 +528,10 @@ function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMes
 
       return !boilerplateFragments.some((fragment) => message.text.includes(fragment));
     })
-    .slice(-10)
+    .slice(-24)
     .map((message) => ({
       author: message.author,
-      text: message.text.slice(0, 700),
+      text: message.text.slice(0, 1200),
       memberId: message.memberId,
       source: message.source
     }));

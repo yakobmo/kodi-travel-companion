@@ -75,7 +75,7 @@ function shouldResetStaleConversationContext(text: string) {
 
 function joinRecentMessages(messages: ConversationMessage[] = []) {
   return messages
-    .slice(-8)
+    .slice(-20)
     .map((message) => `${message.author}: ${message.text}`)
     .join(" ");
 }
@@ -102,7 +102,7 @@ function summarizeRecentConversation(
   currentMessage: string,
   tripState?: TripState
 ): ConversationContextSummary {
-  const recentMessages = shouldResetStaleConversationContext(currentMessage) ? [] : messages.slice(-8);
+  const recentMessages = shouldResetStaleConversationContext(currentMessage) ? [] : messages.slice(-20);
   const allText = `${joinRecentMessages(recentMessages)} ${currentMessage}`;
   const childNames =
     tripState?.members
