@@ -543,6 +543,7 @@ function buildAgentPayload(input: OpenAiKodiReplyInput, options: { reasoningMode
     member: input.member,
     message: input.message,
     currentMessageIsAuthoritative: true,
+    answerThisMessageOnly: input.message,
     recentMessages: sanitizeRecentMessagesForAgent(input.recentMessages),
     selectedPlace: input.selectedPlace,
     tripState: compactTripState(input.tripState, { reasoningMode: options.reasoningMode }),

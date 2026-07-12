@@ -832,3 +832,25 @@ QA/automation:
 - `scripts/kodi-agent-regression.mjs` now includes static guards for the agent-first boundary.
 - The regression fails if `skipped_fast_lane`, fast concrete provider bypasses, fast trip call sites, or fast Places pre-router call sites return.
 - Keep this guard before live tests so architectural regressions fail quickly even when public provider health is unstable.
+
+### 35. Conversation History Must Not Steal The Current Question
+
+What happened:
+
+After the fast-lane cleanup, a live probe still showed Kodi answering an older bridge-related context when the current message asked whether the Greece trip fits a family. The AI provider was alive and fast, so this was not a model outage. The stale answer came from the orchestration layer blending prior user messages into the current request too eagerly.
+
+Why it happened:
+
+The focused-reference helper was designed for short follow-ups like "yes", "that one", or "will we arrive before dark?". Over time, route keywords made it trigger for broader messages. That meant an older question could become the apparent input for timeline and trip-reference resolution before the model saw the message.
+
+Decision:
+
+- The current message is authoritative by default.
+- Conversation-history borrowing is allowed only for short contextual follow-ups or short route follow-ups.
+- Longer standalone questions must go to the agent as-is, with recent messages available only as background.
+- The provider payload must include an explicit current-answer target so the model does not answer older chat history.
+
+QA/automation:
+
+- `scripts/kodi-agent-regression.mjs` fails if focused reference borrowing becomes unconditional again.
+- The regression also checks that the provider payload keeps an explicit `answerThisMessageOnly` field.

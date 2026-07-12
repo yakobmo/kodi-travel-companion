@@ -742,6 +742,11 @@ function isRouteFollowUp(message: string) {
   );
 }
 
+function shouldBorrowConversationReferenceForMessage(message: string) {
+  const trimmed = message.trim();
+  return isShortContextualFollowUp(trimmed) || (trimmed.length <= 90 && isRouteFollowUp(trimmed));
+}
+
 function isUsefulPreviousQuestionForFollowUp(text: string) {
   const normalized = normalizeConversationText(text);
   return (
@@ -780,7 +785,7 @@ function buildFocusedReferenceMessage(message: string, recentMessages: unknown[]
     return trimmed;
   }
 
-  if (!isShortContextualFollowUp(trimmed) && !isRouteFollowUp(trimmed)) {
+  if (!shouldBorrowConversationReferenceForMessage(trimmed)) {
     return trimmed;
   }
 
@@ -3489,10 +3494,13 @@ app.post("/api/agent/message", async (req, res) => {
 
   const requestCurrentLocation = getRequestCurrentLocation(context);
   const currentMessage = message.trim();
-  const focusedReferenceMessage = buildFocusedReferenceMessage(currentMessage, recentMessages);
+  const shouldBorrowConversationReference = shouldBorrowConversationReferenceForMessage(currentMessage);
+  const focusedReferenceMessage = shouldBorrowConversationReference
+    ? buildFocusedReferenceMessage(currentMessage, recentMessages)
+    : currentMessage;
   const referenceMessage = focusedReferenceMessage === currentMessage ? currentMessage : focusedReferenceMessage;
   const actionMessage =
-    referenceMessage !== currentMessage && (isShortContextualFollowUp(currentMessage) || isRouteFollowUp(currentMessage))
+    shouldBorrowConversationReference && referenceMessage !== currentMessage
       ? referenceMessage
       : currentMessage;
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);

@@ -30,9 +30,15 @@ function assertAgentFirstSourceGuards() {
   assertCheck("agent-first no fast concrete provider bypass", !serverSource.includes("!fastConcretePlacesReply"));
   assertCheck("agent-first no fast trip call site", !serverSource.includes("const fastTripAnswer = buildFastTripAnswer"));
   assertCheck(
+    "agent-first current message guarded reference borrowing",
+    serverSource.includes("shouldBorrowConversationReferenceForMessage") &&
+      !serverSource.includes("const focusedReferenceMessage = buildFocusedReferenceMessage(currentMessage, recentMessages);")
+  );
+  assertCheck(
     "agent-first no fast places pre-router call site",
     countOccurrences(openAiSource, "shouldPreferFastPlacesAnswer") <= 1
   );
+  assertCheck("agent-first answer target in provider payload", openAiSource.includes("answerThisMessageOnly"));
   assertCheck("agent-first expanded place context", openAiSource.includes("options.reasoningMode ? 180 : 120"));
   assertCheck(
     "agent-first expanded recent message context",
