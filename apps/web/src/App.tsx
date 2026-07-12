@@ -1068,11 +1068,10 @@ function shouldAttachSelectedPlaceToAgent(text: string) {
   ].some((term) => normalized.includes(term));
 }
 
-const kodiWakeWordPattern = /(?:^|[\s,.;:!?()[\]{}"'\-])(kodi|\u05e7\u05d5\u05d3\u05d9)(?:$|[\s,.;:!?()[\]{}"'\-])/i;
-
 function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = []) {
+  void text;
   void currentMessages;
-  return kodiWakeWordPattern.test(text.normalize("NFKC").trim());
+  return true;
 }
 
 function getMapPosition(index: number, total: number) {
@@ -1270,7 +1269,7 @@ export function App() {
       id: "session-kodi-reminder",
       author: "קודי",
       source: "system",
-      text: 'אני כאן ברקע. אם תרצו להתייעץ, לשתף או לבקש עזרה, כתבו "קודי" ואני נכנס לשיחה.'
+      text: "אני כאן בשיחה הקבוצתית ועונה להודעות הקבוצה."
     }),
     []
   );
@@ -1429,7 +1428,7 @@ export function App() {
     }
 
     return undefined;
-  }, [visibleChatMessages, isKodiThinking]);
+  }, [messages, isKodiThinking]);
 
   function updateMessageScrollIntent() {
     const container = messagesContainerRef.current;
@@ -3853,15 +3852,8 @@ export function App() {
       welcomeMessage = payload.welcomeMessage ?? null;
       setMembers(normalizeTripMembers(mapMemberLocations(payload.members), setupDraft.memberName));
     } catch {
-      setMembers((currentMembers) => [...currentMembers, nextMember]);
-      welcomeMessage = {
-        id: `local-join-${Date.now()}`,
-        author: "קודי",
-        text: `ברוך הבא ${name} לקבוצת הטיול 🙂 אני קודי, סוכן הטיול של הקבוצה, כאן כדי לעזור במסלול, במפה ובהמלצות בדרך.`,
-        source: "agent",
-        createdAt: new Date().toISOString()
-      };
       setMemberActionState("error");
+      return;
     }
 
     setActiveMemberId(joinedMember.id);
@@ -4487,7 +4479,7 @@ export function App() {
         </div>
 
         <div className="kodi-presence" aria-label="נוכחות קודי">
-          קודי ברקע · מתעורר כשקוראים לו
+          קודי מחובר לשיחה · מגיב להודעות הקבוצה
         </div>
       </section>
 

@@ -583,7 +583,7 @@ async function sendChatMessageNotifications(input: {
 async function buildKodiMemberWelcomeMessage(memberName: string) {
   const setupState = await buildDemoTripSetupStateAsync();
   const tripName = setupState.setupSummary?.tripName?.trim() || "הטיול";
-  return `ברוך הבא ${memberName} לקבוצת הטיול ל${tripName} 🙂 שמחים שאתה איתנו. אני קודי, סוכן הטיול של הקבוצה. כשתרצו להכניס אותי לשיחה, כתבו קודי ואני אעזור במסלול, במפה, בנקודות עניין, בניווט ובהמלצות בדרך.`;
+  return `ברוך הבא ${memberName} לקבוצת הטיול ל${tripName} 🙂 שמחים שאתה איתנו. אני קודי, סוכן הטיול של הקבוצה. אני נמצא בתוך השיחה הקבוצתית ועונה להודעות הקבוצה עם עזרה במסלול, במפה, בנקודות עניין, בניווט ובהמלצות בדרך.`;
 }
 
 function normalizeWhatsAppJoinRecipient(value: unknown) {

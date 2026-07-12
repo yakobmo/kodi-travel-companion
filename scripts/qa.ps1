@@ -984,10 +984,11 @@ $openAiSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts"
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
-  -not $appSource.Contains("kodiWakeWordPattern") -or
+  $appSource.Contains("kodiWakeWordPattern") -or
+  -not $appSource.Contains("return true;") -or
   -not $appSource.Contains("shouldWakeKodi(text, messages)")
 ) {
-  throw "Web app must route Kodi wake-word messages to the agent while keeping normal group chat as group chat."
+  throw "Web app must route every group chat message to Kodi instead of requiring a Kodi wake word."
 }
 
 if (
@@ -1333,17 +1334,19 @@ if (
 
 if (
   -not $appSource.Contains("function shouldWakeKodi") -or
-  -not $appSource.Contains("kodiWakeWordPattern") -or
+  $appSource.Contains("kodiWakeWordPattern") -or
+  -not $appSource.Contains("return true;") -or
   -not $appSource.Contains("shouldAskKodi = options.forceKodi || shouldWakeKodi(text, messages)")
 ) {
-  throw "Web group chat must wake Kodi by name or explicit UI action, not by every normal group message."
+  throw "Web group chat must route normal group messages through Kodi without a wake-word gate."
 }
 
 if (
   -not $kodiAgentSpecSource.Contains("מה קורה אורייה") -or
-  -not $kodiAgentSpecSource.Contains("Kodi wakes when called")
+  -not $kodiAgentSpecSource.Contains("Kodi does not require a wake word") -or
+  -not $kodiAgentSpecSource.Contains("Every message in the Kodi trip chat")
 ) {
-  throw "Kodi agent spec must document wake-word behavior for normal group chat."
+  throw "Kodi agent spec must document always-on group-chat routing without requiring a wake word."
 }
 
 if (
@@ -1436,7 +1439,8 @@ if (
   -not $appSource.Contains("VITE_GOOGLE_MAPS_API_KEY") -or
   -not $appSource.Contains("getMapProviderStatus") -or
   -not $appSource.Contains("googleMapInstanceRef") -or
-  -not $appSource.Contains("googleMapMarkersRef") -or
+  -not $appSource.Contains("googleMapPlaceMarkersRef") -or
+  -not $appSource.Contains("googleMapDynamicMarkersRef") -or
   -not $appSource.Contains("mapPlaces.forEach") -or
   -not $appSource.Contains("map.fitBounds") -or
   -not $serverSourceForContext.Contains("/api/config/maps")

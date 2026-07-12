@@ -127,13 +127,13 @@ Kodi is a participant in one shared family/group chat.
 
 There is no separate "ask the bot" channel.
 
-Kodi is part of the group conversation, but it should not interrupt every normal family message.
+Kodi is part of the group conversation and should respond to group messages through the agent harness.
 
-Kodi wakes when called by name (`קודי` / `Kodi`) or when the user uses an explicit Kodi action such as voice conversation or a place action button. Normal participant-to-participant chatter remains group chatter.
+Kodi does not require a wake word. Every message in the Kodi trip chat is available to Kodi as conversational context and may receive a natural agent response when useful. Explicit Kodi actions such as voice conversation or a place action button should still route through the same agent harness.
 
-When Kodi handles a message, it reads recent group context and then answers through the agent harness. Even a short call such as "קודי?" must not be intercepted by a hard-coded presence response.
+When Kodi handles a message, it reads recent group context and then answers through the agent harness. Even a short message such as "אתה כאן?" must not be intercepted by a hard-coded presence response.
 
-Kodi should remember the recent flow only after being called. If the user corrected a wrong assumption, the correction should override stale state.
+Kodi should remember the recent flow continuously inside the group chat. If the user corrected a wrong assumption, the correction should override stale state.
 
 Bad behavior:
 
@@ -146,7 +146,7 @@ Good behavior:
 
 ```text
 Manager: מה קורה אורייה?
-Kodi stays quiet because the message is addressed to אורייה, not to Kodi.
+Kodi understands this is probably a greeting to אורייה and either stays quiet or gives a minimal natural group-chat response only if the broader conversation makes that useful. It must not repeat unrelated previous travel answers.
 ```
 
 Bad behavior:

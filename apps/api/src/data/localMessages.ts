@@ -14,7 +14,7 @@ const initialDemoMessages: StoredDemoMessage[] = [
     id: "msg_kodi_start_hint",
     tripGroupId: DEMO_GROUP_ID,
     author: "קודי",
-    text: "הי, אני כאן. כשתרצו להתייעץ כתבו קודי ואני נכנס לשיחה.",
+    text: "הי, אני כאן בשיחה הקבוצתית ועונה להודעות הקבוצה.",
     source: "agent",
     createdAt: "2026-07-08T00:00:00.000Z"
   }
