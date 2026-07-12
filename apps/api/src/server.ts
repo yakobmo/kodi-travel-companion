@@ -3518,39 +3518,9 @@ app.post("/api/agent/message", async (req, res) => {
     hereAndNowContext,
     requestCurrentLocation
   });
-  if (freshCurrentLocationRequired) {
-    const reply = buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName));
-    res.json({
-      ...reply,
-      agentRuntime: {
-        openAiStatus: "skipped_fresh_location_required",
-        openAiModel: undefined,
-        fallbackUsed: false,
-        fastLane: true,
-        latencyMs: Date.now() - agentStartedAt
-      },
-      contextSummary: buildAgentContextSummary({
-        tripGroupId,
-        member: {
-          id: normalizedMember.id,
-          displayName: normalizedMember.displayName,
-          role: normalizedMember.role
-        },
-        recentMessages,
-        tripState,
-        freshCurrentLocationRequired: true,
-        externalPlacesSearchRequest: undefined,
-        timelineReferenceConfidence: "live_location_required",
-        timelineReferenceReason:
-          "Here-and-now request did not include a fresh request currentLocation, so Kodi must not reuse stale saved GPS.",
-        permissionPolicy
-      })
-    });
-    return;
-  }
 
   const timelineReference = resolveTimelineReferenceForMessage(referenceMessage, tripState);
-  const placesUsageGate = shouldUseExternalPlacesSearch(currentMessage)
+  const placesUsageGate = !freshCurrentLocationRequired && shouldUseExternalPlacesSearch(currentMessage)
     ? authorizeTripUsageCapability({
         usagePool,
         capability: "google_places",
@@ -3587,6 +3557,7 @@ app.post("/api/agent/message", async (req, res) => {
       : undefined;
   const tripReference = resolveTripReferenceForMessage(referenceMessage, tripState);
   const canEstimateRoute =
+    !freshCurrentLocationRequired &&
     shouldUseRouteEstimate(referenceMessage) &&
     tripReference.confidence !== "low" &&
     tripReference.origin &&
@@ -3615,15 +3586,17 @@ app.post("/api/agent/message", async (req, res) => {
       source: "kodi_agent"
     });
   }
-  const rulesReply = buildKodiReplyFromContext({
-    ...req.body,
-    message: actionMessage,
-    tripState,
-    externalPlacesSearch,
-    reverseGeocodedLocation,
-    routeEstimate,
-    tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined
-  });
+  const rulesReply = freshCurrentLocationRequired
+    ? buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName))
+    : buildKodiReplyFromContext({
+        ...req.body,
+        message: actionMessage,
+        tripState,
+        externalPlacesSearch,
+        reverseGeocodedLocation,
+        routeEstimate,
+        tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined
+      });
   const openAiUsageGate = authorizeTripUsageCapability({
     usagePool,
     capability: "openai_agent",
@@ -3695,6 +3668,7 @@ app.post("/api/agent/message", async (req, res) => {
       },
       recentMessages,
       tripState,
+      freshCurrentLocationRequired,
       externalPlacesSearchStatus: externalPlacesSearch?.status,
       externalPlacesSearchRequest: externalPlacesSearch?.request,
       routeEstimateStatus: routeEstimate?.status,

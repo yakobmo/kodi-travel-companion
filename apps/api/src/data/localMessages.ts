@@ -9,16 +9,7 @@ import {
 import { DEMO_GROUP_ID, DEMO_TRIP_GROUP_UUID, demoMemberUuidById } from "./demoRelationalIds.js";
 import { ensureDemoRelationalBase } from "./demoRelationalSeed.js";
 
-const initialDemoMessages: StoredDemoMessage[] = [
-  {
-    id: "msg_kodi_start_hint",
-    tripGroupId: DEMO_GROUP_ID,
-    author: "קודי",
-    text: "הי, אני כאן בשיחה הקבוצתית ועונה להודעות הקבוצה.",
-    source: "agent",
-    createdAt: "2026-07-08T00:00:00.000Z"
-  }
-];
+const initialDemoMessages: StoredDemoMessage[] = [];
 
 const retiredSeedMessageIds = new Set([
   "msg_demo_dad_ice_cream",
@@ -39,7 +30,8 @@ const retiredSeedMessageTextFragments = [
   "Averof 12",
   "יעד הקבוצתי הנוכחי",
   "מסלול קבוצתי קצר סביב",
-  "התחנה הפעילה הבאה במסלול"
+  "התחנה הפעילה הבאה במסלול",
+  "אני כאן בשיחה הקבוצתית"
 ];
 
 function isRetiredSeedMessage(message: StoredDemoMessage) {

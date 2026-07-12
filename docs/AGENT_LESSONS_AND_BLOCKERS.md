@@ -71,6 +71,19 @@ Decision:
 - Default Gemini should be a full fast agent model, not a lite model, unless explicitly changed by env.
 - Regression QA must include stale-context tests where an old location/topic must not hijack a new question.
 
+### Fast Paths Must Not Replace Kodi
+
+Problem:
+
+Individually reasonable shortcuts can slowly turn Kodi into a rules bot: fresh-location gates, trip/lodging shortcuts, route diagram handlers, and concrete-place replies can answer before the LLM sees the user's real message.
+
+Decision:
+
+- Missing fresh location is context for the agent, not a reason to skip the agent.
+- Google Places and Google Routes may be called before the model only to gather evidence, never to become the final voice of Kodi.
+- Provider failures must be visible in runtime diagnostics; do not silently present a rule fallback as if the agent reasoned.
+- Regression checks must fail if a new `skipped_*` fast lane or synthetic presence message bypasses Kodi again.
+
 ### 0. Chat History Must Load The Latest Slice
 
 Problem:

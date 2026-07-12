@@ -25,8 +25,14 @@ function countOccurrences(source, pattern) {
 function assertAgentFirstSourceGuards() {
   const serverSource = readRepoFile("apps/api/src/server.ts");
   const openAiSource = readRepoFile("apps/api/src/agent/openaiAgent.ts");
+  const webSource = readRepoFile("apps/web/src/App.tsx");
+  const localMessagesSource = readRepoFile("apps/api/src/data/localMessages.ts");
 
   assertCheck("agent-first no skipped fast lane", !serverSource.includes("skipped_fast_lane"));
+  assertCheck(
+    "agent-first no skipped fresh-location lane",
+    !serverSource.includes("skipped_fresh_location_required")
+  );
   assertCheck("agent-first no fast concrete provider bypass", !serverSource.includes("!fastConcretePlacesReply"));
   assertCheck("agent-first no fast trip call site", !serverSource.includes("const fastTripAnswer = buildFastTripAnswer"));
   assertCheck(
@@ -44,6 +50,10 @@ function assertAgentFirstSourceGuards() {
     "agent-first expanded recent message context",
     openAiSource.includes(".slice(-24)") && openAiSource.includes("message.text.slice(0, 1200)")
   );
+  assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));
+  assertCheck("agent-first no synthetic session Kodi message", !webSource.includes("sessionKodiReminderMessage"));
+  assertCheck("agent-first no seeded Kodi presence message", !localMessagesSource.includes("msg_kodi_start_hint"));
+  assertCheck("agent-first no fake group-chat presence copy", !webSource.includes("אני כאן בשיחה הקבוצתית"));
 }
 
 assertAgentFirstSourceGuards();

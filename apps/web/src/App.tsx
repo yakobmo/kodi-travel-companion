@@ -1264,19 +1264,7 @@ export function App() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const initialComposerRevealRef = useRef(false);
-  const sessionKodiReminderMessage = useMemo<ChatMessage>(
-    () => ({
-      id: "session-kodi-reminder",
-      author: "קודי",
-      source: "system",
-      text: "אני כאן בשיחה הקבוצתית ועונה להודעות הקבוצה."
-    }),
-    []
-  );
-  const visibleChatMessages = useMemo(
-    () => [...messages, sessionKodiReminderMessage],
-    [messages, sessionKodiReminderMessage]
-  );
+  const visibleChatMessages = messages;
 
   useEffect(() => {
     voiceConversationActiveRef.current = voiceConversationActive;
@@ -4438,7 +4426,7 @@ export function App() {
             {currentLocation ? (
               <div className="self-marker" style={{ left: "50%", top: "50%" }}>
                 <Navigation size={15} aria-hidden="true" />
-                <span>אני כאן</span>
+                <span>המיקום שלי</span>
               </div>
             ) : null}
           </div>
