@@ -152,6 +152,12 @@ assertCheck(
   `timeline=${liveCafe.payload.contextSummary?.timelineReferenceConfidence}`
 );
 assertCheck(
+  "live cafe tells agent to anchor on current location",
+  Array.isArray(liveCafe.payload.contextSummary?.runtimeGuidance) &&
+    liveCafe.payload.contextSummary.runtimeGuidance.some((line) => String(line).includes("currentLocation as the active anchor")),
+  JSON.stringify(liveCafe.payload.contextSummary?.runtimeGuidance ?? [])
+);
+assertCheck(
   "live cafe uses Google Places",
   ["ready", "not_configured"].includes(liveCafe.payload.contextSummary?.externalPlacesSearchStatus),
   `places=${liveCafe.payload.contextSummary?.externalPlacesSearchStatus}`
@@ -176,6 +182,11 @@ assertCheck(
   "no fresh location cafe does not use Places",
   !noFreshLocationCafe.payload.contextSummary?.externalPlacesSearchStatus,
   `places=${noFreshLocationCafe.payload.contextSummary?.externalPlacesSearchStatus}`
+);
+assertCheck(
+  "no fresh location cafe does not call provider",
+  noFreshLocationCafe.payload.agentRuntime?.openAiStatus === "location_required",
+  `openAiStatus=${noFreshLocationCafe.payload.agentRuntime?.openAiStatus}`
 );
 assertCheck("no fresh location cafe has no stale Maps link", !String(noFreshLocationCafe.payload.text ?? "").includes("Google Maps"));
 assertCheck("no fresh location cafe has no stale Waze link", !String(noFreshLocationCafe.payload.text ?? "").includes("Waze"));

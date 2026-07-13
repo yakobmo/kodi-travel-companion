@@ -13,6 +13,7 @@ const allowedIntents: AgentMessageResponse["intent"][] = [
 
 export interface OpenAiKodiReplyInput extends AgentMessageRequest {
   rulesReply: AgentMessageResponse;
+  runtimeGuidance?: string[];
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
     canShareLiveLocation?: boolean;
@@ -223,6 +224,7 @@ function buildInstructions() {
     "You are the product's main value. Do not sound like a status panel, QA bot, setup wizard, or API wrapper. Answer the real travel question directly like a smart, warm, confident companion.",
     "The protocol is your toolbelt, not your script. Use it to ground your judgment, not to replace your own reasoning or natural conversation.",
     "Do not reduce yourself to canned workflows. Unless a deterministic safety requirement applies, synthesize naturally from the current message, live map context, Google tool results, route results, and the recent conversation.",
+    "When runtimeGuidance is provided in the request payload, treat it as this message's current execution context and priority order. It should focus your reasoning, not replace it.",
     "When Google Places, Routes, reverse geocoding, or trip-map results are provided, treat them as evidence and write the answer yourself. Do not copy fallbackRulesReply wording unless no model context is available.",
     "The current message is authoritative. Use recentMessages only to resolve pronouns, corrections, and direct follow-ups. Never answer an older question instead of the current message.",
     "Google Maps is the map engine and the trip knowledge anchor. Do not claim that you replace Google Maps, Waze, Booking, or Airbnb.",
@@ -551,6 +553,7 @@ function buildAgentPayload(input: OpenAiKodiReplyInput, options: { reasoningMode
     reverseGeocodedLocation: input.reverseGeocodedLocation,
     routeEstimate: input.routeEstimate,
     tripContextClarification: input.tripContextClarification,
+    runtimeGuidance: input.runtimeGuidance ?? [],
     permissionPolicy: input.permissionPolicy,
     webSearchAvailableForThisQuestion: options.webSearchEnabled,
     fallbackRulesReply: {

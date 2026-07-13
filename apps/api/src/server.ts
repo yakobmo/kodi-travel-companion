@@ -823,6 +823,7 @@ function buildAgentContextSummary(input: {
   externalPlacesSearchStatus?: string;
   externalPlacesSearchRequest?: GooglePlacesTextSearchResult["request"];
   routeEstimateStatus?: string;
+  runtimeGuidance?: string[];
   tripContextConfidence?: string;
   tripContextReason?: string;
   timelineReferenceConfidence?: string;
@@ -850,6 +851,7 @@ function buildAgentContextSummary(input: {
     externalPlacesSearchStatus: input.externalPlacesSearchStatus,
     externalPlacesSearchRequest: input.externalPlacesSearchRequest,
     routeEstimateStatus: input.routeEstimateStatus,
+    runtimeGuidance: input.runtimeGuidance,
     tripContextConfidence: input.tripContextConfidence,
     tripContextReason: input.tripContextReason,
     timelineReferenceConfidence: input.timelineReferenceConfidence,
@@ -883,24 +885,56 @@ function buildAgentUnavailableReply(baseReply: AgentMessageResponse): AgentMessa
   };
 }
 
-function enforceFreshCurrentLocationContract(
-  reply: AgentMessageResponse,
-  groundingReply: AgentMessageResponse
-): AgentMessageResponse {
-  if (reply.text.includes("\u05de\u05d9\u05e7\u05d5\u05dd \u05e0\u05d5\u05db\u05d7\u05d9")) {
-    return {
-      ...reply,
-      intent: reply.intent === "place_recommendation" ? "group_location" : reply.intent,
-      recommendedPlaceId: undefined
-    };
-  }
-
+function enforceFreshCurrentLocationContract(groundingReply: AgentMessageResponse): AgentMessageResponse {
   return {
-    ...reply,
-    text: `${reply.text.trim()}\n\n${groundingReply.text}`,
+    ...groundingReply,
     intent: "group_location",
     recommendedPlaceId: undefined
   };
+}
+
+function buildKodiRuntimeGuidance(input: {
+  hereAndNowContext: boolean;
+  hasFreshCurrentLocation: boolean;
+  freshCurrentLocationRequired: boolean;
+  externalPlacesSearchStatus?: string;
+  reverseGeocodedLocationStatus?: string;
+  routeEstimateStatus?: string;
+}) {
+  const guidance: string[] = [];
+
+  if (input.freshCurrentLocationRequired) {
+    guidance.push(
+      "A fresh current location is required before answering this message. Do not infer or answer from planned trip points."
+    );
+  }
+
+  if (input.hereAndNowContext && input.hasFreshCurrentLocation) {
+    guidance.push(
+      "This message is a here-and-now request and the app supplied a fresh currentLocation. Treat currentLocation as the active anchor."
+    );
+    guidance.push(
+      "Do not ask whether the user means the planned trip unless the current message explicitly mentions a planned trip day, hotel, region, or future itinerary."
+    );
+  }
+
+  if (input.externalPlacesSearchStatus === "ready") {
+    guidance.push(
+      "Google Places results are available in externalPlacesSearch. Use them as primary evidence for nearby-place recommendations."
+    );
+  }
+
+  if (input.reverseGeocodedLocationStatus === "ready") {
+    guidance.push(
+      "Reverse geocoding is available. Use the human-readable location before raw coordinates."
+    );
+  }
+
+  if (input.routeEstimateStatus === "ready") {
+    guidance.push("Google Routes results are available. Use them for travel-time and route reasoning.");
+  }
+
+  return guidance;
 }
 
 function includesAnyTerm(text: string, terms: string[]) {
@@ -3617,6 +3651,14 @@ app.post("/api/agent/message", async (req, res) => {
         routeEstimate,
         tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined
       });
+  const runtimeGuidance = buildKodiRuntimeGuidance({
+    hereAndNowContext,
+    hasFreshCurrentLocation: Boolean(requestCurrentLocation),
+    freshCurrentLocationRequired,
+    externalPlacesSearchStatus: externalPlacesSearch?.status,
+    reverseGeocodedLocationStatus: reverseGeocodedLocation?.status,
+    routeEstimateStatus: routeEstimate?.status
+  });
   const openAiUsageGate = authorizeTripUsageCapability({
     usagePool,
     capability: "openai_agent",
@@ -3625,9 +3667,10 @@ app.post("/api/agent/message", async (req, res) => {
       role: normalizedMember.role
     }
   });
+  const shouldCallAgentProvider =
+    !freshCurrentLocationRequired && openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
   const openAiReply =
-    openAiUsageGate.allowed &&
-    openAiUsageGate.providerConfigured
+    shouldCallAgentProvider
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
           message: actionMessage,
@@ -3636,6 +3679,7 @@ app.post("/api/agent/message", async (req, res) => {
           reverseGeocodedLocation,
           routeEstimate,
           tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined,
+          runtimeGuidance,
           permissionPolicy,
           rulesReply
         })
@@ -3652,11 +3696,12 @@ app.post("/api/agent/message", async (req, res) => {
     });
   }
   const providerUnavailable =
+    !freshCurrentLocationRequired &&
     openAiUsageGate.allowed &&
     (!openAiUsageGate.providerConfigured || (openAiReply?.status === "error" && !openAiReply.reply));
   const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply) : rulesReply);
   const locationBoundReply = freshCurrentLocationRequired
-    ? enforceFreshCurrentLocationContract(selectedReply, rulesReply)
+    ? enforceFreshCurrentLocationContract(rulesReply)
     : selectedReply;
   const shouldAppendExternalPlaceNavigation =
     locationBoundReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
@@ -3673,7 +3718,7 @@ app.post("/api/agent/message", async (req, res) => {
   res.json({
     ...reply,
     agentRuntime: {
-      openAiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
+      openAiStatus: openAiReply?.status ?? (freshCurrentLocationRequired ? "location_required" : openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
       openAiModel: openAiReply?.model,
       openAiError: sanitizeProviderErrorForRuntime(openAiReply?.error),
       providerAttempts: openAiReply?.providerAttempts?.map((attempt) => sanitizeProviderErrorForRuntime(attempt)),
@@ -3695,6 +3740,7 @@ app.post("/api/agent/message", async (req, res) => {
       externalPlacesSearchStatus: externalPlacesSearch?.status,
       externalPlacesSearchRequest: externalPlacesSearch?.request,
       routeEstimateStatus: routeEstimate?.status,
+      runtimeGuidance,
       tripContextConfidence: shouldUseRouteEstimate(referenceMessage) ? tripReference.confidence : undefined,
       tripContextReason: shouldUseRouteEstimate(referenceMessage) ? tripReference.reason : undefined,
       timelineReferenceConfidence: hereAndNowContext ? "live_location" : timelineReference.confidence,
