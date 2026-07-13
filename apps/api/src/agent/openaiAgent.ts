@@ -762,6 +762,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
 
   let lastError: unknown;
   const providerAttempts: string[] = [];
+  let geminiFallbackAttempted = false;
 
   for (const modelCandidate of modelCandidates) {
     try {
@@ -787,6 +788,7 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
 
       if (isOpenAiQuotaError(error)) {
         try {
+          geminiFallbackAttempted = true;
           const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
           if (geminiReply) {
             return {
@@ -837,18 +839,20 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
     }
   }
 
-  try {
-    const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
-    if (geminiReply) {
-      return {
-        ...geminiReply,
-        error: "openai_error_fallback_to_gemini",
-        providerAttempts: [...providerAttempts, ...(geminiReply.providerAttempts ?? [])]
-      };
+  if (!geminiFallbackAttempted) {
+    try {
+      const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
+      if (geminiReply) {
+        return {
+          ...geminiReply,
+          error: "openai_error_fallback_to_gemini",
+          providerAttempts: [...providerAttempts, ...(geminiReply.providerAttempts ?? [])]
+        };
+      }
+    } catch (geminiError) {
+      lastError = geminiError;
+      providerAttempts.push(...((geminiError as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
     }
-  } catch (geminiError) {
-    lastError = geminiError;
-    providerAttempts.push(...((geminiError as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
   }
 
   return {
