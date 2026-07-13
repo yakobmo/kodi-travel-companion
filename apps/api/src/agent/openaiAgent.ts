@@ -667,6 +667,10 @@ async function tryBuildKodiReplyWithGemini(
         break;
       }
 
+      if (isOpenAiQuotaError(error)) {
+        break;
+      }
+
       continue;
     }
   }

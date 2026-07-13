@@ -20,7 +20,8 @@ function classifyProviderIssue(runtime = {}, source = "unknown") {
   if (/429|quota|billing/i.test(error)) {
     return {
       kind: "ai_provider_quota",
-      nextAction: "Fix the configured AI provider billing/quota, or replace the backend AI key in Render."
+      nextAction:
+        "Fix the configured AI provider billing/quota, or replace the backend AI key in Render. Gemini usage: https://aistudio.google.com/usage ; OpenAI billing: https://platform.openai.com/settings/organization/billing/overview"
     };
   }
   if (/gemini_fallback_not_configured|GEMINI_API_KEY|GOOGLE_AI_API_KEY/i.test(error)) {
@@ -88,6 +89,7 @@ async function main() {
     openAiModel: runtime.openAiModel || "unknown",
     openAiError: runtime.openAiError || "none",
     fallbackUsed: Boolean(runtime.fallbackUsed),
+    providerFailureKind: runtime.providerFailureKind || "none",
     latencyMs: runtime.latencyMs,
     issue: issue.kind,
     nextAction: issue.nextAction,

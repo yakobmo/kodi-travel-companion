@@ -36,6 +36,7 @@ export interface AgentMessageResponse {
   requiresAdminApproval: boolean;
   source: "rules" | "openai" | "agent_unavailable";
   recommendedPlaceId?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface RecommendationCandidate {

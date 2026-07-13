@@ -549,7 +549,7 @@ if (
 
 if (
   -not $serverSource.Contains("shouldUseDeterministicRouteDiagram") -or
-  -not $serverSource.Contains("const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply) : rulesReply)")
+  -not $serverSource.Contains("const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply, openAiReply) : rulesReply)")
 ) {
   throw "Kodi route-map/diagram requests must let the AI agent reason first; deterministic route diagrams are grounding fallback only."
 }

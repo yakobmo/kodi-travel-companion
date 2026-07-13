@@ -867,3 +867,25 @@ QA/automation:
 
 - `scripts/kodi-agent-regression.mjs` fails if focused reference borrowing becomes unconditional again.
 - The regression also checks that the provider payload keeps an explicit `answerThisMessageOnly` field.
+
+### 36. Provider Quota Must Stop Cascades And Tell The Admin What To Fix
+
+What happened:
+
+Kodi could return a vague `agent_unavailable` answer after the configured AI provider hit quota or billing limits. The Gemini fallback also tried multiple model candidates after a quota error, which made a single user question consume several failed provider attempts.
+
+Why it happened:
+
+Quota, billing, and invalid-key failures are infrastructure failures, not travel-agent reasoning failures. Treating them like ordinary retryable model errors makes Kodi slower, burns quota faster, and hides the one action the admin needs to take.
+
+Decision:
+
+- Stop the Gemini model-candidate cascade immediately on quota/billing errors.
+- Classify provider failure as `quota`, `auth`, `not_configured`, `timeout`, or `unknown`.
+- When Kodi is unavailable because of a configured provider failure, return a clear Hebrew admin-facing explanation with the relevant Gemini/OpenAI links.
+- Expose `agentRuntime.providerFailureKind` so smoke tests and UI diagnostics can show the real blocker instead of a generic fallback.
+
+QA/automation:
+
+- `scripts/smoke-agent-provider-readiness.mjs` must print `providerFailureKind`.
+- A configured provider returning 429 must be treated as a provider quota blocker, not as a broken WhatsApp connector and not as a poor prompt.

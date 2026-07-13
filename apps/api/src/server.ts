@@ -71,7 +71,7 @@ import {
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext, type AgentMessageResponse } from "./agent/kodi.js";
-import { tryBuildKodiReplyWithOpenAi } from "./agent/openaiAgent.js";
+import { tryBuildKodiReplyWithOpenAi, type OpenAiKodiReplyResult } from "./agent/openaiAgent.js";
 import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
 import { reverseGeocodeLocation } from "./google/reverseGeocode.js";
 import {
@@ -874,14 +874,92 @@ function sanitizeProviderErrorForRuntime(error: string | undefined) {
     .slice(0, 220);
 }
 
-function buildAgentUnavailableReply(baseReply: AgentMessageResponse): AgentMessageResponse {
+type ProviderFailureKind = "quota" | "not_configured" | "timeout" | "auth" | "unknown";
+
+function classifyProviderFailure(openAiReply: OpenAiKodiReplyResult | undefined): ProviderFailureKind {
+  if (!openAiReply) {
+    return "not_configured";
+  }
+
+  const combinedError = [
+    openAiReply?.error,
+    ...(openAiReply?.providerAttempts ?? [])
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (!combinedError && openAiReply?.status === "not_configured") {
+    return "not_configured";
+  }
+
+  if (combinedError.includes("429") || combinedError.includes("quota") || combinedError.includes("billing")) {
+    return "quota";
+  }
+
+  if (combinedError.includes("401") || combinedError.includes("403") || combinedError.includes("api key") || combinedError.includes("unauthorized")) {
+    return "auth";
+  }
+
+  if (combinedError.includes("timeout")) {
+    return "timeout";
+  }
+
+  return openAiReply?.status === "not_configured" ? "not_configured" : "unknown";
+}
+
+function buildAgentUnavailableText(providerFailureKind: ProviderFailureKind) {
+  if (providerFailureKind === "quota") {
+    return [
+      "קודי כרגע לא מחובר למודל AI פעיל, כי ספק ה-AI שמוגדר בשרת החזיר שגיאת מכסה/חיוב.",
+      "זה בדרך כלל אומר שהמפתח ב-Render הוא מפתח זמני/חינמי, שהמכסה היומית נגמרה, או שצריך להפעיל Billing/Quota אצל הספק.",
+      "מה עושים: מנהל המערכת צריך לעדכן ב-Render מפתח AI פעיל או להסדיר מכסה/חיוב, ואז לבצע Save, rebuild, and deploy.",
+      "Gemini: https://aistudio.google.com/usage",
+      "OpenAI: https://platform.openai.com/settings/organization/billing/overview"
+    ].join("\n");
+  }
+
+  if (providerFailureKind === "not_configured") {
+    return [
+      "קודי כרגע לא מחובר למודל AI בשרת.",
+      "כדי שאחזור לענות כסוכן מלא, צריך להגדיר ב-Render מפתח אחד לפחות: GEMINI_API_KEY או OPENAI_API_KEY, ואז לבצע Save, rebuild, and deploy.",
+      "Gemini: https://aistudio.google.com/app/apikey",
+      "OpenAI: https://platform.openai.com/api-keys"
+    ].join("\n");
+  }
+
+  if (providerFailureKind === "auth") {
+    return [
+      "קודי כרגע לא מצליח להתחבר למודל AI בגלל בעיית הרשאה במפתח שמוגדר בשרת.",
+      "צריך לבדוק שהמפתח ב-Render נכון, פעיל, שייך לפרויקט הנכון, ושיש לו הרשאות שימוש במודל.",
+      "Gemini: https://aistudio.google.com/app/apikey",
+      "OpenAI: https://platform.openai.com/api-keys"
+    ].join("\n");
+  }
+
+  if (providerFailureKind === "timeout") {
+    return "קודי כרגע לא קיבל תשובה ממודל ה-AI בזמן סביר. החיבור לאפליקציה פעיל, אבל ספק ה-AI איטי או לא זמין כרגע. נסו שוב בעוד רגע; אם זה חוזר, צריך לבדוק את ספק ה-AI ב-Render.";
+  }
+
+  return "קודי כרגע לא מחובר למודל AI פעיל ולכן אני לא רוצה להמציא תשובה. החיבור לאפליקציה ולווטסאפ יכול להיות תקין, אבל צריך לבדוק את מפתח/מכסת ה-AI ב-Render ואז לפרוס מחדש.";
+}
+
+function buildAgentUnavailableReply(
+  baseReply: AgentMessageResponse,
+  openAiReply: OpenAiKodiReplyResult | undefined
+): AgentMessageResponse {
+  const providerFailureKind = classifyProviderFailure(openAiReply);
+
   return {
     ...baseReply,
-    text:
-      "קודי כרגע לא מחובר למודל ה-AI, ולכן אני לא רוצה להמציא תשובה. הווטסאפ והחיבור לאפליקציה עובדים, אבל צריך לתקן את מפתח/מכסת ה-AI בשרת ואז אחזור לענות כסוכן מלא.",
+    text: buildAgentUnavailableText(providerFailureKind),
     intent: "general",
     requiresAdminApproval: false,
-    source: "agent_unavailable"
+    source: "agent_unavailable",
+    metadata: {
+      ...baseReply.metadata,
+      providerFailureKind
+    }
   };
 }
 
@@ -3699,7 +3777,7 @@ app.post("/api/agent/message", async (req, res) => {
     !freshCurrentLocationRequired &&
     openAiUsageGate.allowed &&
     (!openAiUsageGate.providerConfigured || (openAiReply?.status === "error" && !openAiReply.reply));
-  const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply) : rulesReply);
+  const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply, openAiReply) : rulesReply);
   const locationBoundReply = freshCurrentLocationRequired
     ? enforceFreshCurrentLocationContract(rulesReply)
     : selectedReply;
@@ -3724,6 +3802,7 @@ app.post("/api/agent/message", async (req, res) => {
       providerAttempts: openAiReply?.providerAttempts?.map((attempt) => sanitizeProviderErrorForRuntime(attempt)),
       fallbackUsed: reply.source !== "openai",
       providerFailureVisible: reply.source === "agent_unavailable",
+      providerFailureKind: reply.source === "agent_unavailable" ? reply.metadata?.providerFailureKind : undefined,
       fastLane: false,
       latencyMs: Date.now() - agentStartedAt
     },
