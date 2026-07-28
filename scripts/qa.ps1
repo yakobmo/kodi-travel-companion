@@ -289,7 +289,7 @@ if (
   -not $webAppEarlySource.Contains("function closeSecondaryMenu()") -or
   -not $webAppEarlySource.Contains("setOpenMenuSection(null);") -or
   -not (Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw).Contains(".secondary-menu > .menu-block.menu-block-open") -or
-  -not (Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw).Contains("max-height: 48px")
+  -not (Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw).Contains(".secondary-menu > .menu-block:not(.menu-block-open)")
 ) {
   throw "Hamburger menu sections must use React state and accessible toggle buttons, not direct DOM class mutation."
 }
@@ -1431,6 +1431,16 @@ if (
   -not $appSource.Contains("fetchWithTimeout")
 ) {
   throw "Web app must stream member locations with a bounded, non-overlapping polling fallback."
+}
+
+$stylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
+if (
+  $stylesSource.Contains(".secondary-menu > .menu-block {`r`n  max-height: 48px") -or
+  -not $stylesSource.Contains(".secondary-menu > .menu-block:not(.menu-block-open)") -or
+  -not $stylesSource.Contains("display: block;") -or
+  -not $stylesSource.Contains(".secondary-menu > .menu-block.menu-block-open")
+) {
+  throw "Collapsed hamburger sections must render as stable button rows instead of clipped grid containers."
 }
 
 if (-not $appSource.Contains('memberRealtimeState === "live"')) {

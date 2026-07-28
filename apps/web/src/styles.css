@@ -1466,20 +1466,23 @@ input {
 }
 
 .secondary-menu > .menu-block {
-  max-height: 48px;
-  overflow: hidden;
   border: 1px solid #d7e4e7;
   border-radius: 10px;
   padding: 0;
   background: #ffffff;
   transition:
-    max-height 180ms ease,
     border-color 160ms ease,
     background 160ms ease;
 }
 
+.secondary-menu > .menu-block:not(.menu-block-open) {
+  display: block;
+  min-height: 48px;
+  overflow: visible;
+}
+
 .secondary-menu > .menu-block.menu-block-open {
-  max-height: none;
+  display: grid;
   overflow: visible;
   border-color: #9fd5df;
   background: #f7fcfd;
@@ -1487,6 +1490,7 @@ input {
 }
 
 .secondary-menu > .menu-block > .menu-block-toggle {
+  position: relative;
   min-height: 46px;
   display: flex;
   align-items: center;
