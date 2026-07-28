@@ -1174,6 +1174,8 @@ export function App() {
   const [inviteCopyState, setInviteCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [inviteShareState, setInviteShareState] = useState<"idle" | "sharing" | "shared" | "copied" | "error">("idle");
   const [memberActionState, setMemberActionState] = useState<"idle" | "working" | "done" | "error">("idle");
+  const [memberActionTargetId, setMemberActionTargetId] = useState<string | null>(null);
+  const [memberActionMessage, setMemberActionMessage] = useState("");
   const [mapSwitchState, setMapSwitchState] = useState<"idle" | "working" | "done" | "error">("idle");
   const [mapSwitchMessage, setMapSwitchMessage] = useState("");
   const [mapSwitchDraft, setMapSwitchDraft] = useState({
@@ -1230,6 +1232,7 @@ export function App() {
   );
   const [activeRouteStopIndex, setActiveRouteStopIndex] = useState(0);
   const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
+  const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installState, setInstallState] = useState<"idle" | "ready" | "installed" | "unavailable">("idle");
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfigResponse | null>(null);
@@ -1265,6 +1268,40 @@ export function App() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const initialComposerRevealRef = useRef(false);
   const visibleChatMessages = messages;
+
+  function closeSecondaryMenu() {
+    setSecondaryMenuOpen(false);
+    setOpenMenuSection(null);
+  }
+
+  function openSecondaryMenu() {
+    setOpenMenuSection(null);
+    setSecondaryMenuOpen(true);
+  }
+
+  function toggleSecondaryMenu() {
+    if (secondaryMenuOpen) {
+      closeSecondaryMenu();
+      return;
+    }
+
+    openSecondaryMenu();
+  }
+
+  useEffect(() => {
+    if (!secondaryMenuOpen) {
+      return;
+    }
+
+    function closeMenuOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeSecondaryMenu();
+      }
+    }
+
+    window.addEventListener("keydown", closeMenuOnEscape);
+    return () => window.removeEventListener("keydown", closeMenuOnEscape);
+  }, [secondaryMenuOpen]);
 
   useEffect(() => {
     voiceConversationActiveRef.current = voiceConversationActive;
@@ -1416,7 +1453,7 @@ export function App() {
     }
 
     return undefined;
-  }, [messages, isKodiThinking]);
+  }, [messages, isKodiThinking, showActivation, showJoinFlow]);
 
   function updateMessageScrollIntent() {
     const container = messagesContainerRef.current;
@@ -3497,6 +3534,7 @@ export function App() {
         return;
       }
 
+      setIsKodiThinking(false);
       const localKodiMessage: ChatMessage = {
         id: `local-kodi-${Date.now()}`,
         author: "קודי",
@@ -3795,6 +3833,8 @@ export function App() {
     }
 
     setMemberActionState("working");
+    setMemberActionTargetId("join");
+    setMemberActionMessage("");
     const nextMember: DemoMember = {
       id: `guest-${Date.now()}`,
       name,
@@ -3841,6 +3881,8 @@ export function App() {
       setMembers(normalizeTripMembers(mapMemberLocations(payload.members), setupDraft.memberName));
     } catch {
       setMemberActionState("error");
+      setMemberActionTargetId(null);
+      setMemberActionMessage("לא הצלחנו לצרף אותך כרגע. בדוק את החיבור ונסה שוב.");
       return;
     }
 
@@ -3851,19 +3893,23 @@ export function App() {
       setMessages((currentMessages) => mergeChatMessages(currentMessages, [welcomeMessage]));
     }
     setMemberActionState("done");
+    setMemberActionTargetId(null);
+    setMemberActionMessage("");
   }
 
   async function removeTripMember(memberId: string) {
     if (memberActionState === "working") {
-      return;
+      return false;
     }
 
     const target = members.find((member) => member.id === memberId);
     if (!target || target.role === "owner") {
-      return;
+      return false;
     }
 
     setMemberActionState("working");
+    setMemberActionTargetId(memberId);
+    setMemberActionMessage("");
     try {
       const response = await fetch(`${apiBaseUrl}/api/trips/demo/members/${encodeURIComponent(memberId)}`, {
         method: "DELETE",
@@ -3886,13 +3932,23 @@ export function App() {
         setActiveMemberId(nextMembers.find((member) => member.role === "owner")?.id ?? nextMembers[0]?.id ?? "mom");
       }
       setMemberActionState("done");
+      setMemberActionTargetId(null);
+      setMemberActionMessage(`${target.name} הוסר/ה מהקבוצה.`);
+      return true;
     } catch {
       setMemberActionState("error");
+      setMemberActionTargetId(null);
+      setMemberActionMessage(`לא הצלחנו להסיר את ${target.name}. אפשר לנסות שוב.`);
+      return false;
     }
   }
 
-  function leaveTripGroup() {
-    void removeTripMember(activeMember.id);
+  async function leaveTripGroup() {
+    const leftGroup = await removeTripMember(activeMember.id);
+    if (leftGroup) {
+      closeSecondaryMenu();
+      setShowJoinFlow(true);
+    }
   }
 
   async function requestTripMapSwitch() {
@@ -3953,7 +4009,7 @@ export function App() {
           createdAt: new Date().toISOString()
         }
       ]);
-      setSecondaryMenuOpen(false);
+      closeSecondaryMenu();
     } catch {
       setMapSwitchState("error");
       setMapSwitchMessage("לא הצלחתי להחליף את מקור המפה. ודא שאתה מנהל ושיש קישור Google Maps תקין.");
@@ -4131,10 +4187,15 @@ export function App() {
                 value={joinDraft.whatsAppPhone}
               />
             </label>
-            <button disabled={joinDraft.name.trim().length < 2} type="submit">
-              הצטרפות לקבוצה
+            <button disabled={joinDraft.name.trim().length < 2 || memberActionState === "working"} type="submit">
+              {memberActionState === "working" && memberActionTargetId === "join" ? "מצרף..." : "הצטרפות לקבוצה"}
             </button>
           </form>
+          {memberActionMessage ? (
+            <p className={memberActionState === "error" ? "join-action-message error" : "join-action-message"} role="status">
+              {memberActionMessage}
+            </p>
+          ) : null}
           <div className="join-consent-note">
             <ShieldCheck size={18} aria-hidden="true" />
             <p>אישור מיקום נעשה בנפרד מהמכשיר שלך. בלי אישור מיקום, אפשר עדיין להשתתף בשיחה עם קודי.</p>
@@ -4149,9 +4210,6 @@ export function App() {
       <main className="activation-shell" aria-label="קליטת משתמש והפעלת קודי">
         <section className="activation-map-preview" aria-label="תצוגת מפת טיול">
           <div className="activation-top">
-            <button className="icon-button" aria-label="תפריט">
-              <Menu size={22} aria-hidden="true" />
-            </button>
             <div>
               <h1>מלווה טיול AI</h1>
               <p>Welcome + Activation עם קודי</p>
@@ -4369,7 +4427,7 @@ export function App() {
             aria-expanded={secondaryMenuOpen}
             className="icon-button"
             aria-label="תפריט"
-            onClick={() => setSecondaryMenuOpen((isOpen) => !isOpen)}
+            onClick={toggleSecondaryMenu}
             type="button"
           >
             <Menu size={22} aria-hidden="true" />
@@ -4471,29 +4529,30 @@ export function App() {
         </div>
       </section>
 
-      <aside
-        className="secondary-menu"
-        aria-label="ניהול הטיול"
-        onClick={(event) => {
-          const target = event.target as HTMLElement;
-          const menuBlock = target.closest(".menu-block");
-          if (!menuBlock || !target.closest(".secondary-menu")) {
-            return;
-          }
-          if (target.closest("button, input, a, form, article, .place-filter-chips, .trip-place-list, .member-management-list, .external-shortcuts")) {
-            return;
-          }
-          menuBlock.classList.toggle("menu-block-open");
-        }}
-      >
+      {secondaryMenuOpen ? (
+        <>
+          <button
+            aria-label="סגירת תפריט הניהול"
+            className="secondary-menu-backdrop"
+            onClick={closeSecondaryMenu}
+            type="button"
+          />
+          <aside aria-modal="true" className="secondary-menu" aria-label="ניהול הטיול" role="dialog">
         <div className="secondary-menu-header">
           <strong>ניהול</strong>
-          <button onClick={() => setSecondaryMenuOpen(false)} type="button">
+          <button onClick={closeSecondaryMenu} type="button">
             סגור
           </button>
         </div>
-        <section className="menu-block trip-places-menu" aria-label="כל נקודות הטיול">
-          <strong>נקודות הטיול</strong>
+        <section className={`menu-block trip-places-menu ${openMenuSection === "places" ? "menu-block-open" : ""}`} aria-label="כל נקודות הטיול">
+          <button
+            aria-expanded={openMenuSection === "places"}
+            className="menu-block-toggle"
+            onClick={() => setOpenMenuSection((current) => (current === "places" ? null : "places"))}
+            type="button"
+          >
+            נקודות הטיול
+          </button>
           <p>
             {placeListFilter === "route"
               ? `${menuPlaces.length} נקודות לפי סדר המסלול`
@@ -4575,8 +4634,15 @@ export function App() {
             )}
           </div>
         </section>
-        <section className="menu-block invite-menu" data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
-          <strong>הזמנת משתתפים</strong>
+        <section className={`menu-block invite-menu ${openMenuSection === "invite" ? "menu-block-open" : ""}`} data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
+          <button
+            aria-expanded={openMenuSection === "invite"}
+            className="menu-block-toggle"
+            onClick={() => setOpenMenuSection((current) => (current === "invite" ? null : "invite"))}
+            type="button"
+          >
+            הזמנת משתתפים
+          </button>
           <p>שלחו קישור כמו בקבוצת וואטסאפ. מי שמקבל נכנס, כותב שם, מאשר מיקום ומצטרף.</p>
           <input aria-label="קישור הזמנה בתפריט ניהול" dir="ltr" readOnly value={tripInviteUrl} />
           <div className="invite-menu-actions">
@@ -4594,8 +4660,15 @@ export function App() {
           {inviteCopyState === "copied" ? <small>הקישור הועתק</small> : null}
           {inviteCopyState === "error" ? <small>לא הצלחתי להעתיק. אפשר לסמן ולהעתיק ידנית.</small> : null}
         </section>
-        <section className="menu-block notifications-menu" aria-label="התראות הודעות">
-          <strong>התראות הודעות</strong>
+        <section className={`menu-block notifications-menu ${openMenuSection === "notifications" ? "menu-block-open" : ""}`} aria-label="התראות הודעות">
+          <button
+            aria-expanded={openMenuSection === "notifications"}
+            className="menu-block-toggle"
+            onClick={() => setOpenMenuSection((current) => (current === "notifications" ? null : "notifications"))}
+            type="button"
+          >
+            התראות הודעות
+          </button>
           <p>{notificationMessage || "קבלו התראה לנייד כשיש הודעה חדשה בקבוצת הטיול."}</p>
           <button
             disabled={
@@ -4622,22 +4695,27 @@ export function App() {
               : "ההתראות הן בהרשאה אישית לכל מכשיר. לא נשלח תוכן מיקום רגיש למסך הנעילה."}
           </small>
         </section>
-        <section className="menu-block members-menu" aria-label="ניהול חברי הקבוצה">
-          <strong>חברי הקבוצה</strong>
+        <section className={`menu-block members-menu ${openMenuSection === "members" ? "menu-block-open" : ""}`} aria-label="ניהול חברי הקבוצה">
+          <button
+            aria-expanded={openMenuSection === "members"}
+            className="menu-block-toggle"
+            onClick={() => setOpenMenuSection((current) => (current === "members" ? null : "members"))}
+            type="button"
+          >
+            חברי הקבוצה
+          </button>
           <p>הצטרפות פשוטה: שם, גיל ואישור מיקום מהמכשיר. הסוכן, המפה וההרשאות נשארים תחת מנהל הטיול.</p>
           <div className="member-pills menu-member-pills" aria-label="חברי קבוצה">
             {members.map((member, index) => (
-              <button
+              <span
                 className={`${member.locationSharing === "enabled" ? "sharing-on" : "sharing-off"} ${
                   activeMember.id === member.id ? "active-speaker" : ""
                 }`}
                 key={member.id}
-                onClick={() => setActiveMemberId(member.id)}
-                type="button"
               >
                 {index === 0 ? <Users size={13} aria-hidden="true" /> : null}
                 {member.name}
-              </button>
+              </span>
             ))}
             <span className="kodi-pill">קודי</span>
           </div>
@@ -4652,7 +4730,7 @@ export function App() {
                 <small>{member.role === "owner" ? "מנהל" : member.role === "admin" ? "מנהל נוסף" : "משתתף"}</small>
                 {activeMember.id !== member.id && (activeMember.role === "owner" || activeMember.role === "admin") && member.role !== "owner" ? (
                   <button disabled={memberActionState === "working"} onClick={() => removeTripMember(member.id)} type="button">
-                    הסר משתתף
+                    {memberActionState === "working" && memberActionTargetId === member.id ? "מסיר..." : "הסר משתתף"}
                   </button>
                 ) : null}
               </article>
@@ -4665,10 +4743,17 @@ export function App() {
           ) : (
             <small>מנהל הטיול לא יוצא מהקבוצה; הוא יכול להסיר משתתפים ולשלוח הזמנות.</small>
           )}
-          {memberActionState === "error" ? <small>לא הצלחתי לעדכן את הקבוצה כרגע.</small> : null}
+          {memberActionMessage ? <small className={memberActionState === "error" ? "member-action-message error" : "member-action-message"} role="status">{memberActionMessage}</small> : null}
         </section>
-        <section className="menu-block trip-map-source-menu" aria-label="מפות הטיול שלי">
-          <strong>מפות הטיול שלי</strong>
+        <section className={`menu-block trip-map-source-menu ${openMenuSection === "maps" ? "menu-block-open" : ""}`} aria-label="מפות הטיול שלי">
+          <button
+            aria-expanded={openMenuSection === "maps"}
+            className="menu-block-toggle"
+            onClick={() => setOpenMenuSection((current) => (current === "maps" ? null : "maps"))}
+            type="button"
+          >
+            מפות הטיול שלי
+          </button>
           <p>מנהל הטיול יכול להחליף את מקור המפה הפעיל. משתתפים רגילים לא משנים את נקודות הטיול.</p>
           <div className="trip-map-source-current">
             <span>פעיל עכשיו</span>
@@ -4699,16 +4784,30 @@ export function App() {
           {activeMember.role === "owner" || activeMember.role === "admin" ? null : <small>רק מנהל טיול יכול להחליף מפה לכל הקבוצה.</small>}
           <small>הקישור נשמר כמקור הפעיל. ייבוא אוטומטי של נקודות ממפות פרטיות דורש חיבור Google OAuth.</small>
         </section>
-        <section className="menu-block location-menu">
-          <strong>מיקום בטלפון</strong>
+        <section className={`menu-block location-menu ${openMenuSection === "location" ? "menu-block-open" : ""}`}>
+          <button
+            aria-expanded={openMenuSection === "location"}
+            className="menu-block-toggle"
+            onClick={() => setOpenMenuSection((current) => (current === "location" ? null : "location"))}
+            type="button"
+          >
+            מיקום בטלפון
+          </button>
           <p>{currentLocation ? `פעיל על Google Maps · דיוק ${Math.round(currentLocation.accuracyMeters ?? 0)} מ'` : "כדי שקודי ידע איפה אתם, צריך לאשר מיקום במכשיר הזה."}</p>
           <small>{locationPermissionLabel}</small>
           <button disabled={locationState === "requesting"} onClick={() => enablePersonalGps()} type="button">
             {locationState === "requesting" ? "מבקש הרשאה..." : currentLocation ? "רענן מיקום" : "אשר מיקום"}
           </button>
         </section>
-        <section className="menu-block external-apps-menu">
-          <strong>קישורים חיצוניים</strong>
+        <section className={`menu-block external-apps-menu ${openMenuSection === "external" ? "menu-block-open" : ""}`}>
+          <button
+            aria-expanded={openMenuSection === "external"}
+            className="menu-block-toggle"
+            onClick={() => setOpenMenuSection((current) => (current === "external" ? null : "external"))}
+            type="button"
+          >
+            קישורים חיצוניים
+          </button>
           <p>יציאה מהירה לכלים המקוריים: Google Maps, Booking, Airbnb וקיצורים אישיים.</p>
           <div className="external-shortcuts menu-shortcuts" aria-label="קיצורי אפליקציות חיצוניות בתפריט">
             {externalShortcuts.map((shortcut) => (
@@ -4741,8 +4840,15 @@ export function App() {
             <button type="submit">הוסף</button>
           </form>
         </section>
-        <section className="menu-block install-menu" aria-label="הפוך את קודי למסך הבית">
-          <strong>הפוך את קודי למסך הבית</strong>
+        <section className={`menu-block install-menu ${openMenuSection === "install" ? "menu-block-open" : ""}`} aria-label="הפוך את קודי למסך הבית">
+          <button
+            aria-expanded={openMenuSection === "install"}
+            className="menu-block-toggle"
+            onClick={() => setOpenMenuSection((current) => (current === "install" ? null : "install"))}
+            type="button"
+          >
+            הפוך את קודי למסך הבית
+          </button>
           <p>
             {installState === "installed"
               ? "קודי כבר פעיל כקיצור אפליקציה."
@@ -4807,7 +4913,9 @@ export function App() {
           </div>
           </section>
         </details>
-      </aside>
+          </aside>
+        </>
+      ) : null}
 
       <aside className="chat-sheet" aria-label="שיחת המשפחה">
         <header>
@@ -4863,7 +4971,7 @@ export function App() {
             <span>מצלמה</span>
             <input accept="image/*" capture="environment" type="file" />
           </label>
-          <button className="dashboard-shortcut" onClick={() => setSecondaryMenuOpen(true)} type="button">
+          <button className="dashboard-shortcut" onClick={openSecondaryMenu} type="button">
             <Plus size={18} aria-hidden="true" />
             <span>הוסף</span>
           </button>
