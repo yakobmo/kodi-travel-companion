@@ -2030,6 +2030,44 @@ foreach ($requiredAiFallbackEnvName in @("GEMINI_API_KEY=", "GEMINI_AGENT_MODEL=
   }
 }
 
+$providerFleetSource = Get-Content (Join-Path $root "apps\api\src\agent\providerFleet.ts") -Raw
+foreach ($requiredProviderFleetToken in @(
+  "tryFreeProviderFleet",
+  "getFreeProviderFleetReadiness",
+  "KODI_FREE_PROVIDER_ORDER",
+  "GROQ_API_KEY",
+  "CLOUDFLARE_AI_TOKEN",
+  "OPENROUTER_API_KEY",
+  "cooldownUntil",
+  "retry-after"
+)) {
+  if (-not $providerFleetSource.Contains($requiredProviderFleetToken)) {
+    throw "Provider fleet is missing required failover behavior: $requiredProviderFleetToken"
+  }
+}
+
+foreach ($requiredProviderEnvName in @(
+  "KODI_FREE_PROVIDER_ORDER=groq,cloudflare,openrouter",
+  "KODI_PROVIDER_ATTEMPT_TIMEOUT_MS=5500",
+  "GROQ_API_KEY=",
+  "CLOUDFLARE_ACCOUNT_ID=",
+  "CLOUDFLARE_AI_TOKEN=",
+  "OPENROUTER_API_KEY="
+)) {
+  if (-not $envExampleSource.Contains($requiredProviderEnvName)) {
+    throw ".env.example is missing provider fleet configuration: $requiredProviderEnvName"
+  }
+}
+
+if (
+  -not $serverSource.Contains("/api/agent/providers/readiness") -or
+  -not $serverSource.Contains("free_first_paid_last") -or
+  -not $serverSource.Contains("paid_last_resort") -or
+  -not $serverSource.Contains("לא אמציא תשובה כאשר אין מודל פעיל")
+) {
+  throw "Kodi must expose safe provider diagnostics and explain total fleet exhaustion without inventing an answer."
+}
+
 if (-not $envExampleSource.Contains("MIGRATION_ADMIN_TOKEN=")) {
   throw ".env.example must include MIGRATION_ADMIN_TOKEN for guarded migration automation."
 }

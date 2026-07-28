@@ -29,7 +29,14 @@ const providerByCapability: Record<TripUsageCapability, "openai" | "google" | "i
 };
 
 function hasAiAgentProvider() {
-  return Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY);
+  return Boolean(
+    process.env.OPENAI_API_KEY ||
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_AI_API_KEY ||
+      process.env.GROQ_API_KEY ||
+      process.env.OPENROUTER_API_KEY ||
+      (process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_AI_TOKEN)
+  );
 }
 
 const enabledByCapability: Record<TripUsageCapability, boolean> = {

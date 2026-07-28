@@ -17,6 +17,7 @@
     "smoke:local": "node scripts/smoke-local.mjs",
     "smoke:whatsapp": "node scripts/smoke-whatsapp-readiness.mjs",
     "smoke:agent-provider": "node scripts/smoke-agent-provider-readiness.mjs",
+    "test:provider-fleet": "node scripts/test-provider-fleet.mjs",
     "smoke:google-places-live": "node scripts/smoke-google-places-live.mjs",
     "smoke:google-routes-live": "node scripts/smoke-google-routes-live.mjs",
     "agent:regression": "node scripts/kodi-agent-regression.mjs",
