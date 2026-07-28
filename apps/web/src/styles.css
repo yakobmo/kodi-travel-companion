@@ -1408,6 +1408,14 @@ input {
   overflow: auto;
 }
 
+.secondary-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  border: 0;
+  background: rgba(7, 57, 77, 0.28);
+}
+
 .secondary-menu-visible .secondary-menu {
   transform: translateX(0);
 }
@@ -1471,19 +1479,24 @@ input {
   padding-bottom: 12px;
 }
 
-.secondary-menu > .menu-block > strong {
+.secondary-menu > .menu-block > .menu-block-toggle {
   min-height: 46px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
   padding: 0 12px;
   cursor: pointer;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #07394d;
   font-size: 14px;
+  text-align: start;
 }
 
-.secondary-menu > .menu-block > strong::after {
+.secondary-menu > .menu-block > .menu-block-toggle::after {
   content: "+";
   width: 24px;
   height: 24px;
@@ -1497,12 +1510,29 @@ input {
   line-height: 1;
 }
 
-.secondary-menu > .menu-block.menu-block-open > strong::after {
+.secondary-menu > .menu-block.menu-block-open > .menu-block-toggle::after {
   content: "-";
 }
 
-.secondary-menu > .menu-block > :not(strong) {
+.secondary-menu > .menu-block > :not(.menu-block-toggle) {
   margin-inline: 12px;
+}
+
+.secondary-menu > .menu-block > .menu-block-toggle:focus-visible {
+  outline: 3px solid #7ed7e7;
+  outline-offset: -3px;
+}
+
+.join-action-message,
+.member-action-message {
+  margin: 0;
+  color: #17634f;
+  font-weight: 800;
+}
+
+.join-action-message.error,
+.member-action-message.error {
+  color: #a12a2a;
 }
 
 .install-menu,

@@ -282,11 +282,16 @@ if (
 }
 
 if (
-  -not $webAppEarlySource.Contains("menuBlock.classList.toggle(`"menu-block-open`")") -or
+  $webAppEarlySource.Contains("classList.toggle(`"menu-block-open`")") -or
+  -not $webAppEarlySource.Contains("openMenuSection") -or
+  -not $webAppEarlySource.Contains("menu-block-toggle") -or
+  -not $webAppEarlySource.Contains("aria-expanded={openMenuSection") -or
+  -not $webAppEarlySource.Contains("function closeSecondaryMenu()") -or
+  -not $webAppEarlySource.Contains("setOpenMenuSection(null);") -or
   -not (Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw).Contains(".secondary-menu > .menu-block.menu-block-open") -or
   -not (Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw).Contains("max-height: 48px")
 ) {
-  throw "Hamburger menu sections must default to collapsed headings and expand only when selected."
+  throw "Hamburger menu sections must use React state and accessible toggle buttons, not direct DOM class mutation."
 }
 
 if (
@@ -629,9 +634,10 @@ if (
   -not $webAppSource.Contains("isKodiThinking") -or
   -not $webAppSource.Contains("kodi-thinking-pulse") -or
   -not $webAppSource.Contains("role=`"status`"") -or
-  -not $webAppSource.Contains("[messages, isKodiThinking]")
+  -not $webAppSource.Contains("[messages, isKodiThinking, showActivation, showJoinFlow]") -or
+  -not $webAppSource.Contains("setIsKodiThinking(false);")
 ) {
-  throw "Web chat must show a live Kodi thinking indicator while waiting for the agent."
+  throw "Web chat must reveal the composer on first entry and stop the Kodi thinking indicator as soon as the reply is ready."
 }
 
 if (
@@ -807,7 +813,10 @@ if (-not $webStylesSource.Contains(".speak-message-button") -or -not $webStylesS
 
 $sourcePlacesPath = Join-Path (Split-Path -Parent $root) "work\spikes\google-place-list\out\places.json"
 if (-not (Test-Path $sourcePlacesPath)) {
-  throw "Missing local places fixture: $sourcePlacesPath"
+  $sourcePlacesPath = Join-Path $root "data\demo-google-places.json"
+}
+if (-not (Test-Path $sourcePlacesPath)) {
+  throw "Missing local places fixture. Checked workspace import output and repository fallback."
 }
 
 $places = Get-Content $sourcePlacesPath -Raw | ConvertFrom-Json
