@@ -78,14 +78,16 @@ Each layer has one job.
 
 ### 1. Conversation Routing Gate
 
-Kodi is a smart agent inside the group chat, but it should wake only when intentionally invited. The default product behavior is:
+Kodi is a smart agent inside the group chat. It is not a keyword bot and it does not require a wake word. The default product behavior is:
 
-- normal trip/group messages remain visible group chat and do not automatically wake Kodi
-- explicit calls such as `קודי` or `Kodi` are routed to Kodi
-- voice conversation mode routes to Kodi
-- explicit Kodi UI actions route to Kodi
+- every app or WhatsApp user message becomes conversational context for Kodi
+- Kodi may answer, stay silent, ask one short clarification, or perform an action according to the actual conversation
+- explicit calls such as `קודי` or `Kodi`, voice conversation mode, WhatsApp connector messages, and explicit Kodi UI actions are priority signals, not hard requirements
+- the routing gate blocks only non-user system noise, duplicate delivery, unsafe permission requests, and transport errors
 
 Kodi must not be intercepted by a hard-coded presence response. The UI/backend should send the conversation event to the agent harness, not to canned `I am here` logic.
+
+The gate must not invent a fake answer, decide intent by keyword matching, or bypass the model with canned natural-language replies. Its job is to protect the agent pipeline and keep useful context attached.
 
 Example:
 
@@ -93,7 +95,7 @@ Example:
 מה קורה אורייה
 ```
 
-Kodi must stay silent.
+Kodi should not repeat an unrelated previous travel answer. It may stay silent or acknowledge naturally if the group context makes that useful.
 
 Example:
 
@@ -101,7 +103,15 @@ Example:
 קודי, מה קורה עם המסלול היום?
 ```
 
-Kodi should answer.
+Kodi should answer through the full agent pipeline.
+
+Example:
+
+```text
+יש בית קפה טוב באזור?
+```
+
+Kodi should receive fresh location, Google Places context, map state, and action links before synthesizing a natural answer.
 
 ### 2. Context Builder
 

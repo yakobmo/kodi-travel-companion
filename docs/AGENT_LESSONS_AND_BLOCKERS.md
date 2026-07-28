@@ -70,6 +70,7 @@ Decision:
 - Google Places/Routes enrich the answer; they do not replace the agent's reasoning.
 - Default Gemini should be a full fast agent model, not a lite model, unless explicitly changed by env.
 - Regression QA must include stale-context tests where an old location/topic must not hijack a new question.
+- Binding QA rule: no new code, prompt, profile, skill, or script may introduce final natural-language fast-lane answers, synthetic presence replies, silent fallback, or keyword-only intent gates without failing Agent Integrity QA.
 
 ### Fast Paths Must Not Replace Kodi
 
@@ -397,8 +398,9 @@ The fallback layer was treated as the primary response path for convenience and 
 Decision:
 
 - Default runtime is agent-first.
-- Rules are fallback, safety grounding, or explicitly enabled fast paths only.
-- `KODI_FAST_TRIP_ANSWER_ENABLED` must be explicitly set to `true` before canned fast trip answers can bypass OpenAI.
+- Rules are fallback, safety grounding, diagnostics, or fact/tool preparation only.
+- Fast paths may speed up data retrieval, reverse geocoding, Google Places/Routes lookup, dedupe, or link generation, but they must not produce final natural-language travel answers instead of the agent.
+- `KODI_FAST_TRIP_ANSWER_ENABLED` is a legacy risk flag. It must not be used to bypass the agent with canned conversation unless a future QA decision explicitly narrows it to non-conversational diagnostics.
 - Current-location questions should still reach the OpenAI agent after reverse geocoding, with raw coordinates avoided in user-facing copy.
 - Prompt updates must preserve Kodi as a warm, capable travel partner, not an API/status explainer.
 
