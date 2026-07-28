@@ -41,6 +41,13 @@ function assertAgentFirstSourceGuards() {
       !serverSource.includes("message: actionMessage")
   );
   assertCheck(
+    "agent-first reads fresh location from full request body",
+    serverSource.includes("getRequestCurrentLocation(req.body)") &&
+      serverSource.includes("normalizeRequestCurrentLocation(body.currentLocation)") &&
+      serverSource.includes('typeof location.accuracy === "number"') &&
+      !serverSource.includes("getRequestCurrentLocation(context)")
+  );
+  assertCheck(
     "agent-first no fast places pre-router call site",
     countOccurrences(openAiSource, "shouldPreferFastPlacesAnswer") <= 1
   );

@@ -1604,30 +1604,68 @@ function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessa
   };
 }
 
-function getRequestCurrentLocation(context: unknown) {
-  if (!context || typeof context !== "object") {
+type RequestCurrentLocation = {
+  lat: number;
+  lng: number;
+  accuracyMeters?: number;
+  updatedAt?: string;
+};
+
+function normalizeRequestCurrentLocation(value: unknown): RequestCurrentLocation | undefined {
+  if (!value || typeof value !== "object") {
     return undefined;
   }
 
-  const currentLocation = (
-    context as { currentLocation?: { lat?: unknown; lng?: unknown; accuracyMeters?: unknown; updatedAt?: unknown } }
-  ).currentLocation;
-  if (typeof currentLocation?.lat !== "number" || typeof currentLocation.lng !== "number") {
+  const location = value as {
+    lat?: unknown;
+    lng?: unknown;
+    accuracyMeters?: unknown;
+    accuracy?: unknown;
+    updatedAt?: unknown;
+  };
+  if (typeof location.lat !== "number" || typeof location.lng !== "number") {
     return undefined;
   }
+
+  const accuracyMeters =
+    typeof location.accuracyMeters === "number"
+      ? location.accuracyMeters
+      : typeof location.accuracy === "number"
+        ? location.accuracy
+        : undefined;
 
   return {
-    lat: currentLocation.lat,
-    lng: currentLocation.lng,
-    accuracyMeters: typeof currentLocation.accuracyMeters === "number" ? currentLocation.accuracyMeters : undefined,
-    updatedAt: typeof currentLocation.updatedAt === "string" ? currentLocation.updatedAt : undefined
+    lat: location.lat,
+    lng: location.lng,
+    accuracyMeters,
+    updatedAt: typeof location.updatedAt === "string" ? location.updatedAt : undefined
   };
+}
+
+function getRequestCurrentLocation(input: unknown): RequestCurrentLocation | undefined {
+  if (!input || typeof input !== "object") {
+    return undefined;
+  }
+
+  const body = input as {
+    currentLocation?: unknown;
+    context?: { currentLocation?: unknown; liveLocation?: unknown };
+    member?: { currentLocation?: unknown; liveLocation?: unknown };
+  };
+
+  return (
+    normalizeRequestCurrentLocation(body.context?.currentLocation) ??
+    normalizeRequestCurrentLocation(body.currentLocation) ??
+    normalizeRequestCurrentLocation(body.context?.liveLocation) ??
+    normalizeRequestCurrentLocation(body.member?.currentLocation) ??
+    normalizeRequestCurrentLocation(body.member?.liveLocation)
+  );
 }
 
 function withRequestCurrentLocation(
   tripState: ReturnType<typeof buildDemoTripState>,
   member: { id?: unknown; displayName?: unknown; role?: unknown },
-  currentLocation?: { lat: number; lng: number; accuracyMeters?: number; updatedAt?: string }
+  currentLocation?: RequestCurrentLocation
 ) {
   if (!currentLocation) {
     return tripState;
@@ -3566,7 +3604,7 @@ app.post("/api/agent/message", async (req, res) => {
           .permissionPolicy
       : undefined;
 
-  const requestCurrentLocation = getRequestCurrentLocation(context);
+  const requestCurrentLocation = getRequestCurrentLocation(req.body);
   const currentMessage = message.trim();
   const referenceMessage = currentMessage;
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);

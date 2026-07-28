@@ -424,6 +424,10 @@ $placesSearchSource = Get-Content (Join-Path $root "apps\api\src\google\placesSe
 if (
   -not $serverSource.Contains("shouldUseHereAndNowContext") -or
   -not $serverSource.Contains("getRequestCurrentLocation") -or
+  -not $serverSource.Contains("getRequestCurrentLocation(req.body)") -or
+  -not $serverSource.Contains("normalizeRequestCurrentLocation(body.currentLocation)") -or
+  -not $serverSource.Contains('typeof location.accuracy === "number"') -or
+  $serverSource.Contains("getRequestCurrentLocation(context)") -or
   -not $serverSource.Contains("withRequestCurrentLocation") -or
   -not $serverSource.Contains('item.member.role === "owner"') -or
   -not $serverSource.Contains('first.liveLocation?.source === "gps"') -or
