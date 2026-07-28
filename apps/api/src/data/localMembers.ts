@@ -9,6 +9,7 @@ import {
 } from "./demoStorage.js";
 import { DEMO_GROUP_ID, DEMO_TRIP_GROUP_UUID, demoMemberUuidById, demoRelationalMembers } from "./demoRelationalIds.js";
 import { ensureDemoRelationalBase } from "./demoRelationalSeed.js";
+import { createSupabaseServerClient } from "./supabaseClient.js";
 
 const UPDATED_AT = "2026-06-23T09:00:00.000Z";
 
@@ -318,7 +319,7 @@ async function loadSupabaseTripMembers(): Promise<TripMemberLocationView[] | nul
     return null;
   }
 
-  const supabase = await seedSupabaseLocationStateIfEmpty();
+  const supabase = createSupabaseServerClient();
   if (!supabase) {
     return null;
   }
@@ -403,7 +404,7 @@ async function updateSupabaseMemberLocation(input: {
     return { ok: false as const, error: "location_sharing_not_enabled" };
   }
 
-  const supabase = await ensureDemoRelationalBase();
+  const supabase = createSupabaseServerClient();
   if (!supabase) {
     return null;
   }
@@ -440,7 +441,7 @@ async function addSupabaseTripMember(input: {
     return null;
   }
 
-  const supabase = await ensureDemoRelationalBase();
+  const supabase = createSupabaseServerClient();
   if (!supabase) {
     return null;
   }
@@ -514,7 +515,7 @@ async function removeSupabaseTripMember(input: { memberId: string; actorMemberId
     return null;
   }
 
-  const supabase = await ensureDemoRelationalBase();
+  const supabase = createSupabaseServerClient();
   if (!supabase) {
     return null;
   }
@@ -535,12 +536,31 @@ async function removeSupabaseTripMember(input: { memberId: string; actorMemberId
     return { ok: false as const, error: "not_allowed" };
   }
 
-  const { error } = await supabase.from("trip_members").delete().eq("id", getSupabaseMemberUuidByAppId(input.memberId));
+  const fallbackMember = members.find((item) => item.member.role === "owner" && item.member.id !== input.memberId) ?? actor;
+  if (!fallbackMember || fallbackMember.member.id === input.memberId) {
+    return { ok: false as const, error: "member_reassignment_required" };
+  }
+
+  const targetUuid = getSupabaseMemberUuidByAppId(input.memberId);
+  const fallbackUuid = getSupabaseMemberUuidByAppId(fallbackMember.member.id);
+  const [destinationResult, routeResult] = await Promise.all([
+    supabase.from("group_destinations").update({ set_by_member_id: fallbackUuid }).eq("set_by_member_id", targetUuid),
+    supabase.from("group_routes").update({ created_by_member_id: fallbackUuid }).eq("created_by_member_id", targetUuid)
+  ]);
+
+  if (destinationResult.error) {
+    throw new Error(`Supabase member destination reassignment failed: ${destinationResult.error.message}`);
+  }
+  if (routeResult.error) {
+    throw new Error(`Supabase member route reassignment failed: ${routeResult.error.message}`);
+  }
+
+  const { error } = await supabase.from("trip_members").delete().eq("id", targetUuid);
   if (error) {
     throw new Error(`Supabase member delete failed: ${error.message}`);
   }
 
-  return { ok: true as const, members: await loadDemoTripMembersAsync() };
+  return { ok: true as const, members: (await loadSupabaseTripMembers()) ?? [] };
 }
 
 export function loadDemoTripMembers(): TripMemberLocationView[] {

@@ -654,6 +654,18 @@ interface JoinDraft {
 }
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : "");
+const MENU_REQUEST_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = MENU_REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 const buildTimeGoogleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
 
 function loadGoogleMapsSdk(apiKey: string) {
@@ -1267,11 +1279,14 @@ export function App() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const initialComposerRevealRef = useRef(false);
+  const memberPollInFlightRef = useRef(false);
+  const secondaryMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const visibleChatMessages = messages;
 
   function closeSecondaryMenu() {
     setSecondaryMenuOpen(false);
     setOpenMenuSection(null);
+    window.requestAnimationFrame(() => secondaryMenuButtonRef.current?.focus());
   }
 
   function openSecondaryMenu() {
@@ -1715,7 +1730,7 @@ export function App() {
 
     async function loadMembers() {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/trips/demo/members`);
+        const response = await fetchWithTimeout(`${apiBaseUrl}/api/trips/demo/members`);
         if (!response.ok) {
           throw new Error(`Members API failed with ${response.status}`);
         }
@@ -2006,8 +2021,13 @@ export function App() {
     let eventSource: EventSource | undefined;
 
     async function pollMemberLocations() {
+      if (memberPollInFlightRef.current) {
+        return;
+      }
+
+      memberPollInFlightRef.current = true;
       try {
-        const response = await fetch(`${apiBaseUrl}/api/trips/demo/members`);
+        const response = await fetchWithTimeout(`${apiBaseUrl}/api/trips/demo/members`);
         if (!response.ok) {
           throw new Error(`Members polling failed with ${response.status}`);
         }
@@ -2023,6 +2043,8 @@ export function App() {
         if (!ignore) {
           setMemberRealtimeState("error");
         }
+      } finally {
+        memberPollInFlightRef.current = false;
       }
     }
 
@@ -2032,7 +2054,7 @@ export function App() {
       }
 
       void pollMemberLocations();
-      intervalId = window.setInterval(pollMemberLocations, 5000);
+      intervalId = window.setInterval(pollMemberLocations, 15000);
     }
 
     if ("EventSource" in window) {
@@ -3801,7 +3823,7 @@ export function App() {
           applicationServerKey: urlBase64ToUint8Array(notificationConfig.publicKey)
         }));
 
-      const response = await fetch(`${apiBaseUrl}/api/trips/demo/notifications/subscriptions`, {
+      const response = await fetchWithTimeout(`${apiBaseUrl}/api/trips/demo/notifications/subscriptions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -3849,7 +3871,7 @@ export function App() {
     let joinedMember = nextMember;
     let welcomeMessage: ChatMessage | null = null;
     try {
-      const response = await fetch(`${apiBaseUrl}/api/trips/demo/members`, {
+      const response = await fetchWithTimeout(`${apiBaseUrl}/api/trips/demo/members`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -3911,7 +3933,7 @@ export function App() {
     setMemberActionTargetId(memberId);
     setMemberActionMessage("");
     try {
-      const response = await fetch(`${apiBaseUrl}/api/trips/demo/members/${encodeURIComponent(memberId)}`, {
+      const response = await fetchWithTimeout(`${apiBaseUrl}/api/trips/demo/members/${encodeURIComponent(memberId)}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json"
@@ -3971,7 +3993,7 @@ export function App() {
     setMapSwitchMessage("");
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/trips/demo/google-source/switch`, {
+      const response = await fetchWithTimeout(`${apiBaseUrl}/api/trips/demo/google-source/switch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -4428,6 +4450,7 @@ export function App() {
             className="icon-button"
             aria-label="תפריט"
             onClick={toggleSecondaryMenu}
+            ref={secondaryMenuButtonRef}
             type="button"
           >
             <Menu size={22} aria-hidden="true" />

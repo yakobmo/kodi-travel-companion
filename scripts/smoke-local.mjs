@@ -1,12 +1,20 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { homedir } from "node:os";
 
 async function loadChromium() {
   try {
     return (await import("playwright")).chromium;
   } catch {
     const fallbackModule = join(
-      "C:\\Users\\yaako\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules\\.pnpm\\node_modules\\playwright-core",
+      homedir(),
+      ".cache",
+      "codex-runtimes",
+      "codex-primary-runtime",
+      "dependencies",
+      "node",
+      "node_modules",
+      "playwright-core",
       "index.js"
     );
     const fallback = await import(pathToFileURL(fallbackModule).href);

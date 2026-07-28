@@ -2592,15 +2592,31 @@ app.get("/api/trips/demo/members/stream", async (req, res) => {
     closed = true;
   });
 
-  await publishIfChanged(true);
-  const intervalId = setInterval(() => {
+  let timeoutId: NodeJS.Timeout | undefined;
+
+  async function scheduleNextSnapshot() {
     if (closed) {
-      clearInterval(intervalId);
       return;
     }
 
-    void publishIfChanged();
-  }, 3000);
+    await publishIfChanged();
+    if (!closed) {
+      timeoutId = setTimeout(() => {
+        void scheduleNextSnapshot();
+      }, 10000);
+    }
+  }
+
+  req.on("close", () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  });
+
+  await publishIfChanged(true);
+  timeoutId = setTimeout(() => {
+    void scheduleNextSnapshot();
+  }, 10000);
 });
 
 app.get("/api/trips/demo/messages", async (_req, res) => {
