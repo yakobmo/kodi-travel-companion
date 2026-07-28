@@ -72,6 +72,7 @@ import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripSta
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext, type AgentMessageResponse } from "./agent/kodi.js";
 import { tryBuildKodiReplyWithOpenAi, type OpenAiKodiReplyResult } from "./agent/openaiAgent.js";
+import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
 import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
 import { reverseGeocodeLocation } from "./google/reverseGeocode.js";
 import {
@@ -949,10 +950,12 @@ function buildAgentUnavailableReply(
   openAiReply: OpenAiKodiReplyResult | undefined
 ): AgentMessageResponse {
   const providerFailureKind = classifyProviderFailure(openAiReply);
+  const diagnosticSuffix =
+    "\n\nלא אמציא תשובה כאשר אין מודל פעיל. אפשר לנסות שוב בעוד כמה דקות; מנהל המערכת יכול לבדוק את מצב הצי ב-/api/agent/providers/readiness ולראות איזה ספק דורש מכסה, מפתח או המתנה.";
 
   return {
     ...baseReply,
-    text: buildAgentUnavailableText(providerFailureKind),
+    text: `${buildAgentUnavailableText(providerFailureKind)}${diagnosticSuffix}`,
     intent: "general",
     requiresAdminApproval: false,
     source: "agent_unavailable",
@@ -3605,6 +3608,40 @@ app.post("/api/trips/demo/agent-actions/authorize", (req, res) => {
   res.json(payload);
 });
 
+app.get("/api/agent/providers/readiness", (_req, res) => {
+  const freeFleet = getFreeProviderFleetReadiness();
+  res.json({
+    strategy: "free_first_paid_last",
+    order: ["gemini", ...freeFleet.order, "openai"],
+    safeFallback: "grounded_generic_response",
+    providers: [
+      {
+        provider: "gemini",
+        configured: Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY),
+        model: process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash",
+        role: "free_primary"
+      },
+      ...freeFleet.providers.map((provider) => ({
+        ...provider,
+        lastError: sanitizeProviderErrorForRuntime(provider.lastError),
+        role: "free_fallback"
+      })),
+      {
+        provider: "openai",
+        configured: Boolean(process.env.OPENAI_API_KEY),
+        model: process.env.OPENAI_AGENT_FAST_MODEL?.trim() || "gpt-4.1-mini",
+        role: "paid_last_resort"
+      }
+    ],
+    circuitBreaker: {
+      enabled: true,
+      scope: "render_instance",
+      attemptTimeoutMs: freeFleet.attemptTimeoutMs
+    },
+    lastSuccessfulFreeFallback: freeFleet.lastSuccessfulProvider
+  });
+});
+
 app.post("/api/agent/message", async (req, res) => {
   const agentStartedAt = Date.now();
   const { message, member, recentMessages, context, tripGroupId } = req.body ?? {};
@@ -3808,12 +3845,29 @@ app.post("/api/agent/message", async (req, res) => {
     fallbackRecommendedPlaceId: rulesReply.recommendedPlaceId,
     forceAppend: Boolean(rulesReply.recommendedPlaceId || routeEstimate?.route || shouldAppendExternalPlaceNavigation)
   });
+  const selectedProviderModel = openAiReply?.model;
+  const selectedProvider =
+    selectedProviderModel?.startsWith("gemini:")
+      ? "gemini"
+      : selectedProviderModel?.startsWith("groq:")
+        ? "groq"
+        : selectedProviderModel?.startsWith("cloudflare:")
+          ? "cloudflare"
+          : selectedProviderModel?.startsWith("openrouter:")
+            ? "openrouter"
+            : selectedProviderModel
+              ? "openai"
+              : undefined;
 
   res.json({
     ...reply,
     agentRuntime: {
       openAiStatus: openAiReply?.status ?? (freshCurrentLocationRequired ? "location_required" : openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
       openAiModel: openAiReply?.model,
+      providerStatus: openAiReply?.status ?? "not_configured",
+      provider: selectedProvider,
+      providerModel: selectedProviderModel,
+      paidFallbackUsed: selectedProvider === "openai",
       openAiError: sanitizeProviderErrorForRuntime(openAiReply?.error),
       providerAttempts: openAiReply?.providerAttempts?.map((attempt) => sanitizeProviderErrorForRuntime(attempt)),
       fallbackUsed: reply.source !== "openai",

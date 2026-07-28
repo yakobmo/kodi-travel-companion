@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { AgentMessageRequest, AgentMessageResponse } from "./kodi.js";
 import { buildTripTimelineFromGoogleMapOrder } from "./tripTimelineResolver.js";
+import { hasFreeFleetProvider, tryFreeProviderFleet } from "./providerFleet.js";
 
 const allowedIntents: AgentMessageResponse["intent"][] = [
   "local_guide",
@@ -72,7 +73,7 @@ function getPreferredAgentProvider() {
   const configuredProvider =
     process.env.KODI_AGENT_PROVIDER?.trim().toLowerCase() || process.env.AI_AGENT_PROVIDER?.trim().toLowerCase() || "";
 
-  if (configuredProvider === "openai-only") {
+  if (configuredProvider === "openai-only" || configuredProvider === "openai") {
     return "openai";
   }
 
@@ -689,6 +690,21 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   const reasoningMode = shouldUseReasoningModel(input);
   const timeoutMs = getAgentTimeoutMs();
   const preferredProvider = getPreferredAgentProvider();
+  const geminiPrimaryAttempted = preferredProvider === "gemini" && hasGeminiProvider();
+  const preOpenAiAttempts: string[] = [];
+
+  async function tryConfiguredFreeFleet() {
+    return tryFreeProviderFleet({
+      instructions: buildInstructions(),
+      payload: buildAgentPayload(input, {
+        reasoningMode,
+        webSearchEnabled: false
+      }),
+      reasoningMode,
+      fallbackIntent: input.rulesReply.intent,
+      parseReply: toReplyFromProviderOutput
+    });
+  }
 
   if (preferredProvider === "gemini" && hasGeminiProvider()) {
     try {
@@ -697,8 +713,53 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         return geminiReply;
       }
     } catch (error) {
-      if (!client) {
-        const providerAttempts = (error as Error & { providerAttempts?: string[] })?.providerAttempts;
+      preOpenAiAttempts.push(
+        ...((error as Error & { providerAttempts?: string[] })?.providerAttempts ?? [
+          `gemini:${getGeminiModel()}:${error instanceof Error ? error.message : "gemini_agent_failed"}`
+        ])
+      );
+    }
+
+    if (hasFreeFleetProvider()) {
+      const freeFleetReply = await tryConfiguredFreeFleet();
+      preOpenAiAttempts.push(...freeFleetReply.providerAttempts);
+      if (freeFleetReply.status === "ready" && freeFleetReply.reply) {
+        return {
+          status: "ready",
+          model: freeFleetReply.model,
+          reply: freeFleetReply.reply,
+          error: "gemini_fallback_to_free_provider_fleet",
+          providerAttempts: preOpenAiAttempts
+        };
+      }
+    }
+  }
+
+  if (!client) {
+    if (hasFreeFleetProvider() && preferredProvider !== "gemini") {
+      const freeFleetReply = await tryConfiguredFreeFleet();
+      preOpenAiAttempts.push(...freeFleetReply.providerAttempts);
+      if (freeFleetReply.status === "ready" && freeFleetReply.reply) {
+        return {
+          status: "ready",
+          model: freeFleetReply.model,
+          reply: freeFleetReply.reply,
+          providerAttempts: preOpenAiAttempts
+        };
+      }
+    }
+
+    if (!geminiPrimaryAttempted) {
+      try {
+        const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
+        if (geminiReply) {
+          return geminiReply;
+        }
+      } catch (error) {
+        const providerAttempts = [
+          ...preOpenAiAttempts,
+          ...((error as Error & { providerAttempts?: string[] })?.providerAttempts ?? [])
+        ];
         return {
           status: "error",
           model: `gemini:${getGeminiModel()}`,
@@ -707,25 +768,13 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
         };
       }
     }
-  }
 
-  if (!client) {
-    try {
-      const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs });
-      if (geminiReply) {
-        return geminiReply;
-      }
-    } catch (error) {
-      const providerAttempts = (error as Error & { providerAttempts?: string[] })?.providerAttempts;
-      return {
-        status: "error",
-        model: `gemini:${getGeminiModel()}`,
-        error: error instanceof Error ? error.message : "gemini_agent_failed",
-        providerAttempts
-      };
-    }
-
-    return { status: "not_configured", model };
+    return {
+      status: preOpenAiAttempts.length > 0 ? "error" : "not_configured",
+      model: geminiPrimaryAttempted ? `gemini:${getGeminiModel()}` : model,
+      error: preOpenAiAttempts.length > 0 ? "configured_provider_fleet_exhausted" : undefined,
+      providerAttempts: preOpenAiAttempts
+    };
   }
 
   const openAiClient = client;
@@ -765,8 +814,8 @@ export async function tryBuildKodiReplyWithOpenAi(input: OpenAiKodiReplyInput): 
   }
 
   let lastError: unknown;
-  const providerAttempts: string[] = [];
-  let geminiFallbackAttempted = false;
+  const providerAttempts: string[] = [...preOpenAiAttempts];
+  let geminiFallbackAttempted = preferredProvider === "gemini";
 
   for (const modelCandidate of modelCandidates) {
     try {
