@@ -75,8 +75,9 @@ function shouldResetStaleConversationContext(text: string) {
 }
 
 function joinRecentMessages(messages: ConversationMessage[] = []) {
+  // Keep history weak and local so stale questions cannot become the active intent.
   return messages
-    .slice(-20)
+    .slice(-6)
     .map((message) => `${message.author}: ${message.text}`)
     .join(" ");
 }
@@ -103,7 +104,7 @@ function summarizeRecentConversation(
   currentMessage: string,
   tripState?: TripState
 ): ConversationContextSummary {
-  const recentMessages = shouldResetStaleConversationContext(currentMessage) ? [] : messages.slice(-20);
+  const recentMessages = shouldResetStaleConversationContext(currentMessage) ? [] : messages.slice(-6);
   const allText = `${joinRecentMessages(recentMessages)} ${currentMessage}`;
   const childNames =
     tripState?.members

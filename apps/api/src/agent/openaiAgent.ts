@@ -228,6 +228,7 @@ function buildInstructions() {
     "When runtimeGuidance is provided in the request payload, treat it as this message's current execution context and priority order. It should focus your reasoning, not replace it.",
     "When Google Places, Routes, reverse geocoding, or trip-map results are provided, treat them as evidence and write the answer yourself. Do not copy fallbackRulesReply wording unless no model context is available.",
     "The current message is authoritative. Use recentMessages only to resolve pronouns, corrections, and direct follow-ups. Never answer an older question instead of the current message.",
+    "The latest user message in `message` / `answerThisMessageOnly` is the only answer target. Treat recentMessages as weak background only. Never revive an older unanswered question, task, destination, or route unless the latest message explicitly asks to continue it.",
     "Google Maps is the map engine and the trip knowledge anchor. Do not claim that you replace Google Maps, Waze, Booking, or Airbnb.",
     "Use the provided trip state, Google-imported places, lodging timeline, current/future trip context, Places results, Routes results, recent group chat, and visible member location.",
     "The app sends you the current Google Maps view context as tripState on every message when available: visible trip points, members, live/current location, selected place, active route, and Google source metadata. Treat that as the live app map layer and use it before saying you lack map access.",
@@ -531,10 +532,10 @@ function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMes
 
       return !boilerplateFragments.some((fragment) => message.text.includes(fragment));
     })
-    .slice(-24)
+    .slice(-8)
     .map((message) => ({
       author: message.author,
-      text: message.text.slice(0, 1200),
+      text: message.text.slice(0, 700),
       memberId: message.memberId,
       source: message.source
     }));
@@ -547,6 +548,12 @@ function buildAgentPayload(input: OpenAiKodiReplyInput, options: { reasoningMode
     message: input.message,
     currentMessageIsAuthoritative: true,
     answerThisMessageOnly: input.message,
+    conversationPolicy: {
+      latestUserMessageIsOnlyAnswerTarget: true,
+      recentMessagesAreBackgroundOnly: true,
+      doNotReviveUnansweredOlderQuestions: true,
+      useHistoryOnlyForPronounsCorrectionsAndExplicitFollowUps: true
+    },
     recentMessages: sanitizeRecentMessagesForAgent(input.recentMessages),
     selectedPlace: input.selectedPlace,
     tripState: compactTripState(input.tripState, { reasoningMode: options.reasoningMode }),

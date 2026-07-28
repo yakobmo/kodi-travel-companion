@@ -943,14 +943,19 @@ if (
   -not $serverSourceForContext.Contains('capability: "openai_agent"') -or
   -not $serverSourceForContext.Contains("agentRuntime") -or
   -not $serverSourceForContext.Contains("fallbackUsed") -or
-  -not $serverSourceForContext.Contains("buildFocusedReferenceMessage") -or
-  -not $serverSourceForContext.Contains("const actionMessage") -or
-  -not $serverSourceForContext.Contains("message: actionMessage") -or
   -not $serverSourceForContext.Contains("shouldUseExternalPlacesSearch(currentMessage)") -or
   -not $serverSourceForContext.Contains("shouldRequireFreshCurrentLocation(currentMessage") -or
   -not $serverSourceForContext.Contains("KODI_FAST_PLACES_REPLY_ENABLED")
 ) {
   throw "Kodi agent flow must use trip context and trip timeline resolvers before choosing destinations or external search anchors."
+}
+
+if (
+  $serverSourceForContext.Contains("buildFocusedReferenceMessage") -or
+  $serverSourceForContext.Contains("const actionMessage") -or
+  $serverSourceForContext.Contains("message: actionMessage")
+) {
+  throw "Kodi must not promote old chat messages into the current user prompt."
 }
 
 if ($serverSourceForContext.Contains("!deterministicRouteDiagram`n      ? await tryBuildKodiReplyWithOpenAi")) {
@@ -1593,10 +1598,12 @@ if ($fastPlacesMentions -gt 1) {
 
 if (
   -not $openAiAgentSource.Contains("options.reasoningMode ? 180 : 120") -or
-  -not $openAiAgentSource.Contains(".slice(-24)") -or
-  -not $openAiAgentSource.Contains("message.text.slice(0, 1200)")
+  -not $openAiAgentSource.Contains(".slice(-8)") -or
+  -not $openAiAgentSource.Contains("message.text.slice(0, 700)") -or
+  -not $openAiAgentSource.Contains("recentMessagesAreBackgroundOnly") -or
+  -not $openAiAgentSource.Contains("doNotReviveUnansweredOlderQuestions")
 ) {
-  throw "Kodi agent context budget must remain wide enough for trip-scale reasoning."
+  throw "Kodi agent context must keep recent chat as bounded weak background only."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {

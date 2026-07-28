@@ -704,117 +704,6 @@ function isConversationMessage(value: unknown) {
   return typeof candidate.author === "string" && typeof candidate.text === "string";
 }
 
-function normalizeConversationText(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function isShortContextualFollowUp(message: string) {
-  const trimmed = message.trim();
-  const normalized = normalizeConversationText(trimmed);
-  if (trimmed.length > 56) {
-    return false;
-  }
-
-  return (
-    trimmed.length <= 24 ||
-    [
-      "מארתה",
-      "מאריתה",
-      "מרתה",
-      "מרתיה",
-      "marathia",
-      "כן",
-      "לא",
-      "אותו",
-      "אותה",
-      "שם",
-      "באתונה",
-      "אתונה",
-      "בפיליון",
-      "פיליון"
-    ].some((term) => normalized.includes(term))
-  );
-}
-
-function isRouteFollowUp(message: string) {
-  const normalized = normalizeConversationText(message);
-  return ["גשר", "אונטריו", "אנטיריו", "ריו", "חושך", "לפני החושך", "מסוכנת", "מסוכן", "הרים"].some((term) =>
-    normalized.includes(term)
-  );
-}
-
-function shouldBorrowConversationReferenceForMessage(message: string) {
-  const trimmed = message.trim();
-  return isShortContextualFollowUp(trimmed) || (trimmed.length <= 90 && isRouteFollowUp(trimmed));
-}
-
-function isUsefulPreviousQuestionForFollowUp(text: string) {
-  const normalized = normalizeConversationText(text);
-  return (
-    text.includes("?") ||
-    [
-      "איפה",
-      "מה",
-      "כמה",
-      "מתי",
-      "תן",
-      "סדר",
-      "מלון",
-      "מלונות",
-      "לינה",
-      "לינות",
-      "ישנים",
-      "מסלול",
-      "וויז",
-      "מפה",
-      "נגיע",
-      "נסיעה"
-    ].some((term) => normalized.includes(term))
-  );
-}
-
-function buildFocusedReferenceMessage(message: string, recentMessages: unknown[]) {
-  const trimmed = message.trim();
-  const normalized = normalizeConversationText(trimmed);
-  const shouldReset =
-    normalized.includes("יצאת מהשיחה") ||
-    normalized.includes("לא הבנת") ||
-    normalized.includes("אוורוף זה סוף") ||
-    normalized.includes("נוחתים באתונה");
-
-  if (shouldReset) {
-    return trimmed;
-  }
-
-  if (!shouldBorrowConversationReferenceForMessage(trimmed)) {
-    return trimmed;
-  }
-
-  const currentNormalized = normalizeConversationText(trimmed);
-  const previousMemberMessages = recentMessages
-    .filter(
-      (item): item is { author: string; text: string; source?: string } =>
-        Boolean(item) &&
-        typeof item === "object" &&
-        typeof (item as { text?: unknown }).text === "string" &&
-        (item as { source?: unknown }).source !== "agent"
-    )
-    .map((item) => item.text.trim())
-    .filter((text) => text && normalizeConversationText(text) !== currentNormalized);
-
-  const anchor =
-    previousMemberMessages
-      .slice()
-      .reverse()
-      .find((text) => isUsefulPreviousQuestionForFollowUp(text)) ?? previousMemberMessages.at(-1);
-
-  if (!anchor) {
-    return trimmed;
-  }
-
-  return `${anchor} ${trimmed}`;
-}
-
 function buildAgentContextSummary(input: {
   tripGroupId?: string;
   member: { id?: string; displayName?: string; role?: string };
@@ -3679,15 +3568,7 @@ app.post("/api/agent/message", async (req, res) => {
 
   const requestCurrentLocation = getRequestCurrentLocation(context);
   const currentMessage = message.trim();
-  const shouldBorrowConversationReference = shouldBorrowConversationReferenceForMessage(currentMessage);
-  const focusedReferenceMessage = shouldBorrowConversationReference
-    ? buildFocusedReferenceMessage(currentMessage, recentMessages)
-    : currentMessage;
-  const referenceMessage = focusedReferenceMessage === currentMessage ? currentMessage : focusedReferenceMessage;
-  const actionMessage =
-    shouldBorrowConversationReference && referenceMessage !== currentMessage
-      ? referenceMessage
-      : currentMessage;
+  const referenceMessage = currentMessage;
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);
   const tripState = withRequestCurrentLocation(
     req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
@@ -3775,7 +3656,7 @@ app.post("/api/agent/message", async (req, res) => {
     ? buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName))
     : buildKodiReplyFromContext({
         ...req.body,
-        message: actionMessage,
+        message: currentMessage,
         tripState,
         externalPlacesSearch,
         reverseGeocodedLocation,
@@ -3804,7 +3685,7 @@ app.post("/api/agent/message", async (req, res) => {
     shouldCallAgentProvider
       ? await tryBuildKodiReplyWithOpenAi({
           ...req.body,
-          message: actionMessage,
+          message: currentMessage,
           tripState,
           externalPlacesSearch,
           reverseGeocodedLocation,

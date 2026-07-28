@@ -36,19 +36,24 @@ function assertAgentFirstSourceGuards() {
   assertCheck("agent-first no fast concrete provider bypass", !serverSource.includes("!fastConcretePlacesReply"));
   assertCheck("agent-first no fast trip call site", !serverSource.includes("const fastTripAnswer = buildFastTripAnswer"));
   assertCheck(
-    "agent-first current message guarded reference borrowing",
-    serverSource.includes("shouldBorrowConversationReferenceForMessage") &&
-      !serverSource.includes("const focusedReferenceMessage = buildFocusedReferenceMessage(currentMessage, recentMessages);")
+    "agent-first does not promote old chat into current prompt",
+    !serverSource.includes("buildFocusedReferenceMessage(currentMessage, recentMessages)") &&
+      !serverSource.includes("message: actionMessage")
   );
   assertCheck(
     "agent-first no fast places pre-router call site",
     countOccurrences(openAiSource, "shouldPreferFastPlacesAnswer") <= 1
   );
   assertCheck("agent-first answer target in provider payload", openAiSource.includes("answerThisMessageOnly"));
+  assertCheck(
+    "agent-first recent chat is weak background only",
+    openAiSource.includes("recentMessagesAreBackgroundOnly") &&
+      openAiSource.includes("doNotReviveUnansweredOlderQuestions")
+  );
   assertCheck("agent-first expanded place context", openAiSource.includes("options.reasoningMode ? 180 : 120"));
   assertCheck(
-    "agent-first expanded recent message context",
-    openAiSource.includes(".slice(-24)") && openAiSource.includes("message.text.slice(0, 1200)")
+    "agent-first bounded recent message context",
+    openAiSource.includes(".slice(-8)") && openAiSource.includes("message.text.slice(0, 700)")
   );
   assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));
   assertCheck("agent-first no synthetic session Kodi message", !webSource.includes("sessionKodiReminderMessage"));
@@ -259,7 +264,7 @@ assertCheck(
 );
 assertCheck(
   "trip nature after stale context mentions trip arc",
-  /Pelion|Zagori|Tzoumerka|Athens|Marathia|פיליון|זגוריה|צומרקה|אתונה/.test(String(tripNatureAfterStaleContext.payload.text ?? "")),
+  /Pelion|Zagori|Tzoumerka|Tz[oou]merka|Athens|Marathia|פיליון|זגוריה|זאגורי|צומרקה|טזומרקה|אתונה/.test(String(tripNatureAfterStaleContext.payload.text ?? "")),
   String(tripNatureAfterStaleContext.payload.text ?? "").slice(0, 260)
 );
 
