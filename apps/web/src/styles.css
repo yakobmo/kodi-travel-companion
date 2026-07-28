@@ -1429,6 +1429,13 @@ input {
 .secondary-menu-header {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  position: sticky;
+  top: -18px;
+  z-index: 2;
+  margin: -18px -18px 0;
+  padding: 18px;
+  border-bottom: 1px solid #e1e6e3;
+  background: #ffffff;
 }
 
 .secondary-menu-header strong,
@@ -1516,6 +1523,10 @@ input {
 
 .secondary-menu > .menu-block > :not(.menu-block-toggle) {
   margin-inline: 12px;
+}
+
+.secondary-menu > .menu-block:not(.menu-block-open) > :not(.menu-block-toggle) {
+  display: none;
 }
 
 .secondary-menu > .menu-block > .menu-block-toggle:focus-visible {
@@ -1668,6 +1679,11 @@ input {
   max-height: 300px;
   overflow: auto;
   padding-left: 2px;
+}
+
+.secondary-menu .trip-place-list {
+  max-height: none;
+  overflow: visible;
 }
 
 .trip-place-card {

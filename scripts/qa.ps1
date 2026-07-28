@@ -1426,9 +1426,11 @@ if (
   -not $appSource.Contains("memberRealtimeState") -or
   -not $appSource.Contains("/api/trips/demo/members/stream") -or
   -not $appSource.Contains("trip-members") -or
-  -not $appSource.Contains("window.setInterval(pollMemberLocations, 5000)")
+  -not $appSource.Contains("window.setInterval(pollMemberLocations, 15000)") -or
+  -not $appSource.Contains("memberPollInFlightRef.current") -or
+  -not $appSource.Contains("fetchWithTimeout")
 ) {
-  throw "Web app must stream member locations with a polling fallback."
+  throw "Web app must stream member locations with a bounded, non-overlapping polling fallback."
 }
 
 if (-not $appSource.Contains('memberRealtimeState === "live"')) {
@@ -1589,6 +1591,13 @@ if (
 
 if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {
   throw "API server is missing demo members endpoints."
+}
+
+if (
+  -not $serverSource.Contains("async function scheduleNextSnapshot()") -or
+  -not $serverSource.Contains("await publishIfChanged()")
+) {
+  throw "Member SSE snapshots must be serialized so slow database reads cannot overlap."
 }
 
 if (
@@ -1763,6 +1772,14 @@ if (
   -not $localMembersSource.Contains("loadSupabaseTripMembers")
 ) {
   throw "Trip member joins must be idempotent by normalized display name across Supabase and local fallback storage."
+}
+
+if (
+  -not $localMembersSource.Contains("const supabase = createSupabaseServerClient();") -or
+  -not $localMembersSource.Contains("member destination reassignment failed") -or
+  -not $localMembersSource.Contains("member route reassignment failed")
+) {
+  throw "Routine member reads and removals must avoid reseeding and safely reassign relational ownership."
 }
 
 $localDestinationSource = Get-Content (Join-Path $root "apps\api\src\data\localGroupDestination.ts") -Raw
