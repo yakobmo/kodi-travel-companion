@@ -3411,7 +3411,7 @@ export function App() {
 
     const request = (async () => {
       try {
-        const response = await fetch(`${apiBaseUrl}/api/agent/speech`, {
+        const response = await fetchWithTimeout(`${apiBaseUrl}/api/agent/speech`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -3422,7 +3422,7 @@ export function App() {
             memberName: activeMember.name,
             memberRole: activeMember.role
           })
-        });
+        }, 20000);
 
         if (!response.ok) {
           throw new Error(`Kodi speech API failed with ${response.status}`);
@@ -3548,6 +3548,16 @@ export function App() {
     }
 
     stopKodiSpeech();
+    const cachedAudioUrl = speechAudioCacheRef.current.get(speechText);
+    if (cachedAudioUrl) {
+      try {
+        await playKodiSpeechAudioUrl(cachedAudioUrl, messageId);
+      } catch {
+        speakKodiMessageWithBrowserVoice(text, messageId);
+      }
+      return;
+    }
+
     const requestToken = speechRequestTokenRef.current;
     setSpeechOutputState("preparing");
     setSpeakingMessageId(messageId ?? null);
@@ -3558,16 +3568,14 @@ export function App() {
     }
 
     if (!audioUrl) {
-      setSpeechOutputState("error");
-      setSpeakingMessageId(null);
+      speakKodiMessageWithBrowserVoice(text, messageId);
       return;
     }
 
     try {
       await playKodiSpeechAudioUrl(audioUrl, messageId);
     } catch {
-      setSpeechOutputState("error");
-      setSpeakingMessageId(null);
+      speakKodiMessageWithBrowserVoice(text, messageId);
     }
   }
 

@@ -4001,6 +4001,12 @@ app.post("/api/agent/speech", async (req, res) => {
   const speech = await createKodiSpeechAudio(text);
 
   if (speech.status !== "ready" || !speech.audio) {
+    console.error("OpenAI speech generation failed", {
+      status: speech.status,
+      model: speech.model,
+      voice: speech.voice,
+      error: speech.error
+    });
     res.status(502).json({
       error: "openai speech failed",
       speechRuntime: {
