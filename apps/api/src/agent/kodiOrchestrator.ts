@@ -81,7 +81,7 @@ function getPreferredAgentProvider() {
     return "gemini";
   }
 
-  return hasGeminiProvider() ? "gemini" : "openai";
+  return hasFreeFleetProvider() ? "fleet" : hasGeminiProvider() ? "gemini" : "openai";
 }
 
 function getAgentTimeoutMs() {
@@ -699,7 +699,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
   const preferredProvider = getPreferredAgentProvider();
   const deadlineAt = Date.now() + getAgentTotalBudgetMs();
   const remainingTimeoutMs = () => Math.max(Math.min(timeoutMs, deadlineAt - Date.now()), 500);
-  const geminiPrimaryAttempted = preferredProvider === "gemini" && hasGeminiProvider();
+  let geminiPrimaryAttempted = preferredProvider === "gemini" && hasGeminiProvider();
   const preOpenAiAttempts: string[] = [];
 
   async function tryConfiguredFreeFleet() {
@@ -715,6 +715,35 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         validateKodiProviderReply(toReplyFromProviderOutput(output, fallbackIntent), input.message),
       deadlineAt
     });
+  }
+
+  if (preferredProvider === "fleet" && hasFreeFleetProvider()) {
+    const freeFleetReply = await tryConfiguredFreeFleet();
+    preOpenAiAttempts.push(...freeFleetReply.providerAttempts);
+    if (freeFleetReply.status === "ready" && freeFleetReply.reply) {
+      return {
+        status: "ready",
+        model: freeFleetReply.model,
+        reply: freeFleetReply.reply,
+        providerAttempts: preOpenAiAttempts
+      };
+    }
+
+    if (hasGeminiProvider()) {
+      geminiPrimaryAttempted = true;
+      try {
+        const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs: remainingTimeoutMs() });
+        if (geminiReply) {
+          return {
+            ...geminiReply,
+            error: "free_provider_fleet_fallback_to_gemini",
+            providerAttempts: [...preOpenAiAttempts, ...(geminiReply.providerAttempts ?? [])]
+          };
+        }
+      } catch (error) {
+        preOpenAiAttempts.push(...((error as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
+      }
+    }
   }
 
   if (preferredProvider === "gemini" && hasGeminiProvider()) {
