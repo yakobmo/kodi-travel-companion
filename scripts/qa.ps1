@@ -2061,6 +2061,7 @@ foreach ($requiredProviderFleetToken in @(
   "GROQ_API_KEY",
   "CLOUDFLARE_AI_TOKEN",
   "OPENROUTER_API_KEY",
+  'provider === "openrouter" ? Math.max(getAttemptTimeoutMs(), 8_000)',
   "cooldownUntil",
   "retry-after"
 )) {
