@@ -1538,18 +1538,6 @@ input {
   outline-offset: -3px;
 }
 
-.menu-order-number {
-  display: inline-grid;
-  width: 24px;
-  height: 24px;
-  margin-inline-end: 8px;
-  place-items: center;
-  border-radius: 999px;
-  background: #e9f8fb;
-  color: #07536b;
-  font-size: 12px;
-}
-
 .document-upload-controls,
 .trip-document-list {
   display: grid;

@@ -4689,7 +4689,7 @@ export function App() {
             onClick={() => setOpenMenuSection((current) => (current === "places" ? null : "places"))}
             type="button"
           >
-            <span><b className="menu-order-number">1</b> נקודות הטיול</span>
+            נקודות הטיול
           </button>
           <p>
             {placeListFilter === "route"
@@ -4774,7 +4774,7 @@ export function App() {
         </section>
         <section className={`menu-block documents-menu ${openMenuSection === "documents" ? "menu-block-open" : ""}`} aria-label="המסמכים של קודי">
           <button aria-expanded={openMenuSection === "documents"} className="menu-block-toggle" onClick={toggleDocumentsMenu} type="button">
-            <span><b className="menu-order-number">2</b> המסמכים של קודי</span>
+            המסמכים של קודי
           </button>
           <p>כרטיסי טיסה, ביטוח, הזמנות ומסמכי נסיעה במקום פרטי אחד.</p>
           {canManageDocuments ? (
