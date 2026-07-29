@@ -3664,9 +3664,10 @@ app.get("/api/agent/providers/readiness", (_req, res) => {
     process.env.AI_AGENT_PROVIDER?.trim().toLowerCase() ||
     "automatic";
   const openAiOnly = preferredProvider === "openai" || preferredProvider === "openai-only";
+  const geminiFirst = preferredProvider === "gemini" || preferredProvider === "google";
   res.json({
     strategy: openAiOnly ? "explicit_openai" : "free_first_paid_last",
-    order: openAiOnly ? ["openai"] : ["gemini", ...freeFleet.order, "openai"],
+    order: openAiOnly ? ["openai"] : geminiFirst ? ["gemini", ...freeFleet.order, "openai"] : [...freeFleet.order, "gemini", "openai"],
     totalBudgetMs: Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 20_000),
     safeFallback: "short_user_message_with_admin_diagnostics",
     providers: [

@@ -40,7 +40,7 @@ function getFreeProviderOrder(): FleetProviderId[] {
       provider === "groq" || provider === "cloudflare" || provider === "openrouter"
     );
 
-  return configured?.length ? Array.from(new Set(configured)) : ["groq", "cloudflare", "openrouter"];
+  return configured?.length ? Array.from(new Set(configured)) : ["openrouter", "cloudflare", "groq"];
 }
 
 function getProviderConfig(provider: FleetProviderId) {
@@ -54,10 +54,9 @@ function getProviderConfig(provider: FleetProviderId) {
     return {
       configured: Boolean(
         process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
-          process.env.CLOUDFLARE_AI_TOKEN?.trim() &&
-          process.env.CLOUDFLARE_AGENT_MODEL?.trim()
+          process.env.CLOUDFLARE_AI_TOKEN?.trim()
       ),
-      model: process.env.CLOUDFLARE_AGENT_MODEL?.trim() || "model_required"
+      model: process.env.CLOUDFLARE_AGENT_MODEL?.trim() || "@cf/meta/llama-3.1-8b-instruct-fp8-fast"
     };
   }
 
