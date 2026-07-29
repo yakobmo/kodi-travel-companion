@@ -121,7 +121,8 @@ async function fetchProviderJson(provider: FleetProviderId, url: string, init: R
   if (remainingMs < 500) {
     throw new Error("ai_agent_deadline_exhausted");
   }
-  const timeoutId = setTimeout(() => controller.abort(), Math.min(getAttemptTimeoutMs(), remainingMs));
+  const providerTimeoutMs = provider === "openrouter" ? Math.max(getAttemptTimeoutMs(), 8_000) : getAttemptTimeoutMs();
+  const timeoutId = setTimeout(() => controller.abort(), Math.min(providerTimeoutMs, remainingMs));
 
   try {
     const response = await fetch(url, { ...init, signal: controller.signal });
