@@ -426,3 +426,15 @@ Smoke:
 $env:BROWSER_EXECUTABLE = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 & (Join-Path $nodeDir "node.exe") .\scripts\smoke-local.mjs
 ```
+
+## Kodi Orchestrator Refactor — 2026-07-29
+
+- Replaced the provider-specific `openaiAgent.ts` boundary with `kodiOrchestrator.ts`.
+- Reduced Kodi's permanent prompt to identity, evidence, conversation, safety, and response-contract rules.
+- Removed the fixed Greece itinerary from the prompt and trip resolver. Trip references now come from the active trip and imported map order.
+- Added a 20-second total AI fleet budget, per-provider deadline propagation, and normalized timeout handling.
+- Added provider reply quality validation for Hebrew, minimum useful content, and internal-detail leakage.
+- Navigation URLs are now server-owned: unverified model URLs are removed and Google Maps/Waze links are attached from tool evidence.
+- Split usage capabilities into `ai_agent` and `openai_speech`.
+- Provider failures now produce a short participant-safe message; technical diagnostics remain in `agentRuntime` and readiness.
+- Added `test:kodi-trip-agnostic` with an Austria fixture.

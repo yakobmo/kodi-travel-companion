@@ -421,7 +421,7 @@ try {
   assertCheck(
     "agent openai usage gate present",
     locationAgentPayload.contextSummary?.usageGateResults?.some(
-      (item) => item.capability === "openai_agent" && item.providerConfigured === false
+      (item) => item.capability === "ai_agent" && item.providerConfigured === false
     )
   );
   assertCheck("agent location state", locationAgentPayload.text?.includes("מיקום") || locationAgentPayload.text?.includes("קבוצה"));

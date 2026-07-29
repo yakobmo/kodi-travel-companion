@@ -29,14 +29,15 @@ $requiredFiles = @(
   "scripts/smoke-google-routes-live.mjs",
   "scripts/smoke-agent-provider-readiness.mjs",
   "scripts/kodi-agent-regression.mjs",
+  "scripts/test-kodi-trip-agnostic.mjs",
   "scripts/smoke-local.mjs",
   "apps/api/package.json",
   "apps/api/tsconfig.json",
   "apps/api/src/server.ts",
   "apps/api/src/agent/kodi.ts",
-  "apps/api/src/agent/openaiAgent.ts",
+  "apps/api/src/agent/kodiOrchestrator.ts",
   "apps/api/src/agent/openaiSpeech.ts",
-  "apps/api/src/agent/tripContextResolver.ts",
+  "apps/api/src/agent/tripReferenceResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
   "apps/api/src/whatsapp/connector.ts",
   "apps/api/src/billing/tripUsagePool.ts",
@@ -366,7 +367,7 @@ if (
   throw "Trip usage pool code must enforce owner-managed billing, backend mediation, AI provider fallback, and no participant secrets."
 }
 
-$openAiAgentSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts") -Raw
+$openAiAgentSource = Get-Content (Join-Path $root "apps\api\src\agent\kodiOrchestrator.ts") -Raw
 if (
   -not $openAiAgentSource.Contains("OpenAI") -or
   -not $openAiAgentSource.Contains("OPENAI_API_KEY") -or
@@ -377,13 +378,12 @@ if (
   -not $openAiAgentSource.Contains('"gpt-4.1-mini"') -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_REASONING_MODEL") -or
   -not $openAiAgentSource.Contains("OPENAI_AGENT_TIMEOUT_MS") -or
-  -not $openAiAgentSource.Contains("openai_agent_timeout") -or
-  -not $openAiAgentSource.Contains("withAgentTimeout") -or
+  -not $openAiAgentSource.Contains("ai_agent_timeout") -or
+  -not $openAiAgentSource.Contains("withAiTimeout") -or
   -not $openAiAgentSource.Contains("shouldUseReasoningModel") -or
   -not $openAiAgentSource.Contains("fallbackRulesReply") -or
-  -not $openAiAgentSource.Contains("Google Maps is the map engine") -or
-  -not $openAiAgentSource.Contains("route map, route diagram, trip sketch") -or
-  -not $openAiAgentSource.Contains("elite Hebrew AI travel companion") -or
+  -not $openAiAgentSource.Contains("The active trip in tripState is the only planned-trip anchor") -or
+  -not $openAiAgentSource.Contains("intelligent, warm Hebrew travel companion") -or
   -not $openAiAgentSource.Contains("web_search") -or
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
   -not $openAiAgentSource.Contains("web_search_retry_without_tool") -or
@@ -391,17 +391,27 @@ if (
   -not $openAiAgentSource.Contains("generateContent") -or
   -not $openAiAgentSource.Contains("openai_quota_fallback_to_gemini") -or
   -not $openAiAgentSource.Contains("lodgingTimeline") -or
-  -not $openAiAgentSource.Contains("tripArcHint") -or
-  -not $openAiAgentSource.Contains("cash planning") -or
-  -not $openAiAgentSource.Contains("road accessibility") -or
-  -not $openAiAgentSource.Contains("Support a here-and-now mode") -or
+  -not $openAiAgentSource.Contains("tripArc") -or
+  -not $openAiAgentSource.Contains("KODI_AGENT_TOTAL_BUDGET_MS") -or
+  -not $openAiAgentSource.Contains("validateKodiProviderReply") -or
   -not $openAiAgentSource.Contains("reverseGeocodedLocation") -or
-  -not $openAiAgentSource.Contains("Do not expose raw latitude/longitude as the user-facing answer") -or
-  -not $openAiAgentSource.Contains("Do not claim private Google account sync") -or
   -not $openAiAgentSource.Contains("Return JSON only") -or
-  -not $openAiAgentSource.Contains('source: "openai"')
+  -not $openAiAgentSource.Contains('source: "ai_provider"')
 ) {
   throw "AI agent bridge must be backend-only, elite-agent grounded in Google/trip context, fast by default for normal chat, Gemini-capable when OpenAI quota fails, web-search capable for live questions, JSON validated, time-budgeted, and guarded by a fallback."
+}
+
+$tripReferenceSourceForPrompt = Get-Content (Join-Path $root "apps\api\src\agent\tripReferenceResolver.ts") -Raw
+foreach ($forbiddenTripSpecificAgentToken in @(
+  "Athens landing",
+  "Hotel Marathia",
+  "Rio-Antirrio",
+  "REGION_ALIASES",
+  "tripArcHint"
+)) {
+  if ($openAiAgentSource.Contains($forbiddenTripSpecificAgentToken) -or $tripReferenceSourceForPrompt.Contains($forbiddenTripSpecificAgentToken)) {
+    throw "Kodi core must derive trip context dynamically and may not contain a fixed Greece itinerary: $forbiddenTripSpecificAgentToken"
+  }
 }
 
 $openAiSpeechSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiSpeech.ts") -Raw
@@ -496,13 +506,13 @@ if (
 }
 
 if (
-  -not $openAiAgentSource.Contains("freshest currentLocation/live member location") -or
-  -not $openAiAgentSource.Contains("current Google Maps view context as tripState") -or
-  -not $openAiAgentSource.Contains("use it before saying you lack map access") -or
-  -not $openAiAgentSource.Contains("For every practical recommendation of a concrete place") -or
-  -not $openAiAgentSource.Contains("Google Maps for walking/checking details and Waze for driving")
+  -not $openAiAgentSource.Contains("For here-and-now questions use only a fresh current location") -or
+  -not $openAiAgentSource.Contains("The active trip in tripState is the only planned-trip anchor") -or
+  -not $openAiAgentSource.Contains("The server attaches verified navigation links") -or
+  -not $serverSource.Contains("normalizeKodiProviderReply") -or
+  -not $serverSource.Contains("textWithoutUnverifiedNavigation")
 ) {
-  throw "Kodi OpenAI prompt must require fresh map/location reasoning and action links for concrete place recommendations."
+  throw "Kodi orchestration must ground live-location answers and attach verified navigation outside the model."
 }
 
 $webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encoding UTF8
@@ -558,7 +568,8 @@ if (
 
 if (
   -not $serverSource.Contains("shouldUseDeterministicRouteDiagram") -or
-  -not $serverSource.Contains("const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply, openAiReply) : rulesReply)")
+  -not $serverSource.Contains("const selectedReply = openAiReply?.reply") -or
+  -not $serverSource.Contains("normalizeKodiProviderReply")
 ) {
   throw "Kodi route-map/diagram requests must let the AI agent reason first; deterministic route diagrams are grounding fallback only."
 }
@@ -904,12 +915,12 @@ if (
   throw "Live Google Places smoke must verify readiness, endpoint results, Kodi agent context, and no API key leakage."
 }
 
-$tripContextResolverSource = Get-Content (Join-Path $root "apps\api\src\agent\tripContextResolver.ts") -Raw
+$tripContextResolverSource = Get-Content (Join-Path $root "apps\api\src\agent\tripReferenceResolver.ts") -Raw
 if (
-  -not $tripContextResolverSource.Contains("TripContextConfidence") -or
+  -not $tripContextResolverSource.Contains("TripReferenceResolution") -or
   -not $tripContextResolverSource.Contains("resolveTripReferenceForMessage") -or
   -not $tripContextResolverSource.Contains("clarificationQuestion") -or
-  -not $tripContextResolverSource.Contains("nearest_lodging") -or
+  -not $tripContextResolverSource.Contains("first_lodging") -or
   -not $tripContextResolverSource.Contains("live_member_location")
 ) {
   throw "Kodi must resolve trip context through confidence-based origin/destination logic before using Google Routes."
@@ -921,7 +932,7 @@ if (
   -not $tripTimelineResolverSource.Contains("buildTripTimelineFromGoogleMapOrder") -or
   -not $tripTimelineResolverSource.Contains("resolveTimelineReferenceForMessage") -or
   -not $tripTimelineResolverSource.Contains("google_map_order_lodging_segments") -or
-  -not $tripTimelineResolverSource.Contains("REGION_ALIASES") -or
+  -not $tripTimelineResolverSource.Contains("REGION_STOP_WORDS") -or
   -not $tripTimelineResolverSource.Contains("timeline_lodging")
 ) {
   throw "Kodi must derive a trip timeline from Google map order and resolve future lodging/region references before external searches."
@@ -943,10 +954,11 @@ if (
   -not $serverSourceForContext.Contains("tripContextConfidence") -or
   -not $serverSourceForContext.Contains("timelineReferenceConfidence") -or
   -not $serverSourceForContext.Contains("tripReference.confidence !== `"low`"") -or
-  -not $serverSourceForContext.Contains("tryBuildKodiReplyWithOpenAi") -or
-  -not $serverSourceForContext.Contains('capability: "openai_agent"') -or
+  -not $serverSourceForContext.Contains("tryBuildKodiReply") -or
+  -not $serverSourceForContext.Contains('capability: "ai_agent"') -or
   -not $serverSourceForContext.Contains("agentRuntime") -or
   -not $serverSourceForContext.Contains("fallbackUsed") -or
+  -not $serverSourceForContext.Contains("message: currentMessage") -or
   -not $serverSourceForContext.Contains("shouldUseExternalPlacesSearch(currentMessage)") -or
   -not $serverSourceForContext.Contains("shouldRequireFreshCurrentLocation(currentMessage") -or
   -not $serverSourceForContext.Contains("KODI_FAST_PLACES_REPLY_ENABLED")
@@ -962,7 +974,7 @@ if (
   throw "Kodi must not promote old chat messages into the current user prompt."
 }
 
-if ($serverSourceForContext.Contains("!deterministicRouteDiagram`n      ? await tryBuildKodiReplyWithOpenAi")) {
+if ($serverSourceForContext.Contains("!deterministicRouteDiagram`n      ? await tryBuildKodiReply")) {
   throw "Kodi must not skip the model for route-map requests; deterministic route diagrams are fallback grounding, not the agent."
 }
 
@@ -998,7 +1010,7 @@ if (-not $demoTripSource.Contains("locationSharing")) {
 }
 
 $appSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encoding UTF8
-$openAiSource = Get-Content (Join-Path $root "apps\api\src\agent\openaiAgent.ts") -Raw -Encoding UTF8
+$openAiSource = Get-Content (Join-Path $root "apps\api\src\agent\kodiOrchestrator.ts") -Raw -Encoding UTF8
 $styleSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 if (
   -not $appSource.Contains("function shouldWakeKodi(text: string, currentMessages: ChatMessage[] = [])") -or
@@ -1313,9 +1325,9 @@ if (-not $openAiSource.Contains("Kodi speaks about himself in masculine Hebrew")
 }
 
 if (
-  -not $openAiSource.Contains("The protocol is your toolbelt, not your script") -or
-  -not $openAiSource.Contains("Do not reduce yourself to canned workflows") -or
-  -not $openAiSource.Contains("write the answer yourself")
+  -not $openAiSource.Contains("Think and write like a capable travel agent") -or
+  -not $openAiSource.Contains("Never invent data that conflicts with them") -or
+  -not $openAiSource.Contains("Be specific, conversational, and concise")
 ) {
   throw "Kodi model prompt must preserve agent-first behavior: tools ground the answer, but the model reasons and writes naturally."
 }
@@ -2074,7 +2086,7 @@ if (
   -not $serverSource.Contains("/api/agent/providers/readiness") -or
   -not $serverSource.Contains("free_first_paid_last") -or
   -not $serverSource.Contains("paid_last_resort") -or
-  -not $serverSource.Contains("לא אמציא תשובה כאשר אין מודל פעיל")
+  -not $serverSource.Contains("מנהל הטיול יקבל את פרטי האבחון בנפרד")
 ) {
   throw "Kodi must expose safe provider diagnostics and explain total fleet exhaustion without inventing an answer."
 }

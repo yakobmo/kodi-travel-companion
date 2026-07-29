@@ -22,6 +22,7 @@ interface FleetInput {
   reasoningMode: boolean;
   fallbackIntent: AgentMessageResponse["intent"];
   parseReply: (output: string, fallbackIntent: AgentMessageResponse["intent"]) => AgentMessageResponse;
+  deadlineAt?: number;
 }
 
 const providerCircuits = new Map<FleetProviderId, ProviderCircuit>();
@@ -51,8 +52,12 @@ function getProviderConfig(provider: FleetProviderId) {
   }
   if (provider === "cloudflare") {
     return {
-      configured: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID?.trim() && process.env.CLOUDFLARE_AI_TOKEN?.trim()),
-      model: process.env.CLOUDFLARE_AGENT_MODEL?.trim() || "@cf/meta/llama-3.2-3b-instruct"
+      configured: Boolean(
+        process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
+          process.env.CLOUDFLARE_AI_TOKEN?.trim() &&
+          process.env.CLOUDFLARE_AGENT_MODEL?.trim()
+      ),
+      model: process.env.CLOUDFLARE_AGENT_MODEL?.trim() || "model_required"
     };
   }
 
@@ -110,9 +115,13 @@ function recordFailure(provider: FleetProviderId, status: number | undefined, me
   });
 }
 
-async function fetchProviderJson(provider: FleetProviderId, url: string, init: RequestInit) {
+async function fetchProviderJson(provider: FleetProviderId, url: string, init: RequestInit, deadlineAt?: number) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), getAttemptTimeoutMs());
+  const remainingMs = deadlineAt ? Math.max(deadlineAt - Date.now(), 0) : getAttemptTimeoutMs();
+  if (remainingMs < 500) {
+    throw new Error("ai_agent_deadline_exhausted");
+  }
+  const timeoutId = setTimeout(() => controller.abort(), Math.min(getAttemptTimeoutMs(), remainingMs));
 
   try {
     const response = await fetch(url, { ...init, signal: controller.signal });
@@ -164,9 +173,11 @@ async function callOpenAiCompatibleProvider(provider: "groq" | "openrouter", inp
       ],
       max_tokens: input.reasoningMode ? 1800 : 1400,
       temperature: input.reasoningMode ? 0.55 : 0.45,
-      response_format: { type: "json_object" }
+      ...(isGroq ? { response_format: { type: "json_object" } } : {})
     })
-  })) as {
+  },
+    input.deadlineAt
+  )) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
 
@@ -193,7 +204,8 @@ async function callCloudflareProvider(input: FleetInput, model: string) {
         max_tokens: input.reasoningMode ? 1800 : 1400,
         temperature: input.reasoningMode ? 0.55 : 0.45
       })
-    }
+    },
+    input.deadlineAt
   )) as {
     success?: boolean;
     result?: { response?: string };
@@ -237,6 +249,10 @@ export async function tryFreeProviderFleet(input: FleetInput): Promise<FreeProvi
   let configuredCount = 0;
 
   for (const provider of getFreeProviderOrder()) {
+    if (input.deadlineAt && input.deadlineAt - Date.now() < 500) {
+      attempts.push("fleet:deadline_exhausted");
+      break;
+    }
     const config = getProviderConfig(provider);
     if (!config.configured) {
       continue;

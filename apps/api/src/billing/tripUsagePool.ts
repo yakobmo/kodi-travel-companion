@@ -21,8 +21,9 @@ export interface TripUsageGateDecision {
   };
 }
 
-const providerByCapability: Record<TripUsageCapability, "openai" | "google" | "internal"> = {
-  openai_agent: "openai",
+const providerByCapability: Record<TripUsageCapability, "ai_fleet" | "openai" | "google" | "internal"> = {
+  ai_agent: "ai_fleet",
+  openai_speech: "openai",
   google_places: "google",
   google_routes: "google",
   google_oauth_sync: "google"
@@ -40,13 +41,20 @@ function hasAiAgentProvider() {
 }
 
 const enabledByCapability: Record<TripUsageCapability, boolean> = {
-  openai_agent: hasAiAgentProvider(),
+  ai_agent: hasAiAgentProvider(),
+  openai_speech: Boolean(process.env.OPENAI_API_KEY),
   google_places: Boolean(process.env.GOOGLE_MAPS_API_KEY),
   google_routes: Boolean(process.env.GOOGLE_MAPS_API_KEY),
   google_oauth_sync: false
 };
 
-const capabilities: TripUsageCapability[] = ["openai_agent", "google_places", "google_routes", "google_oauth_sync"];
+const capabilities: TripUsageCapability[] = [
+  "ai_agent",
+  "openai_speech",
+  "google_places",
+  "google_routes",
+  "google_oauth_sync"
+];
 const capabilitySet = new Set<TripUsageCapability>(capabilities);
 
 function findOwner(members: TripMemberLocationView[]) {

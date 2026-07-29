@@ -71,7 +71,7 @@ import {
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext, type AgentMessageResponse } from "./agent/kodi.js";
-import { tryBuildKodiReplyWithOpenAi, type OpenAiKodiReplyResult } from "./agent/openaiAgent.js";
+import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
 import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
 import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
 import { reverseGeocodeLocation } from "./google/reverseGeocode.js";
@@ -83,7 +83,7 @@ import {
   type WhatsAppSendResult,
   verifyWhatsAppWebhook
 } from "./whatsapp/connector.js";
-import { resolveTripReferenceForMessage } from "./agent/tripContextResolver.js";
+import { resolveTripReferenceForMessage } from "./agent/tripReferenceResolver.js";
 import {
   buildTripTimelineFromGoogleMapOrder,
   resolveTimelineReferenceForMessage,
@@ -766,7 +766,7 @@ function sanitizeProviderErrorForRuntime(error: string | undefined) {
 
 type ProviderFailureKind = "quota" | "not_configured" | "timeout" | "auth" | "unknown";
 
-function classifyProviderFailure(openAiReply: OpenAiKodiReplyResult | undefined): ProviderFailureKind {
+function classifyProviderFailure(openAiReply: KodiReplyResult | undefined): ProviderFailureKind {
   if (!openAiReply) {
     return "not_configured";
   }
@@ -799,52 +799,21 @@ function classifyProviderFailure(openAiReply: OpenAiKodiReplyResult | undefined)
 }
 
 function buildAgentUnavailableText(providerFailureKind: ProviderFailureKind) {
-  if (providerFailureKind === "quota") {
-    return [
-      "קודי כרגע לא מחובר למודל AI פעיל, כי ספק ה-AI שמוגדר בשרת החזיר שגיאת מכסה/חיוב.",
-      "זה בדרך כלל אומר שהמפתח ב-Render הוא מפתח זמני/חינמי, שהמכסה היומית נגמרה, או שצריך להפעיל Billing/Quota אצל הספק.",
-      "מה עושים: מנהל המערכת צריך לעדכן ב-Render מפתח AI פעיל או להסדיר מכסה/חיוב, ואז לבצע Save, rebuild, and deploy.",
-      "Gemini: https://aistudio.google.com/usage",
-      "OpenAI: https://platform.openai.com/settings/organization/billing/overview"
-    ].join("\n");
-  }
-
-  if (providerFailureKind === "not_configured") {
-    return [
-      "קודי כרגע לא מחובר למודל AI בשרת.",
-      "כדי שאחזור לענות כסוכן מלא, צריך להגדיר ב-Render מפתח אחד לפחות: GEMINI_API_KEY או OPENAI_API_KEY, ואז לבצע Save, rebuild, and deploy.",
-      "Gemini: https://aistudio.google.com/app/apikey",
-      "OpenAI: https://platform.openai.com/api-keys"
-    ].join("\n");
-  }
-
-  if (providerFailureKind === "auth") {
-    return [
-      "קודי כרגע לא מצליח להתחבר למודל AI בגלל בעיית הרשאה במפתח שמוגדר בשרת.",
-      "צריך לבדוק שהמפתח ב-Render נכון, פעיל, שייך לפרויקט הנכון, ושיש לו הרשאות שימוש במודל.",
-      "Gemini: https://aistudio.google.com/app/apikey",
-      "OpenAI: https://platform.openai.com/api-keys"
-    ].join("\n");
-  }
-
   if (providerFailureKind === "timeout") {
-    return "קודי כרגע לא קיבל תשובה ממודל ה-AI בזמן סביר. החיבור לאפליקציה פעיל, אבל ספק ה-AI איטי או לא זמין כרגע. נסו שוב בעוד רגע; אם זה חוזר, צריך לבדוק את ספק ה-AI ב-Render.";
+    return "אני מתעכב יותר מהרגיל ולא רוצה להשאיר אתכם מחכים. נסו שוב בעוד רגע.";
   }
 
-  return "קודי כרגע לא מחובר למודל AI פעיל ולכן אני לא רוצה להמציא תשובה. החיבור לאפליקציה ולווטסאפ יכול להיות תקין, אבל צריך לבדוק את מפתח/מכסת ה-AI ב-Render ואז לפרוס מחדש.";
+  return "אני לא מצליח להשלים תשובה אמינה כרגע. נסו שוב בעוד רגע; מנהל הטיול יקבל את פרטי האבחון בנפרד.";
 }
 
 function buildAgentUnavailableReply(
   baseReply: AgentMessageResponse,
-  openAiReply: OpenAiKodiReplyResult | undefined
+  openAiReply: KodiReplyResult | undefined
 ): AgentMessageResponse {
   const providerFailureKind = classifyProviderFailure(openAiReply);
-  const diagnosticSuffix =
-    "\n\nלא אמציא תשובה כאשר אין מודל פעיל. אפשר לנסות שוב בעוד כמה דקות; מנהל המערכת יכול לבדוק את מצב הצי ב-/api/agent/providers/readiness ולראות איזה ספק דורש מכסה, מפתח או המתנה.";
-
   return {
     ...baseReply,
-    text: `${buildAgentUnavailableText(providerFailureKind)}${diagnosticSuffix}`,
+    text: buildAgentUnavailableText(providerFailureKind),
     intent: "general",
     requiresAdminApproval: false,
     source: "agent_unavailable",
@@ -852,14 +821,6 @@ function buildAgentUnavailableReply(
       ...baseReply.metadata,
       providerFailureKind
     }
-  };
-}
-
-function enforceFreshCurrentLocationContract(groundingReply: AgentMessageResponse): AgentMessageResponse {
-  return {
-    ...groundingReply,
-    intent: "group_location",
-    recommendedPlaceId: undefined
   };
 }
 
@@ -1426,6 +1387,50 @@ function enhanceKodiReplyWithNavigationLinks(input: {
   return {
     ...input.reply,
     text: `${input.reply.text.trim()}${navigationText}`
+  };
+}
+
+function normalizeKodiProviderReply(input: {
+  reply: AgentMessageResponse;
+  message: string;
+  externalPlacesSearch?: GooglePlacesTextSearchResult;
+}) {
+  if (input.reply.source !== "ai_provider") {
+    return input.reply;
+  }
+
+  const hasConcretePlaceEvidence =
+    input.externalPlacesSearch?.status === "ready" &&
+    input.externalPlacesSearch.places.length > 0 &&
+    includesConcreteGooglePlacesCue(input.message);
+  const explicitSharedWrite = includesAnyTerm(input.message.toLowerCase(), [
+    "תוסיף",
+    "תסיר",
+    "תמחק",
+    "תשנה",
+    "תקבע יעד",
+    "צור מסלול",
+    "עדכן מפה",
+    "add ",
+    "remove ",
+    "delete ",
+    "change ",
+    "set destination",
+    "create route"
+  ]);
+  const textWithoutUnverifiedNavigation = hasConcretePlaceEvidence
+    ? input.reply.text
+        .replace(/https?:\/\/(?:www\.)?(?:google\.[^\s/]+\/maps|maps\.google\.[^\s/]+|waze\.com)\/\S*/gi, "")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim()
+    : input.reply.text;
+
+  return {
+    ...input.reply,
+    text: textWithoutUnverifiedNavigation,
+    intent: hasConcretePlaceEvidence ? ("place_recommendation" as const) : input.reply.intent,
+    requiresAdminApproval: explicitSharedWrite && input.reply.requiresAdminApproval
   };
 }
 
@@ -3537,14 +3542,21 @@ app.post("/api/trips/demo/agent-actions/authorize", (req, res) => {
 
 app.get("/api/agent/providers/readiness", (_req, res) => {
   const freeFleet = getFreeProviderFleetReadiness();
+  const preferredProvider =
+    process.env.KODI_AGENT_PROVIDER?.trim().toLowerCase() ||
+    process.env.AI_AGENT_PROVIDER?.trim().toLowerCase() ||
+    "automatic";
+  const openAiOnly = preferredProvider === "openai" || preferredProvider === "openai-only";
   res.json({
-    strategy: "free_first_paid_last",
-    order: ["gemini", ...freeFleet.order, "openai"],
-    safeFallback: "grounded_generic_response",
+    strategy: openAiOnly ? "explicit_openai" : "free_first_paid_last",
+    order: openAiOnly ? ["openai"] : ["gemini", ...freeFleet.order, "openai"],
+    totalBudgetMs: Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 20_000),
+    safeFallback: "short_user_message_with_admin_diagnostics",
     providers: [
       {
         provider: "gemini",
         configured: Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY),
+        state: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY ? "configured_unverified" : "not_configured",
         model: process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash",
         role: "free_primary"
       },
@@ -3556,6 +3568,7 @@ app.get("/api/agent/providers/readiness", (_req, res) => {
       {
         provider: "openai",
         configured: Boolean(process.env.OPENAI_API_KEY),
+        state: process.env.OPENAI_API_KEY ? "configured_unverified" : "not_configured",
         model: process.env.OPENAI_AGENT_FAST_MODEL?.trim() || "gpt-4.1-mini",
         role: "paid_last_resort"
       }
@@ -3711,17 +3724,16 @@ app.post("/api/agent/message", async (req, res) => {
   });
   const openAiUsageGate = authorizeTripUsageCapability({
     usagePool,
-    capability: "openai_agent",
+    capability: "ai_agent",
     triggeringMember: {
       id: normalizedMember.id,
       role: normalizedMember.role
     }
   });
-  const shouldCallAgentProvider =
-    !freshCurrentLocationRequired && openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
+  const shouldCallAgentProvider = openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
   const openAiReply =
     shouldCallAgentProvider
-      ? await tryBuildKodiReplyWithOpenAi({
+      ? await tryBuildKodiReply({
           ...req.body,
           message: currentMessage,
           tripState,
@@ -3746,15 +3758,20 @@ app.post("/api/agent/message", async (req, res) => {
     });
   }
   const providerUnavailable =
-    !freshCurrentLocationRequired &&
     openAiUsageGate.allowed &&
     (!openAiUsageGate.providerConfigured || (openAiReply?.status === "error" && !openAiReply.reply));
-  const selectedReply = openAiReply?.reply ?? (providerUnavailable ? buildAgentUnavailableReply(rulesReply, openAiReply) : rulesReply);
-  const locationBoundReply = freshCurrentLocationRequired
-    ? enforceFreshCurrentLocationContract(rulesReply)
-    : selectedReply;
+  const selectedReply = openAiReply?.reply
+    ? normalizeKodiProviderReply({
+        reply: openAiReply.reply,
+        message: currentMessage,
+        externalPlacesSearch
+      })
+    : providerUnavailable
+      ? buildAgentUnavailableReply(rulesReply, openAiReply)
+      : rulesReply;
+  const locationBoundReply = selectedReply;
   const shouldAppendExternalPlaceNavigation =
-    locationBoundReply.intent === "place_recommendation" && externalPlacesSearch?.status === "ready";
+    externalPlacesSearch?.status === "ready" && includesConcreteGooglePlacesCue(currentMessage);
   const reply = enhanceKodiReplyWithNavigationLinks({
     reply: locationBoundReply,
     tripState,
@@ -3781,7 +3798,10 @@ app.post("/api/agent/message", async (req, res) => {
   res.json({
     ...reply,
     agentRuntime: {
-      openAiStatus: openAiReply?.status ?? (freshCurrentLocationRequired ? "location_required" : openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
+      aiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
+      aiModel: openAiReply?.model,
+      aiError: sanitizeProviderErrorForRuntime(openAiReply?.error),
+      openAiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
       openAiModel: openAiReply?.model,
       providerStatus: openAiReply?.status ?? "not_configured",
       provider: selectedProvider,
@@ -3789,7 +3809,7 @@ app.post("/api/agent/message", async (req, res) => {
       paidFallbackUsed: selectedProvider === "openai",
       openAiError: sanitizeProviderErrorForRuntime(openAiReply?.error),
       providerAttempts: openAiReply?.providerAttempts?.map((attempt) => sanitizeProviderErrorForRuntime(attempt)),
-      fallbackUsed: reply.source !== "openai",
+      fallbackUsed: reply.source !== "ai_provider",
       providerFailureVisible: reply.source === "agent_unavailable",
       providerFailureKind: reply.source === "agent_unavailable" ? reply.metadata?.providerFailureKind : undefined,
       fastLane: false,
@@ -3838,7 +3858,7 @@ app.post("/api/agent/speech", async (req, res) => {
   });
   const speechUsageGate = authorizeTripUsageCapability({
     usagePool,
-    capability: "openai_agent",
+    capability: "openai_speech",
     triggeringMember: {
       id: typeof req.body?.memberId === "string" ? req.body.memberId : "manager",
       role: typeof req.body?.memberRole === "string" ? req.body.memberRole : "owner"
