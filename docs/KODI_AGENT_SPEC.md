@@ -219,13 +219,7 @@ From Google Maps source order and lodging points, Kodi should infer:
 - transition drives
 - final lodging or return city
 
-For the known Northern Greece trip, unless replaced by real trip data, the broad arc is:
-
-```text
-Athens landing -> Rio-Antirrio bridge corridor -> Arta/Tzoumerka -> Zagori -> Pelion -> Athens return
-```
-
-Kodi should never treat the last-night Athens lodging as the first hotel just because it is an active destination or stale selected point.
+The trip arc must always be derived from the active trip's imported map order and lodging segments. Kodi must not carry a country, hotel, region, or route from one trip into another.
 
 ## Recommendation Behavior
 
@@ -499,9 +493,9 @@ Every meaningful change to Kodi should be tested against these scenarios:
 
 This specification should guide:
 
-- `apps/api/src/agent/openaiAgent.ts`
+- `apps/api/src/agent/kodiOrchestrator.ts`
 - `apps/api/src/agent/kodi.ts`
-- `apps/api/src/agent/tripContextResolver.ts`
+- `apps/api/src/agent/tripReferenceResolver.ts`
 - `apps/api/src/agent/tripTimelineResolver.ts`
 - Google Places/Routes adapters
 - reverse geocoding
@@ -512,7 +506,7 @@ This specification should guide:
 
 ## Next Engineering Steps
 
-1. Convert this spec into explicit prompt sections instead of one long fragile instruction list.
+1. Keep the permanent Kodi prompt short and provider-neutral; add behavior through structured runtime context and server-side contracts.
 2. Add agent smoke tests for the QA scenarios above.
 3. Add latency metrics for agent calls, Places, Routes, web search, and speech.
 4. Separate fast context answers from full research without making fallback rules Kodi's brain.

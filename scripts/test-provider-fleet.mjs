@@ -5,6 +5,7 @@ process.env.KODI_PROVIDER_ATTEMPT_TIMEOUT_MS = "2500";
 process.env.GROQ_API_KEY = "test-groq";
 process.env.CLOUDFLARE_ACCOUNT_ID = "test-account";
 process.env.CLOUDFLARE_AI_TOKEN = "test-cloudflare";
+process.env.CLOUDFLARE_AGENT_MODEL = "@cf/test/qualified-model";
 process.env.OPENROUTER_API_KEY = "test-openrouter";
 
 const originalFetch = globalThis.fetch;
@@ -50,7 +51,7 @@ try {
     reasoningMode: false,
     fallbackIntent: "general",
     parseReply(output) {
-      return { author: "קודי", source: "openai", ...JSON.parse(output) };
+      return { author: "קודי", source: "ai_provider", ...JSON.parse(output) };
     }
   };
 

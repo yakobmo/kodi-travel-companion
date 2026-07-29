@@ -891,3 +891,28 @@ QA/automation:
 
 - `scripts/smoke-agent-provider-readiness.mjs` must print `providerFailureKind`.
 - A configured provider returning 429 must be treated as a provider quota blocker, not as a broken WhatsApp connector and not as a poor prompt.
+
+### 37. Kodi Needs One Small Brain Contract, Not Accumulated Trip Instructions
+
+What happened:
+
+Kodi's permanent prompt and reference resolvers accumulated provider-specific names, a fixed Greece itinerary, special hotels and regions, formatting rules, and tactical corrections. Each instruction addressed a real incident, but together they made trip switching fragile and provider behavior difficult to diagnose.
+
+Why it happened:
+
+Trip data, safety policy, tool evidence, provider failover, and conversational identity were mixed in the same layer. The model was asked to enforce URLs and operational details that the server can enforce more reliably.
+
+Decision:
+
+- Keep the permanent Kodi prompt limited to identity, current-message authority, evidence use, conversational behavior, safety, and the response schema.
+- Derive every trip arc and destination reference from the active trip payload and imported map order.
+- Keep provider orchestration provider-neutral and enforce one total response deadline.
+- Validate provider output before accepting a free fallback.
+- Make the server own verified navigation links and admin permission enforcement.
+- Keep participant-facing failure text short; expose technical provider diagnostics separately.
+
+QA/automation:
+
+- `test:kodi-trip-agnostic` verifies a non-Greece trip.
+- QA rejects fixed Greece itinerary tokens in the orchestrator and active trip resolver.
+- `smoke:kodi-local` verifies the total deadline contract and missing-location behavior.

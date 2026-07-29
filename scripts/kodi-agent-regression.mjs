@@ -24,7 +24,7 @@ function countOccurrences(source, pattern) {
 
 function assertAgentFirstSourceGuards() {
   const serverSource = readRepoFile("apps/api/src/server.ts");
-  const openAiSource = readRepoFile("apps/api/src/agent/openaiAgent.ts");
+  const openAiSource = readRepoFile("apps/api/src/agent/kodiOrchestrator.ts");
   const webSource = readRepoFile("apps/web/src/App.tsx");
   const localMessagesSource = readRepoFile("apps/api/src/data/localMessages.ts");
 
@@ -196,8 +196,10 @@ assertCheck(
   `places=${noFreshLocationCafe.payload.contextSummary?.externalPlacesSearchStatus}`
 );
 assertCheck(
-  "no fresh location cafe does not call provider",
-  noFreshLocationCafe.payload.agentRuntime?.openAiStatus === "location_required",
+  "no fresh location cafe keeps the agent path available",
+  !["location_required", "skipped_fresh_location_required"].includes(
+    String(noFreshLocationCafe.payload.agentRuntime?.openAiStatus ?? "")
+  ),
   `openAiStatus=${noFreshLocationCafe.payload.agentRuntime?.openAiStatus}`
 );
 assertCheck("no fresh location cafe has no stale Maps link", !String(noFreshLocationCafe.payload.text ?? "").includes("Google Maps"));

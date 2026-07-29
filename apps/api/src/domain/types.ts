@@ -28,7 +28,7 @@ export type AiPlanMode = "limited" | "full";
 
 export type GoogleSourceState = "not_connected" | "demo_link_ready" | "connected" | "needs_refresh";
 
-export type TripUsageCapability = "openai_agent" | "google_places" | "google_routes" | "google_oauth_sync";
+export type TripUsageCapability = "ai_agent" | "openai_speech" | "google_places" | "google_routes" | "google_oauth_sync";
 
 export type TripUsagePoolStatus = "not_configured" | "active" | "limited" | "blocked";
 
@@ -227,7 +227,7 @@ export interface TripUsagePool {
   capabilities: Array<{
     capability: TripUsageCapability;
     enabled: boolean;
-    provider: "openai" | "google" | "internal";
+    provider: "ai_fleet" | "openai" | "google" | "internal";
     chargedTo: "trip_usage_pool";
     triggeredByMemberAuditRequired: boolean;
     quotaEnforcedServerSide: boolean;

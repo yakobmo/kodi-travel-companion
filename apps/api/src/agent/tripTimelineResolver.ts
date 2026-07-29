@@ -29,15 +29,16 @@ export interface TripTimelineResolution {
   };
 }
 
-const REGION_ALIASES: Record<string, string[]> = {
-  pelion: ["pelion", "pilion", "\u05e4\u05d9\u05dc\u05d9\u05d5\u05df"],
-  zagori: ["zagori", "zagoroxoria", "papigo", "aristi", "voidomatis", "vikos"],
-  meteora: ["meteora", "kalabaka"],
-  tzoumerka: ["tzoumerka", "pramanta", "arta"],
-  athens: ["athens", "athina"],
-  edessa: ["edessa"],
-  olympus: ["olympus"]
-};
+const REGION_STOP_WORDS = new Set([
+  "hotel",
+  "resort",
+  "apartments",
+  "apartment",
+  "rooms",
+  "guesthouse",
+  "street",
+  "road"
+]);
 
 function hasCoordinates(value: { lat?: number; lng?: number } | null | undefined): value is { lat: number; lng: number } {
   return typeof value?.lat === "number" && typeof value.lng === "number";
@@ -73,10 +74,19 @@ function detectDateHints(place: TripPlace) {
 }
 
 function detectRegionHints(places: TripPlace[]) {
-  const text = places.map(placeText).join(" ");
-  return Object.entries(REGION_ALIASES)
-    .filter(([, aliases]) => aliases.some((alias) => text.includes(alias)))
-    .map(([region]) => region);
+  const tokens = places
+    .flatMap((place) => placeText(place).match(/[\p{L}\p{N}]{4,}/gu) ?? [])
+    .map((token) => token.toLowerCase())
+    .filter((token) => !REGION_STOP_WORDS.has(token));
+  const counts = tokens.reduce<Map<string, number>>((result, token) => {
+    result.set(token, (result.get(token) ?? 0) + 1);
+    return result;
+  }, new Map());
+
+  return Array.from(counts.entries())
+    .sort((first, second) => second[1] - first[1])
+    .slice(0, 12)
+    .map(([token]) => token);
 }
 
 function countTypes(places: TripPlace[]) {
@@ -155,10 +165,9 @@ export function buildTripTimelineFromGoogleMapOrder(tripState: TripState): TripT
   });
 }
 
-function detectRequestedRegion(message: string) {
+function detectRequestedRegion(message: string, timeline: TripTimelineSegment[]) {
   const normalized = message.toLowerCase();
-
-  return Object.entries(REGION_ALIASES).find(([, aliases]) => aliases.some((alias) => normalized.includes(alias)))?.[0];
+  return timeline.flatMap((segment) => segment.regionHints).find((hint) => normalized.includes(hint));
 }
 
 function detectRelativeDays(message: string) {
@@ -199,7 +208,7 @@ function findCurrentSegmentIndex(tripState: TripState, timeline: TripTimelineSeg
 
 export function resolveTimelineReferenceForMessage(message: string, tripState: TripState): TripTimelineResolution {
   const timeline = buildTripTimelineFromGoogleMapOrder(tripState);
-  const requestedRegion = detectRequestedRegion(message);
+  const requestedRegion = detectRequestedRegion(message, timeline);
 
   if (requestedRegion) {
     const regionMatches = timeline.filter((segment) => segment.regionHints.includes(requestedRegion));

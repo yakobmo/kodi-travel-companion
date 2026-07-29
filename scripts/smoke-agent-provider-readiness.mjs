@@ -9,7 +9,7 @@ const probeMessage =
   "קודי, האם הטיול הזה מתאים למשפחה עם ילדים ומה היית משנה כדי שיהיה זורם יותר?";
 
 function classifyProviderIssue(runtime = {}, source = "unknown") {
-  if (source === "openai" && runtime.openAiStatus === "ready" && !runtime.fallbackUsed) {
+  if (source === "ai_provider" && runtime.providerStatus === "ready" && !runtime.fallbackUsed) {
     return {
       kind: "none",
       nextAction: "none"
@@ -101,7 +101,7 @@ async function main() {
     console.log(`- ${key}: ${value}`);
   }
 
-  if (requireLive && (payload.source !== "openai" || runtime.openAiStatus !== "ready" || runtime.fallbackUsed)) {
+  if (requireLive && (payload.source !== "ai_provider" || runtime.providerStatus !== "ready" || runtime.fallbackUsed)) {
     console.error("Kodi agent is not live-ready: the response did not come from the AI provider.");
     process.exitCode = 1;
   }
