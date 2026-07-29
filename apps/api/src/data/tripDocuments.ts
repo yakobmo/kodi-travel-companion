@@ -23,6 +23,11 @@ export interface TripDocument {
 }
 
 const bucketName = "trip-documents";
+const bucketOptions = {
+  public: false,
+  fileSizeLimit: 8 * 1024 * 1024,
+  allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/json"]
+};
 const localRoot = process.env.TRIP_DOCUMENTS_LOCAL_DIR || join(process.cwd(), ".data", "trip-documents");
 const localIndexPath = join(localRoot, "index.json");
 
@@ -31,12 +36,11 @@ async function ensureBucket() {
   if (!supabase) throw new Error("Supabase document storage is not configured.");
   const { data } = await supabase.storage.getBucket(bucketName);
   if (!data) {
-    const { error } = await supabase.storage.createBucket(bucketName, {
-      public: false,
-      fileSizeLimit: 8 * 1024 * 1024,
-      allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png", "image/webp"]
-    });
+    const { error } = await supabase.storage.createBucket(bucketName, bucketOptions);
     if (error && !/already exists/i.test(error.message)) throw error;
+  } else if (!data.allowed_mime_types?.includes("application/json")) {
+    const { error } = await supabase.storage.updateBucket(bucketName, bucketOptions);
+    if (error) throw error;
   }
   return supabase;
 }
