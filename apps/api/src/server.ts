@@ -44,6 +44,14 @@ import {
   saveDemoTripSetupStateAsync
 } from "./data/localSetupState.js";
 import { getDemoStorageMetadata } from "./data/demoStorage.js";
+import {
+  listTripDocuments,
+  readTripDocument,
+  removeTripDocument,
+  saveTripDocument,
+  type TripDocumentCategory,
+  type TripDocumentVisibility
+} from "./data/tripDocuments.js";
 import { checkSupabaseRuntime } from "./data/supabaseStatus.js";
 import {
   applySupabaseEventLogMigration,
@@ -1892,7 +1900,116 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: "12mb" }));
+
+const documentMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+const documentCategories = new Set<TripDocumentCategory>(["flights", "insurance", "lodging", "tickets", "personal", "other"]);
+
+async function resolveDocumentMember(memberId: unknown) {
+  if (typeof memberId !== "string") return null;
+  return (await loadDemoTripMembersAsync()).find((entry) => entry.member.id === memberId)?.member ?? null;
+}
+
+function canReadDocument(role: string, visibility: TripDocumentVisibility) {
+  return visibility === "group" || role === "owner" || role === "admin";
+}
+
+app.get("/api/trips/demo/documents", async (req, res) => {
+  const member = await resolveDocumentMember(req.query.memberId);
+  if (!member) return res.status(403).json({ error: "member_not_found" });
+  try {
+    const documents = (await listTripDocuments())
+      .filter((document) => canReadDocument(member.role, document.visibility))
+      .map(({ storagePath: _storagePath, ...document }) => document);
+    return res.json({
+      documents,
+      permissions: { canUpload: member.role === "owner" || member.role === "admin" }
+    });
+  } catch (error) {
+    console.error("Document list failed", error);
+    return res.status(503).json({ error: "document_storage_unavailable" });
+  }
+});
+
+app.post("/api/trips/demo/documents", async (req, res) => {
+  const member = await resolveDocumentMember(req.body?.memberId);
+  if (!member || (member.role !== "owner" && member.role !== "admin")) {
+    return res.status(403).json({ error: "document_upload_not_allowed" });
+  }
+  const file = req.body?.file;
+  const category = req.body?.category as TripDocumentCategory;
+  const visibility = req.body?.visibility as TripDocumentVisibility;
+  if (
+    !file ||
+    typeof file.name !== "string" ||
+    typeof file.base64 !== "string" ||
+    !documentMimeTypes.has(file.mimeType) ||
+    !documentCategories.has(category) ||
+    (visibility !== "group" && visibility !== "admins")
+  ) {
+    return res.status(400).json({ error: "invalid_document" });
+  }
+  const content = Buffer.from(file.base64, "base64");
+  if (!content.length || content.length > 8 * 1024 * 1024) {
+    return res.status(413).json({ error: "document_too_large" });
+  }
+  const safeFilename = file.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 160);
+  try {
+    const document = await saveTripDocument({
+      title: String(req.body?.title || safeFilename).trim().slice(0, 120),
+      originalFilename: safeFilename,
+      category,
+      visibility,
+      mimeType: file.mimeType,
+      content,
+      uploadedByMemberId: member.id,
+      uploadedByName: member.displayName
+    });
+    const { storagePath: _storagePath, ...publicDocument } = document;
+    return res.status(201).json({ document: publicDocument });
+  } catch (error) {
+    console.error("Document upload failed", error);
+    return res.status(503).json({ error: "document_storage_unavailable" });
+  }
+});
+
+app.get("/api/trips/demo/documents/:id/content", async (req, res) => {
+  const member = await resolveDocumentMember(req.query.memberId);
+  if (!member) return res.status(403).json({ error: "member_not_found" });
+  try {
+    const stored = await readTripDocument(req.params.id);
+    if (!stored) return res.status(404).json({ error: "document_not_found" });
+    if (!canReadDocument(member.role, stored.document.visibility)) {
+      return res.status(403).json({ error: "document_access_denied" });
+    }
+    res.setHeader("Content-Type", stored.document.mimeType);
+    res.setHeader("Content-Length", stored.content.length);
+    res.setHeader("Content-Disposition", `inline; filename="${stored.document.originalFilename.replace(/"/g, "")}"`);
+    return res.send(stored.content);
+  } catch (error) {
+    console.error("Document read failed", error);
+    return res.status(503).json({ error: "document_storage_unavailable" });
+  }
+});
+
+app.delete("/api/trips/demo/documents/:id", async (req, res) => {
+  const member = await resolveDocumentMember(req.body?.memberId);
+  if (!member || (member.role !== "owner" && member.role !== "admin")) {
+    return res.status(403).json({ error: "document_delete_not_allowed" });
+  }
+  try {
+    const stored = await readTripDocument(req.params.id);
+    if (!stored) return res.status(404).json({ error: "document_not_found" });
+    if (member.role !== "owner" && stored.document.uploadedByMemberId !== member.id) {
+      return res.status(403).json({ error: "document_delete_not_allowed" });
+    }
+    await removeTripDocument(req.params.id);
+    return res.json({ removed: true });
+  } catch (error) {
+    console.error("Document delete failed", error);
+    return res.status(503).json({ error: "document_storage_unavailable" });
+  }
+});
 
 app.get("/api/health", (_req, res) => {
   res.json(buildHealthPayload());

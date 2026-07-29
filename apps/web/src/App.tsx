@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Download,
   ExternalLink,
+  FileText,
   Home,
   MapPin,
   Menu,
@@ -653,6 +654,22 @@ interface JoinDraft {
   whatsAppPhone: string;
 }
 
+type TripDocumentCategory = "flights" | "insurance" | "lodging" | "tickets" | "personal" | "other";
+type TripDocumentVisibility = "group" | "admins";
+
+interface TripDocument {
+  id: string;
+  title: string;
+  originalFilename: string;
+  category: TripDocumentCategory;
+  visibility: TripDocumentVisibility;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedByMemberId: string;
+  uploadedByName: string;
+  createdAt: string;
+}
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3001" : "");
 const MENU_REQUEST_TIMEOUT_MS = 10000;
 
@@ -1245,6 +1262,11 @@ export function App() {
   const [activeRouteStopIndex, setActiveRouteStopIndex] = useState(0);
   const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
   const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
+  const [tripDocuments, setTripDocuments] = useState<TripDocument[]>([]);
+  const [documentState, setDocumentState] = useState<"idle" | "loading" | "uploading" | "ready" | "error">("idle");
+  const [documentMessage, setDocumentMessage] = useState("");
+  const [documentCategory, setDocumentCategory] = useState<TripDocumentCategory>("flights");
+  const [documentVisibility, setDocumentVisibility] = useState<TripDocumentVisibility>("group");
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installState, setInstallState] = useState<"idle" | "ready" | "installed" | "unavailable">("idle");
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfigResponse | null>(null);
@@ -1281,6 +1303,7 @@ export function App() {
   const initialComposerRevealRef = useRef(false);
   const memberPollInFlightRef = useRef(false);
   const secondaryMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
   const visibleChatMessages = messages;
 
   function closeSecondaryMenu() {
@@ -2172,6 +2195,98 @@ export function App() {
   };
   const managerMember = members.find((member) => member.role === "owner" || member.role === "admin") ?? activeMember;
   const mapAnchorLocation = currentLocation ?? managerMember.liveLocation;
+  const canManageDocuments = activeMember.role === "owner" || activeMember.role === "admin";
+
+  async function loadTripDocuments() {
+    setDocumentState("loading");
+    setDocumentMessage("");
+    try {
+      const response = await fetchWithTimeout(
+        `${apiBaseUrl}/api/trips/demo/documents?memberId=${encodeURIComponent(activeMember.id)}`
+      );
+      if (!response.ok) throw new Error("load_failed");
+      const payload = (await response.json()) as { documents: TripDocument[] };
+      setTripDocuments(payload.documents);
+      setDocumentState("ready");
+    } catch {
+      setDocumentState("error");
+      setDocumentMessage("לא הצלחנו לטעון את המסמכים. אפשר לנסות שוב.");
+    }
+  }
+
+  function toggleDocumentsMenu() {
+    setOpenMenuSection((current) => {
+      if (current === "documents") return null;
+      void loadTripDocuments();
+      return "documents";
+    });
+  }
+
+  async function uploadTripDocument(file: File) {
+    if (!["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setDocumentState("error");
+      setDocumentMessage("אפשר להעלות PDF או תמונה מסוג JPG, PNG או WebP.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setDocumentState("error");
+      setDocumentMessage("הקובץ גדול מדי. הגודל המרבי הוא 8MB.");
+      return;
+    }
+    setDocumentState("uploading");
+    setDocumentMessage("");
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = "";
+      for (let index = 0; index < bytes.length; index += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+      }
+      const response = await fetchWithTimeout(`${apiBaseUrl}/api/trips/demo/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId: activeMember.id,
+          category: documentCategory,
+          visibility: documentVisibility,
+          title: file.name.replace(/\.[^.]+$/, ""),
+          file: { name: file.name, mimeType: file.type, base64: window.btoa(binary) }
+        })
+      }, 30000);
+      if (!response.ok) throw new Error("upload_failed");
+      setDocumentMessage("המסמך נשמר בגלריה הפרטית.");
+      await loadTripDocuments();
+    } catch {
+      setDocumentState("error");
+      setDocumentMessage("ההעלאה נכשלה. הקובץ לא נשמר; אפשר לנסות שוב.");
+    } finally {
+      if (documentInputRef.current) documentInputRef.current.value = "";
+    }
+  }
+
+  function openTripDocument(document: TripDocument) {
+    window.open(
+      `${apiBaseUrl}/api/trips/demo/documents/${encodeURIComponent(document.id)}/content?memberId=${encodeURIComponent(activeMember.id)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
+  async function deleteTripDocument(document: TripDocument) {
+    setDocumentState("loading");
+    try {
+      const response = await fetchWithTimeout(`${apiBaseUrl}/api/trips/demo/documents/${encodeURIComponent(document.id)}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: activeMember.id })
+      });
+      if (!response.ok) throw new Error("delete_failed");
+      setDocumentMessage("המסמך הוסר.");
+      await loadTripDocuments();
+    } catch {
+      setDocumentState("error");
+      setDocumentMessage("לא הצלחנו להסיר את המסמך.");
+    }
+  }
 
   const visiblePlaces = useMemo(() => {
     const priority: Record<PlaceType, number> = {
@@ -4574,7 +4689,7 @@ export function App() {
             onClick={() => setOpenMenuSection((current) => (current === "places" ? null : "places"))}
             type="button"
           >
-            נקודות הטיול
+            <span><b className="menu-order-number">1</b> נקודות הטיול</span>
           </button>
           <p>
             {placeListFilter === "route"
@@ -4656,6 +4771,69 @@ export function App() {
               <div className="empty-trip-place-list">אין נקודות במסנן הזה.</div>
             )}
           </div>
+        </section>
+        <section className={`menu-block documents-menu ${openMenuSection === "documents" ? "menu-block-open" : ""}`} aria-label="המסמכים של קודי">
+          <button aria-expanded={openMenuSection === "documents"} className="menu-block-toggle" onClick={toggleDocumentsMenu} type="button">
+            <span><b className="menu-order-number">2</b> המסמכים של קודי</span>
+          </button>
+          <p>כרטיסי טיסה, ביטוח, הזמנות ומסמכי נסיעה במקום פרטי אחד.</p>
+          {canManageDocuments ? (
+            <div className="document-upload-controls">
+              <label>
+                סוג מסמך
+                <select value={documentCategory} onChange={(event) => setDocumentCategory(event.target.value as TripDocumentCategory)}>
+                  <option value="flights">טיסות</option>
+                  <option value="insurance">ביטוח</option>
+                  <option value="lodging">לינה</option>
+                  <option value="tickets">כרטיסים</option>
+                  <option value="personal">אישי</option>
+                  <option value="other">אחר</option>
+                </select>
+              </label>
+              <label>
+                מי יכול לצפות
+                <select value={documentVisibility} onChange={(event) => setDocumentVisibility(event.target.value as TripDocumentVisibility)}>
+                  <option value="group">כל חברי הטיול</option>
+                  <option value="admins">מנהלים בלבד</option>
+                </select>
+              </label>
+              <input
+                accept=".pdf,application/pdf,image/jpeg,image/png,image/webp"
+                aria-label="בחירת מסמך להעלאה"
+                className="document-file-input"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadTripDocument(file);
+                }}
+                ref={documentInputRef}
+                type="file"
+              />
+              <button disabled={documentState === "uploading"} onClick={() => documentInputRef.current?.click()} type="button">
+                <Plus size={16} aria-hidden="true" />
+                {documentState === "uploading" ? "מעלה..." : "הוספת PDF או תמונה"}
+              </button>
+              <small>עד 8MB לקובץ. הקבצים אינם פתוחים לציבור.</small>
+            </div>
+          ) : <small>אפשר לצפות במסמכי הקבוצה. העלאה וניהול זמינים למנהלי הטיול.</small>}
+          {documentState === "loading" ? <div className="document-status">טוען מסמכים...</div> : null}
+          {documentMessage ? <div className={`document-status ${documentState === "error" ? "error" : ""}`}>{documentMessage}</div> : null}
+          {documentState !== "loading" ? (
+            <div className="trip-document-list">
+              {tripDocuments.length ? tripDocuments.map((document) => (
+                <article className="trip-document-card" key={document.id}>
+                  <FileText size={22} aria-hidden="true" />
+                  <div>
+                    <strong>{document.title}</strong>
+                    <small>{document.mimeType === "application/pdf" ? "PDF" : "תמונה"} · {(document.sizeBytes / 1024).toFixed(0)}KB{document.visibility === "admins" ? " · מנהלים בלבד" : ""}</small>
+                  </div>
+                  <div className="trip-document-actions">
+                    <button onClick={() => openTripDocument(document)} type="button"><Download size={15} aria-hidden="true" />פתיחה</button>
+                    {canManageDocuments ? <button className="document-delete-action" onClick={() => void deleteTripDocument(document)} type="button"><Trash2 size={15} aria-hidden="true" />הסרה</button> : null}
+                  </div>
+                </article>
+              )) : documentState === "ready" ? <div className="empty-document-list">עוד אין מסמכים. אפשר להוסיף את הראשון כאן.</div> : null}
+            </div>
+          ) : null}
         </section>
         <section className={`menu-block invite-menu ${openMenuSection === "invite" ? "menu-block-open" : ""}`} data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
           <button

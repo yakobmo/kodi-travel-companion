@@ -1538,6 +1538,109 @@ input {
   outline-offset: -3px;
 }
 
+.menu-order-number {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  margin-inline-end: 8px;
+  place-items: center;
+  border-radius: 999px;
+  background: #e9f8fb;
+  color: #07536b;
+  font-size: 12px;
+}
+
+.document-upload-controls,
+.trip-document-list {
+  display: grid;
+  gap: 9px;
+}
+
+.document-upload-controls {
+  padding: 10px;
+  border-radius: 9px;
+  background: #eef9fb;
+}
+
+.document-upload-controls label {
+  display: grid;
+  gap: 4px;
+  color: #34535c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.document-upload-controls select {
+  min-height: 40px;
+  border: 1px solid #bdd9df;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff;
+  color: #07394d;
+  font: inherit;
+}
+
+.document-file-input {
+  display: none !important;
+}
+
+.trip-document-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #cfe2e6;
+  border-radius: 9px;
+  background: #fff;
+  color: #07536b;
+}
+
+.trip-document-card > div:not(.trip-document-actions) {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.trip-document-card strong,
+.trip-document-card small {
+  overflow-wrap: anywhere;
+}
+
+.trip-document-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.trip-document-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.trip-document-actions .document-delete-action {
+  background: #fff0f0;
+  color: #9a2929;
+}
+
+.document-status,
+.empty-document-list {
+  padding: 10px;
+  border-radius: 8px;
+  background: #eef8f2;
+  color: #17634f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.document-status.error {
+  background: #fff0f0;
+  color: #a12a2a;
+}
+
 .join-action-message,
 .member-action-message {
   margin: 0;
