@@ -438,3 +438,8 @@ $env:BROWSER_EXECUTABLE = "C:\Program Files (x86)\Microsoft\Edge\Application\mse
 - Split usage capabilities into `ai_agent` and `openai_speech`.
 - Provider failures now produce a short participant-safe message; technical diagnostics remain in `agentRuntime` and readiness.
 - Added `test:kodi-trip-agnostic` with an Austria fixture.
+- PR #5 merged as `3ee8787`; Render readiness confirmed the new `totalBudgetMs=20000` contract.
+- The first production provider smoke correctly exposed Gemini/OpenAI quota pressure and an OpenRouter timeout instead of returning a fake rules answer.
+- PR #6 merged as `4b766eb` to give `openrouter/free` an 8-second share of the same 20-second total budget.
+- Public provider smoke then passed with `source=ai_provider`, `fallbackUsed=false`, and a live Gemini response.
+- The previously failing live-location cafe scenario passed in production in about 7.1 seconds with `intent=place_recommendation` and server-verified Google Maps and Waze links.
