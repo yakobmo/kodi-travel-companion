@@ -110,6 +110,15 @@ let agentTripStateCache:
       state: ReturnType<typeof buildDemoTripState>;
     }
   | undefined;
+let lastAgentProviderRuntime:
+  | {
+      provider: string;
+      model?: string;
+      status: string;
+      at: string;
+      latencyMs: number;
+    }
+  | undefined;
 const processedWhatsAppMessageIds = new Set<string>();
 const recentWhatsAppWebhookDiagnostics: Array<{
   receivedAt: string;
@@ -3657,7 +3666,7 @@ app.post("/api/trips/demo/agent-actions/authorize", (req, res) => {
   res.json(payload);
 });
 
-app.get("/api/agent/providers/readiness", (_req, res) => {
+function buildAgentProviderReadinessPayload() {
   const freeFleet = getFreeProviderFleetReadiness();
   const preferredProvider =
     process.env.KODI_AGENT_PROVIDER?.trim().toLowerCase() ||
@@ -3665,7 +3674,7 @@ app.get("/api/agent/providers/readiness", (_req, res) => {
     "automatic";
   const openAiOnly = preferredProvider === "openai" || preferredProvider === "openai-only";
   const geminiFirst = preferredProvider === "gemini" || preferredProvider === "google";
-  res.json({
+  return {
     strategy: openAiOnly ? "explicit_openai" : "free_first_paid_last",
     order: openAiOnly ? ["openai"] : geminiFirst ? ["gemini", ...freeFleet.order, "openai"] : [...freeFleet.order, "gemini", "openai"],
     totalBudgetMs: Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 20_000),
@@ -3696,8 +3705,27 @@ app.get("/api/agent/providers/readiness", (_req, res) => {
       scope: "render_instance",
       attemptTimeoutMs: freeFleet.attemptTimeoutMs
     },
-    lastSuccessfulFreeFallback: freeFleet.lastSuccessfulProvider
-  });
+    lastSuccessfulFreeFallback: freeFleet.lastSuccessfulProvider,
+    lastActiveProvider: lastAgentProviderRuntime,
+    checkedAt: new Date().toISOString()
+  };
+}
+
+app.get("/api/agent/providers/readiness", (_req, res) => {
+  res.json(buildAgentProviderReadinessPayload());
+});
+
+app.get("/api/trips/demo/agent-providers", async (req, res) => {
+  const memberId = typeof req.query.memberId === "string" ? req.query.memberId.trim() : "";
+  const members = await loadDemoTripMembersAsync();
+  const member = members.find((candidate) => candidate.member.id === memberId)?.member;
+
+  if (!member || (member.role !== "owner" && member.role !== "admin")) {
+    res.status(403).json({ error: "trip manager access required" });
+    return;
+  }
+
+  res.json(buildAgentProviderReadinessPayload());
 });
 
 app.post("/api/agent/message", async (req, res) => {
@@ -3912,6 +3940,15 @@ app.post("/api/agent/message", async (req, res) => {
             : selectedProviderModel
               ? "openai"
               : undefined;
+  if (selectedProvider && openAiReply?.status === "ready") {
+    lastAgentProviderRuntime = {
+      provider: selectedProvider,
+      model: selectedProviderModel,
+      status: openAiReply.status,
+      at: new Date().toISOString(),
+      latencyMs: Date.now() - agentStartedAt
+    };
+  }
 
   res.json({
     ...reply,

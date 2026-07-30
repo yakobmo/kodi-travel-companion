@@ -484,6 +484,76 @@ interface UsageAuditOverview {
   lastCapability?: string;
 }
 
+interface AgentProviderStatus {
+  provider: string;
+  model?: string;
+  configured: boolean;
+  state: "ready" | "cooling_down" | "configured_unverified" | "not_configured";
+  failureCount?: number;
+  cooldownUntil?: string;
+  lastError?: string;
+  role?: string;
+}
+
+interface AgentProvidersResponse {
+  strategy: string;
+  order: string[];
+  totalBudgetMs: number;
+  providers: AgentProviderStatus[];
+  checkedAt: string;
+  lastActiveProvider?: {
+    provider: string;
+    model?: string;
+    status: string;
+    at: string;
+    latencyMs: number;
+  };
+  lastSuccessfulFreeFallback?: {
+    provider: string;
+    model: string;
+    at: string;
+  };
+}
+
+function getAgentProviderName(provider: string) {
+  return (
+    {
+      cloudflare: "Cloudflare",
+      openrouter: "OpenRouter",
+      groq: "Groq",
+      gemini: "Gemini",
+      openai: "GPT / OpenAI"
+    }[provider] ?? provider
+  );
+}
+
+function getAgentProviderStatus(provider: AgentProviderStatus) {
+  if (!provider.configured || provider.state === "not_configured") {
+    return { label: "לא מוגדר", tone: "muted", detail: "הספק אינו משתתף כרגע בשרשרת." };
+  }
+  if (provider.state === "ready") {
+    return { label: "זמין", tone: "ready", detail: "הספק מוכן לקבל בקשות." };
+  }
+  if (provider.state === "configured_unverified") {
+    return { label: "מוגדר", tone: "checking", detail: "החיבור ייבדק אוטומטית כשיגיע תורו." };
+  }
+
+  const error = provider.lastError?.toLowerCase() ?? "";
+  if (/(quota|rate.limit|429|credit|billing)/.test(error)) {
+    return { label: "המכסה הסתיימה", tone: "warning", detail: "המערכת דילגה לסוכן הבא ותנסה שוב בהמשך." };
+  }
+  if (/(401|403|auth|token|permission)/.test(error)) {
+    return { label: "בעיית הרשאה", tone: "error", detail: "נדרש לבדוק את המפתח או את הרשאות הספק." };
+  }
+  if (/timeout/.test(error)) {
+    return { label: "איטי כרגע", tone: "warning", detail: "המערכת דילגה לסוכן הבא ותנסה שוב אוטומטית." };
+  }
+  if (/quality/.test(error)) {
+    return { label: "תשובה נפסלה", tone: "warning", detail: "התשובה לא עמדה בבקרת האיכות ולכן לא הוצגה." };
+  }
+  return { label: "בהמתנה", tone: "warning", detail: "המערכת תנסה את הספק שוב לאחר זמן ההמתנה." };
+}
+
 interface TripStateResponse {
   trip: {
     id: string;
@@ -1262,6 +1332,9 @@ export function App() {
   const [activeRouteStopIndex, setActiveRouteStopIndex] = useState(0);
   const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
   const [openMenuSection, setOpenMenuSection] = useState<string | null>(null);
+  const [agentProviders, setAgentProviders] = useState<AgentProvidersResponse | null>(null);
+  const [agentProvidersState, setAgentProvidersState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [agentProvidersMessage, setAgentProvidersMessage] = useState("");
   const [tripDocuments, setTripDocuments] = useState<TripDocument[]>([]);
   const [documentState, setDocumentState] = useState<"idle" | "loading" | "uploading" | "ready" | "error">("idle");
   const [documentMessage, setDocumentMessage] = useState("");
@@ -1324,6 +1397,43 @@ export function App() {
     }
 
     openSecondaryMenu();
+  }
+
+  async function loadAgentProviders() {
+    if (!(activeMember.role === "owner" || activeMember.role === "admin")) {
+      setAgentProvidersState("error");
+      setAgentProvidersMessage("ניהול הסוכנים זמין למנהלי הטיול בלבד.");
+      return;
+    }
+
+    setAgentProvidersState("loading");
+    setAgentProvidersMessage("");
+    try {
+      const response = await fetchWithTimeout(
+        `${apiBaseUrl}/api/trips/demo/agent-providers?memberId=${encodeURIComponent(activeMember.id)}`,
+        undefined,
+        12_000
+      );
+      if (!response.ok) {
+        throw new Error(`agent providers request failed (${response.status})`);
+      }
+      const payload = (await response.json()) as AgentProvidersResponse;
+      setAgentProviders(payload);
+      setAgentProvidersState("ready");
+    } catch {
+      setAgentProvidersState("error");
+      setAgentProvidersMessage("לא הצלחתי לבדוק כרגע את הסוכנים. אפשר לנסות שוב.");
+    }
+  }
+
+  function toggleAgentProvidersMenu() {
+    setOpenMenuSection((current) => {
+      const next = current === "agents" ? null : "agents";
+      if (next === "agents") {
+        void loadAgentProviders();
+      }
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -4843,6 +4953,85 @@ export function App() {
             </div>
           ) : null}
         </section>
+        {(activeMember.role === "owner" || activeMember.role === "admin") ? (
+          <section className={`menu-block agent-providers-menu ${openMenuSection === "agents" ? "menu-block-open" : ""}`} aria-label="ניהול סוכנים">
+            <button
+              aria-expanded={openMenuSection === "agents"}
+              className="menu-block-toggle"
+              onClick={toggleAgentProvidersMenu}
+              type="button"
+            >
+              ניהול סוכנים
+            </button>
+            <p>מצב קודי ושרשרת הגיבוי. מפתחות ופרטים סודיים אינם מוצגים כאן.</p>
+            {agentProvidersState === "loading" ? <div className="agent-provider-message">בודק את הסוכנים...</div> : null}
+            {agentProvidersMessage ? <div className="agent-provider-message error" role="status">{agentProvidersMessage}</div> : null}
+            {agentProviders ? (
+              <>
+                <div className="agent-active-summary">
+                  <span>הסוכן האחרון שענה</span>
+                  <strong>
+                    {getAgentProviderName(
+                      agentProviders.lastActiveProvider?.provider ??
+                        agentProviders.lastSuccessfulFreeFallback?.provider ??
+                        "עדיין לא ידוע"
+                    )}
+                  </strong>
+                  {agentProviders.lastActiveProvider ? (
+                    <small>
+                      {agentProviders.lastActiveProvider.model} · {(agentProviders.lastActiveProvider.latencyMs / 1000).toFixed(1)} שניות
+                    </small>
+                  ) : (
+                    <small>הנתון יתעדכן לאחר תשובת AI הבאה.</small>
+                  )}
+                </div>
+                <div className="agent-provider-order" aria-label="סדר מעבר בין הסוכנים">
+                  {agentProviders.order.map((provider, index) => (
+                    <span key={`${provider}-${index}`}>
+                      {index + 1}. {getAgentProviderName(provider)}
+                    </span>
+                  ))}
+                </div>
+                <div className="agent-provider-list">
+                  {agentProviders.providers.map((provider) => {
+                    const status = getAgentProviderStatus(provider);
+                    const isLastActive =
+                      agentProviders.lastActiveProvider?.provider === provider.provider ||
+                      (!agentProviders.lastActiveProvider &&
+                        agentProviders.lastSuccessfulFreeFallback?.provider === provider.provider);
+                    return (
+                      <article className={`agent-provider-card agent-provider-${status.tone}`} key={provider.provider}>
+                        <div>
+                          <strong>{getAgentProviderName(provider.provider)}</strong>
+                          <span className="agent-provider-status">{status.label}</span>
+                        </div>
+                        <small>{provider.model || "לא נבחר מודל"}</small>
+                        <p>{status.detail}</p>
+                        <div className="agent-provider-meta">
+                          <span>{provider.role === "paid_last_resort" ? "גיבוי בתשלום" : "מסלול חינמי"}</span>
+                          {isLastActive ? <span className="agent-provider-active">ענה לאחרונה</span> : null}
+                          {provider.failureCount ? <span>{provider.failureCount} כשלים אחרונים</span> : null}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                <small className="agent-credit-note">
+                  יתרה מדויקת אינה זמינה מכל הספקים. כשמכסה נגמרת קודי מזהה את השגיאה, מסמן אותה כאן ועובר אוטומטית לסוכן הבא.
+                </small>
+                <button
+                  className="secondary-menu-action"
+                  disabled={agentProvidersState === "loading"}
+                  onClick={() => void loadAgentProviders()}
+                  type="button"
+                >
+                  {agentProvidersState === "loading" ? "בודק..." : "בדוק עכשיו"}
+                </button>
+                <small>נבדק לאחרונה: {new Date(agentProviders.checkedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}</small>
+              </>
+            ) : null}
+          </section>
+        ) : null}
         <section className={`menu-block invite-menu ${openMenuSection === "invite" ? "menu-block-open" : ""}`} data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
           <button
             aria-expanded={openMenuSection === "invite"}

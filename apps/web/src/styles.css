@@ -1745,6 +1745,141 @@ input {
   background: #f2fbfd;
 }
 
+.agent-providers-menu {
+  border-color: #bfe7f2;
+}
+
+.agent-active-summary {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border-radius: 9px;
+  background: #eaf8f2;
+  color: #174f42;
+}
+
+.agent-active-summary span,
+.agent-active-summary small {
+  color: #527069;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.agent-provider-order {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-provider-order span,
+.agent-provider-meta span {
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #edf5f7;
+  color: #315963;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.agent-provider-list {
+  display: grid;
+  gap: 8px;
+}
+
+.agent-provider-card {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid #d6e4e1;
+  border-inline-start-width: 4px;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.agent-provider-card > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.agent-provider-card p,
+.agent-provider-card small {
+  margin: 0 !important;
+  color: #526663;
+  font-size: 12px;
+}
+
+.agent-provider-status {
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #eef3f1;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.agent-provider-ready {
+  border-inline-start-color: #25966f;
+}
+
+.agent-provider-ready .agent-provider-status {
+  background: #e4f7ee;
+  color: #17634f;
+}
+
+.agent-provider-checking {
+  border-inline-start-color: #3b8fa5;
+}
+
+.agent-provider-warning {
+  border-inline-start-color: #d28a20;
+}
+
+.agent-provider-warning .agent-provider-status {
+  background: #fff3d9;
+  color: #875711;
+}
+
+.agent-provider-error {
+  border-inline-start-color: #c34d4d;
+}
+
+.agent-provider-error .agent-provider-status {
+  background: #fff0f0;
+  color: #982f2f;
+}
+
+.agent-provider-muted {
+  border-inline-start-color: #a3afac;
+  opacity: 0.82;
+}
+
+.agent-provider-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.agent-provider-meta .agent-provider-active {
+  background: #dff5eb;
+  color: #17634f;
+}
+
+.agent-credit-note,
+.agent-provider-message {
+  padding: 9px;
+  border-radius: 8px;
+  background: #eef8fb;
+  color: #315963;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.agent-provider-message.error {
+  background: #fff0f0;
+  color: #982f2f;
+}
+
 .place-filter-chips {
   display: flex;
   flex-wrap: wrap;
