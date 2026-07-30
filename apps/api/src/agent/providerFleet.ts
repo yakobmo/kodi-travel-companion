@@ -208,10 +208,23 @@ async function callCloudflareProvider(input: FleetInput, model: string) {
     input.deadlineAt
   )) as {
     success?: boolean;
-    result?: { response?: string };
+    result?: { response?: unknown };
   };
 
-  return response.result?.response?.trim() ?? "";
+  return normalizeCloudflareResponse(response.result?.response);
+}
+
+export function normalizeCloudflareResponse(value: unknown) {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value).trim();
 }
 
 export function hasFreeFleetProvider() {

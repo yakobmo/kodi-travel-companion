@@ -42,9 +42,23 @@ globalThis.fetch = async (url) => {
 };
 
 try {
-  const { getFreeProviderFleetReadiness, tryFreeProviderFleet } = await import(
+  const { getFreeProviderFleetReadiness, normalizeCloudflareResponse, tryFreeProviderFleet } = await import(
     "../apps/api/dist/agent/providerFleet.js"
   );
+  const structuredCloudflareReply = {
+    text: "Structured Cloudflare reply",
+    intent: "general",
+    requiresAdminApproval: false
+  };
+  if (normalizeCloudflareResponse("  plain reply  ") !== "plain reply") {
+    throw new Error("Expected string Cloudflare replies to be trimmed.");
+  }
+  if (
+    normalizeCloudflareResponse(structuredCloudflareReply) !==
+    JSON.stringify(structuredCloudflareReply)
+  ) {
+    throw new Error("Expected structured Cloudflare replies to be serialized.");
+  }
   const request = {
     instructions: "Return JSON",
     payload: "{}",
