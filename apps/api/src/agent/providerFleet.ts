@@ -56,7 +56,7 @@ function getProviderConfig(provider: FleetProviderId) {
         process.env.CLOUDFLARE_ACCOUNT_ID?.trim() &&
           process.env.CLOUDFLARE_AI_TOKEN?.trim()
       ),
-      model: process.env.CLOUDFLARE_AGENT_MODEL?.trim() || "@cf/meta/llama-3.1-8b-instruct-fp8-fast"
+      model: process.env.CLOUDFLARE_AGENT_MODEL?.trim() || "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
     };
   }
 
