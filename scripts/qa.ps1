@@ -258,6 +258,10 @@ if (
   -not $webMainSource.Contains('register("/sw.js")') -or
   -not $webMainSource.Contains("registration.update()") -or
   -not $webMainSource.Contains("controllerchange") -or
+  -not $webMainSource.Contains("visualViewport") -or
+  -not $webMainSource.Contains("--kodi-app-height") -or
+  -not $webMainSource.Contains('window.addEventListener("pageshow"') -or
+  -not $webMainSource.Contains('window.addEventListener("orientationchange"') -or
   -not $webMainSource.Contains("import.meta.env.PROD") -or
   -not $webServiceWorkerSource.Contains("CACHE_NAME") -or
   -not $webServiceWorkerSource.Contains("fetch") -or
@@ -269,6 +273,11 @@ if (
   $webServiceWorkerSource.Contains('const APP_SHELL = ["/"')
 ) {
   throw "Web app must expose a production PWA install path with manifest, icons, and service worker."
+}
+
+$webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
+if (-not $webStylesSource.Contains("height: var(--kodi-app-height, 100dvh)")) {
+  throw "Mobile app height must follow the live visual viewport so the chat composer stays visible on cold start."
 }
 
 $webAppEarlySource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
