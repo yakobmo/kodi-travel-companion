@@ -1377,6 +1377,7 @@ export function App() {
   const memberPollInFlightRef = useRef(false);
   const secondaryMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const agentProvidersRequestInFlightRef = useRef(false);
   const visibleChatMessages = messages;
 
   function closeSecondaryMenu() {
@@ -1400,12 +1401,17 @@ export function App() {
   }
 
   async function loadAgentProviders() {
+    if (agentProvidersRequestInFlightRef.current) {
+      return;
+    }
+
     if (!(activeMember.role === "owner" || activeMember.role === "admin")) {
       setAgentProvidersState("error");
       setAgentProvidersMessage("ניהול הסוכנים זמין למנהלי הטיול בלבד.");
       return;
     }
 
+    agentProvidersRequestInFlightRef.current = true;
     setAgentProvidersState("loading");
     setAgentProvidersMessage("");
     try {
@@ -1423,17 +1429,21 @@ export function App() {
     } catch {
       setAgentProvidersState("error");
       setAgentProvidersMessage("לא הצלחתי לבדוק כרגע את הסוכנים. אפשר לנסות שוב.");
+    } finally {
+      agentProvidersRequestInFlightRef.current = false;
     }
   }
 
   function toggleAgentProvidersMenu() {
-    setOpenMenuSection((current) => {
-      const next = current === "agents" ? null : "agents";
-      if (next === "agents") {
-        void loadAgentProviders();
-      }
-      return next;
-    });
+    if (openMenuSection === "agents") {
+      setOpenMenuSection(null);
+      return;
+    }
+
+    setAgentProvidersState("loading");
+    setAgentProvidersMessage("");
+    setOpenMenuSection("agents");
+    void loadAgentProviders();
   }
 
   useEffect(() => {
