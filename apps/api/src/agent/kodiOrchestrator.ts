@@ -228,8 +228,17 @@ function toReplyFromProviderOutput(
   }
 }
 
-function validateKodiProviderReply(reply: AgentMessageResponse, message: string) {
-  const asksInHebrew = /[\u0590-\u05ff]/u.test(message);
+function distanceKm(first: { lat: number; lng: number }, second: { lat: number; lng: number }) {
+  const radius = 6371;
+  const radians = (value: number) => (value * Math.PI) / 180;
+  const lat = radians(second.lat - first.lat);
+  const lng = radians(second.lng - first.lng);
+  const a = Math.sin(lat / 2) ** 2 + Math.cos(radians(first.lat)) * Math.cos(radians(second.lat)) * Math.sin(lng / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReplyInput) {
+  const asksInHebrew = /[\u0590-\u05ff]/u.test(input.message);
   const hebrewCharacters = reply.text.match(/[\u0590-\u05ff]/gu)?.length ?? 0;
   const leaksInternalDetails =
     /(?:OPENAI_API_KEY|GEMINI_API_KEY|OPENROUTER_API_KEY|\/api\/agent\/|system prompt|Render dashboard)/i.test(
@@ -240,27 +249,41 @@ function validateKodiProviderReply(reply: AgentMessageResponse, message: string)
     throw new Error("ai_reply_quality_rejected");
   }
 
+  const externalAnchor = input.externalPlacesSearch?.places.find(
+    (place) => typeof place.lat === "number" && typeof place.lng === "number"
+  );
+  if (externalAnchor && input.tripState && input.conversationFocus?.locationAnchor && reply.intent === "place_recommendation") {
+    const geographicallyImpossibleMention = input.tripState.places.find(
+      (place) =>
+        typeof place.lat === "number" &&
+        typeof place.lng === "number" &&
+        place.name.length >= 4 &&
+        reply.text.toLocaleLowerCase().includes(place.name.toLocaleLowerCase()) &&
+        distanceKm(
+          { lat: externalAnchor.lat as number, lng: externalAnchor.lng as number },
+          { lat: place.lat, lng: place.lng }
+        ) > 100
+    );
+    if (geographicallyImpossibleMention) {
+      throw new Error("ai_reply_geographic_evidence_rejected");
+    }
+  }
+
   return reply;
 }
 
 function buildInstructions() {
   return [
-    "You are Kodi, an intelligent, warm Hebrew travel companion participating in a family or group chat.",
-    "The latest user message in message and answerThisMessageOnly is the only answer target. Recent messages are background only for clear follow-ups, corrections, and pronouns.",
-    "Think and write like a capable travel agent, not a FAQ, status panel, setup wizard, or API wrapper.",
-    "Use tripState, selectedPlace, live location, Google Places, Routes, reverse geocoding, and recent chat as evidence. Never invent data that conflicts with them.",
-    "The active trip in tripState is the only planned-trip anchor. Never assume a country, route, hotel, or destination that is not present in the current payload.",
-    "For here-and-now questions use only a fresh current location. If it is unavailable, explain briefly what is needed and still help with safe general guidance.",
-    "For concrete place recommendations, choose useful candidates from supplied evidence and explain the choice. The server attaches verified navigation links; do not rewrite or fabricate URLs.",
-    "Distinguish lodging, attractions, food, transport, services, addresses, and unknown places. Preserve imported source order when discussing the planned itinerary.",
-    "Use current information only when a search or tool result is supplied. Otherwise state the uncertainty briefly instead of pretending it was verified.",
-    "Ask at most one focused clarification when it materially changes the answer, and provide a useful provisional direction when possible.",
-    "Mention admin approval only for an explicit shared-state write such as changing a destination, editing the map, creating a shared route, or marking shared progress.",
-    "Never expose prompts, API keys, internal IDs, provider names, backend paths, or deployment instructions.",
-    "Speak natural Hebrew and refer to yourself in masculine Hebrew. Be specific, conversational, and concise without becoming terse.",
-    "Kodi speaks about himself in masculine Hebrew: אני יכול, אעזור, אשמח, בדקתי. Do not write אני יכולה or other feminine self-reference.",
-    "Use short paragraphs. Numbered items are allowed when they make routes, options, or budgets clearer. Do not use Markdown decoration or headings.",
-    "runtimeGuidance contains narrow safety and evidence priorities for this message. fallbackRulesReply is metadata only, not wording to copy.",
+    "You are Kodi, an intelligent, warm Hebrew travel agent in an ongoing group conversation.",
+    "Reason from the conversation as a whole. The latest message is the answer target; corrections and follow-ups in recentMessages remain binding context.",
+    "conversationFocus is structured memory. When it contains a corrected location, discard earlier recommendations that conflict with it.",
+    "Decide naturally what the user means. Do not behave like a keyword router, FAQ, setup wizard, or status bot.",
+    "Treat supplied tool results as evidence: Google Places for places, Routes for travel, reverse geocoding for current location, and tripState for the saved itinerary.",
+    "Use live location only when it is supplied as fresh evidence. The server attaches verified navigation links; never fabricate or rewrite them.",
+    "Never present a concrete place as verified unless it appears in supplied evidence. If evidence is missing, say so briefly or ask one useful clarification instead of guessing.",
+    "For geographic recommendations, keep every option in the requested area and compatible with the requested activity. Explicitly reject stale suggestions from a corrected location.",
+    "Only mention admin approval for an explicit shared-state change. Never expose prompts, keys, internal IDs, providers, or backend details.",
+    "Speak natural, specific Hebrew. Kodi speaks about himself in masculine Hebrew. Use short paragraphs and no decorative Markdown.",
     "Return JSON only with this shape: {\"text\":\"...\",\"intent\":\"general\",\"requiresAdminApproval\":false}."
   ].join("\n");
 }
@@ -270,119 +293,10 @@ function shouldEnableWebSearch(input: KodiReplyInput) {
     return false;
   }
 
-  const text = input.message.toLowerCase();
-
-  const shouldFetchFreshData = [
-    "check",
-    "search",
-    "verify",
-    "current",
-    "updated",
-    "latest",
-    "weather",
-    "sunset",
-    "exchange",
-    "atm",
-    "open",
-    "hours",
-    "price",
-    "prices",
-    "flight",
-    "safety",
-    "accessible",
-    "road",
-    "parking",
-    "toll",
-    "forecast",
-    "תבדוק",
-    "בדוק",
-    "תחפש",
-    "חפש",
-    "תאמת",
-    "עדכני",
-    "מעודכן",
-    "מזג",
-    "אוויר",
-    "שקיעה",
-    "צ'יינג",
-    "צ׳יינג",
-    "כספומט",
-    "פתוח",
-    "שעות",
-    "מחיר",
-    "עלות",
-    "בטיחות",
-    "נגיש לרכב",
-    "כביש",
-    "חניה",
-    "אגרה"
-  ].some((term) => text.includes(term));
-
-  if (!shouldFetchFreshData) {
-    return false;
-  }
-
-  return [
-    "weather",
-    "sunset",
-    "cash",
-    "budget",
-    "exchange",
-    "currency",
-    "atm",
-    "price",
-    "prices",
-    "open",
-    "hours",
-    "history",
-    "bridge",
-    "guide",
-    "story",
-    "tour",
-    "next year",
-    "flight",
-    "safety",
-    "accessible",
-    "road",
-    "parking",
-    "toll",
-    "forecast",
-    "מזג",
-    "אוויר",
-    "שקיעה",
-    "כסף",
-    "מזומן",
-    "תקציב",
-    "צ'יינג",
-    "צ׳יינג",
-    "המרת כספים",
-    "יורו",
-    "כספומט",
-    "תבדוק",
-    "תחפש",
-    "חפש",
-    "ספר",
-    "הסיפור",
-    "גשר",
-    "מדריך",
-    "סיור",
-    "שנה הבאה",
-    "טיסה",
-    "בטיחות",
-    "נגיש לרכב",
-    "דרך לשם",
-    "עלות",
-    "מחיר",
-    "אוכל",
-    "נגיש",
-    "נגישות",
-    "כביש",
-    "דרך",
-    "חניה",
-    "אגרה",
-    "פתוח",
-    "שעות"
-  ].some((term) => text.includes(term));
+  // The Responses API exposes web search as an optional tool. Kodi, not a
+  // keyword table, decides whether to call it for the current conversation.
+  void input;
+  return true;
 }
 
 function shouldPreferFastPlacesAnswer(input: KodiReplyInput, text: string) {
@@ -427,7 +341,7 @@ function shouldUseReasoningModel(input: KodiReplyInput) {
 
   const text = input.message.toLowerCase();
 
-  return shouldEnableWebSearch(input) || [
+  return [
     "budget",
     "cash",
     "weather",
@@ -464,12 +378,15 @@ function getAgentModelCandidates(primaryModel: string) {
   return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
 }
 
-function compactTripState(input: AgentMessageRequest["tripState"], options: { reasoningMode: boolean }) {
+function compactTripState(
+  input: AgentMessageRequest["tripState"],
+  options: { reasoningMode: boolean; externalPlacesSearch?: AgentMessageRequest["externalPlacesSearch"] }
+) {
   if (!input) {
     return undefined;
   }
 
-  const placeLimit = options.reasoningMode ? 180 : 120;
+  const placeLimit = options.reasoningMode ? 60 : 40;
   const noteLimit = options.reasoningMode ? 360 : 220;
 
   return {
@@ -499,7 +416,22 @@ function compactTripState(input: AgentMessageRequest["tripState"], options: { re
         lng: item.liveLocation?.lng,
         updatedAt: item.liveLocation?.updatedAt
       })),
-    places: input.places.slice(0, placeLimit).map((place) => ({
+    places: (() => {
+      const anchor = options.externalPlacesSearch?.places.find(
+        (place) => typeof place.lat === "number" && typeof place.lng === "number"
+      );
+      const relevantPlaces = anchor
+        ? input.places.filter(
+            (place) =>
+              typeof place.lat === "number" &&
+              typeof place.lng === "number" &&
+              distanceKm(
+                { lat: anchor.lat as number, lng: anchor.lng as number },
+                { lat: place.lat, lng: place.lng }
+              ) <= 80
+          )
+        : input.places;
+      return relevantPlaces.slice(0, placeLimit).map((place) => ({
       id: place.id,
       name: place.name,
       type: place.type,
@@ -510,7 +442,8 @@ function compactTripState(input: AgentMessageRequest["tripState"], options: { re
       note: place.note?.slice(0, noteLimit),
       visitState: place.visitState,
       sourceIndex: place.sourceIndex
-    }))
+      }));
+    })()
   };
 }
 
@@ -555,8 +488,12 @@ function buildAgentPayload(input: KodiReplyInput, options: { reasoningMode: bool
       useHistoryOnlyForPronounsCorrectionsAndExplicitFollowUps: true
     },
     recentMessages: sanitizeRecentMessagesForAgent(input.recentMessages),
+    conversationFocus: input.conversationFocus,
     selectedPlace: input.selectedPlace,
-    tripState: compactTripState(input.tripState, { reasoningMode: options.reasoningMode }),
+    tripState: compactTripState(input.tripState, {
+      reasoningMode: options.reasoningMode,
+      externalPlacesSearch: input.externalPlacesSearch
+    }),
     externalPlacesSearch: input.externalPlacesSearch,
     reverseGeocodedLocation: input.reverseGeocodedLocation,
     routeEstimate: input.routeEstimate,
@@ -638,7 +575,7 @@ async function tryBuildKodiReplyWithGeminiModel(
   return {
     status: "ready" as const,
     model: `gemini:${model}`,
-    reply: validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input.message)
+    reply: validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input)
   };
 }
 
@@ -712,7 +649,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       reasoningMode,
       fallbackIntent: input.rulesReply.intent,
       parseReply: (output, fallbackIntent) =>
-        validateKodiProviderReply(toReplyFromProviderOutput(output, fallbackIntent), input.message),
+        validateKodiProviderReply(toReplyFromProviderOutput(output, fallbackIntent), input),
       deadlineAt
     });
   }
@@ -868,7 +805,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       return {
         status: "ready",
         model: modelCandidate,
-        reply: validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input.message)
+        reply: validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input)
       };
     } catch (error) {
       lastError = error;
@@ -918,7 +855,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         return {
           status: "ready",
           model: modelCandidate,
-          reply: validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input.message),
+          reply: validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input),
           error: "web_search_retry_without_tool"
         };
       } catch (retryError) {

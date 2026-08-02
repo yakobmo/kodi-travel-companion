@@ -57,7 +57,16 @@ function assertAgentFirstSourceGuards() {
     openAiSource.includes("recentMessagesAreBackgroundOnly") &&
       openAiSource.includes("doNotReviveUnansweredOlderQuestions")
   );
-  assertCheck("agent-first expanded place context", openAiSource.includes("options.reasoningMode ? 180 : 120"));
+  assertCheck(
+    "agent-first geographically bounded place context",
+    openAiSource.includes("options.reasoningMode ? 60 : 40") &&
+      openAiSource.includes("distanceKm(") &&
+      openAiSource.includes(") <= 80")
+  );
+  assertCheck(
+    "agent-first provider chooses optional web search",
+    openAiSource.includes("Kodi, not a") && openAiSource.includes("return true;")
+  );
   assertCheck(
     "agent-first bounded recent message context",
     openAiSource.includes(".slice(-8)") && openAiSource.includes("message.text.slice(0, 700)")

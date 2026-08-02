@@ -78,7 +78,8 @@ import {
 } from "./data/localGroupRoute.js";
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
-import { buildKodiReplyFromContext, type AgentMessageResponse } from "./agent/kodi.js";
+import { buildKodiReplyFromContext, type AgentMessageResponse, type ConversationMessage } from "./agent/kodi.js";
+import { resolveConversationFocus } from "./agent/conversationFocus.js";
 import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
 import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
 import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
@@ -997,6 +998,8 @@ function shouldUseExternalPlacesSearch(message: string) {
       "find",
       "search",
       "recommend",
+      "boat",
+      "sail",
       "hotel",
       "beach",
       "food",
@@ -1036,6 +1039,10 @@ function shouldUseExternalPlacesSearch(message: string) {
       "תמצא",
       "תציע",
       "המלצה",
+      "סירה",
+      "סירות",
+      "שיט",
+      "לשוט",
       "משהו",
       "נגיש",
       "רכב",
@@ -3765,7 +3772,11 @@ app.post("/api/agent/message", async (req, res) => {
 
   const requestCurrentLocation = getRequestCurrentLocation(req.body);
   const currentMessage = message.trim();
-  const referenceMessage = currentMessage;
+  const conversationFocus = resolveConversationFocus(currentMessage, recentMessages as ConversationMessage[]);
+  const referenceMessage = conversationFocus.effectiveMessage;
+  const toolQueryMessage = conversationFocus.locationAnchor
+    ? `${currentMessage} ליד ${conversationFocus.locationAnchor}`
+    : currentMessage;
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);
   const tripState = withRequestCurrentLocation(
     req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
@@ -3783,7 +3794,7 @@ app.post("/api/agent/message", async (req, res) => {
   });
 
   const timelineReference = resolveTimelineReferenceForMessage(referenceMessage, tripState);
-  const placesUsageGate = !freshCurrentLocationRequired && shouldUseExternalPlacesSearch(currentMessage)
+  const placesUsageGate = !freshCurrentLocationRequired && shouldUseExternalPlacesSearch(toolQueryMessage)
     ? authorizeTripUsageCapability({
         usagePool,
         capability: "google_places",
@@ -3795,7 +3806,7 @@ app.post("/api/agent/message", async (req, res) => {
     : undefined;
   const externalPlacesSearch = placesUsageGate?.allowed
     ? await searchGooglePlacesText({
-      query: buildExternalPlacesQuery(currentMessage, { hereAndNow: hereAndNowContext }),
+      query: buildExternalPlacesQuery(toolQueryMessage, { hereAndNow: hereAndNowContext }),
       ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext, requestCurrentLocation),
       radiusMeters: shouldUsePreciseLocationIdentity(currentMessage) ? 120 : hereAndNowContext ? 15000 : 3000,
       restrictToLocation: hereAndNowContext,
@@ -3855,6 +3866,7 @@ app.post("/api/agent/message", async (req, res) => {
         ...req.body,
         message: currentMessage,
         tripState,
+        conversationFocus,
         externalPlacesSearch,
         reverseGeocodedLocation,
         routeEstimate,
@@ -3883,6 +3895,7 @@ app.post("/api/agent/message", async (req, res) => {
           ...req.body,
           message: currentMessage,
           tripState,
+          conversationFocus,
           externalPlacesSearch,
           reverseGeocodedLocation,
           routeEstimate,

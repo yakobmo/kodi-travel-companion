@@ -30,12 +30,14 @@ $requiredFiles = @(
   "scripts/smoke-agent-provider-readiness.mjs",
   "scripts/kodi-agent-regression.mjs",
   "scripts/test-kodi-trip-agnostic.mjs",
+  "scripts/test-conversation-focus.mjs",
   "scripts/smoke-local.mjs",
   "apps/api/package.json",
   "apps/api/tsconfig.json",
   "apps/api/src/server.ts",
   "apps/api/src/agent/kodi.ts",
   "apps/api/src/agent/kodiOrchestrator.ts",
+  "apps/api/src/agent/conversationFocus.ts",
   "apps/api/src/agent/openaiSpeech.ts",
   "apps/api/src/agent/tripReferenceResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
@@ -391,8 +393,11 @@ if (
   -not $openAiAgentSource.Contains("withAiTimeout") -or
   -not $openAiAgentSource.Contains("shouldUseReasoningModel") -or
   -not $openAiAgentSource.Contains("fallbackRulesReply") -or
-  -not $openAiAgentSource.Contains("The active trip in tripState is the only planned-trip anchor") -or
-  -not $openAiAgentSource.Contains("intelligent, warm Hebrew travel companion") -or
+  -not $openAiAgentSource.Contains("Reason from the conversation as a whole") -or
+  -not $openAiAgentSource.Contains("intelligent, warm Hebrew travel agent") -or
+  -not $openAiAgentSource.Contains("conversationFocus is structured memory") -or
+  -not $openAiAgentSource.Contains("Kodi, not a") -or
+  -not $openAiAgentSource.Contains("ai_reply_geographic_evidence_rejected") -or
   -not $openAiAgentSource.Contains("web_search") -or
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
   -not $openAiAgentSource.Contains("web_search_retry_without_tool") -or
@@ -515,8 +520,8 @@ if (
 }
 
 if (
-  -not $openAiAgentSource.Contains("For here-and-now questions use only a fresh current location") -or
-  -not $openAiAgentSource.Contains("The active trip in tripState is the only planned-trip anchor") -or
+  -not $openAiAgentSource.Contains("Use live location only when it is supplied as fresh evidence") -or
+  -not $openAiAgentSource.Contains("tripState for the saved itinerary") -or
   -not $openAiAgentSource.Contains("The server attaches verified navigation links") -or
   -not $serverSource.Contains("normalizeKodiProviderReply") -or
   -not $serverSource.Contains("textWithoutUnverifiedNavigation")
@@ -968,7 +973,8 @@ if (
   -not $serverSourceForContext.Contains("agentRuntime") -or
   -not $serverSourceForContext.Contains("fallbackUsed") -or
   -not $serverSourceForContext.Contains("message: currentMessage") -or
-  -not $serverSourceForContext.Contains("shouldUseExternalPlacesSearch(currentMessage)") -or
+  -not $serverSourceForContext.Contains("resolveConversationFocus(currentMessage") -or
+  -not $serverSourceForContext.Contains("shouldUseExternalPlacesSearch(toolQueryMessage)") -or
   -not $serverSourceForContext.Contains("shouldRequireFreshCurrentLocation(currentMessage") -or
   -not $serverSourceForContext.Contains("KODI_FAST_PLACES_REPLY_ENABLED")
 ) {
@@ -1297,7 +1303,7 @@ if (-not $appSource.Contains("buildKodiConnectionErrorMessage")) {
   throw "Web app must show an explicit Kodi connection error when the agent call fails."
 }
 
-if (-not $serverSource.Contains("buildExternalPlacesQuery(currentMessage, { hereAndNow: hereAndNowContext })")) {
+if (-not $serverSource.Contains("buildExternalPlacesQuery(toolQueryMessage, { hereAndNow: hereAndNowContext })")) {
   throw "Kodi Google Places search must receive here-and-now context for live-location requests."
 }
 
@@ -1334,9 +1340,9 @@ if (-not $openAiSource.Contains("Kodi speaks about himself in masculine Hebrew")
 }
 
 if (
-  -not $openAiSource.Contains("Think and write like a capable travel agent") -or
-  -not $openAiSource.Contains("Never invent data that conflicts with them") -or
-  -not $openAiSource.Contains("Be specific, conversational, and concise")
+  -not $openAiSource.Contains("Decide naturally what the user means") -or
+  -not $openAiSource.Contains("Never present a concrete place as verified") -or
+  -not $openAiSource.Contains("Speak natural, specific Hebrew")
 ) {
   throw "Kodi model prompt must preserve agent-first behavior: tools ground the answer, but the model reasons and writes naturally."
 }
@@ -1622,11 +1628,12 @@ if ($fastPlacesMentions -gt 1) {
 }
 
 if (
-  -not $openAiAgentSource.Contains("options.reasoningMode ? 180 : 120") -or
+  -not $openAiAgentSource.Contains("options.reasoningMode ? 60 : 40") -or
   -not $openAiAgentSource.Contains(".slice(-8)") -or
   -not $openAiAgentSource.Contains("message.text.slice(0, 700)") -or
   -not $openAiAgentSource.Contains("recentMessagesAreBackgroundOnly") -or
-  -not $openAiAgentSource.Contains("doNotReviveUnansweredOlderQuestions")
+  -not $openAiAgentSource.Contains("doNotReviveUnansweredOlderQuestions") -or
+  -not $openAiAgentSource.Contains("conversationFocus: input.conversationFocus")
 ) {
   throw "Kodi agent context must keep recent chat as bounded weak background only."
 }

@@ -20,6 +20,7 @@
     "smoke:kodi-local": "node scripts/smoke-kodi-orchestrator-local.mjs",
     "test:provider-fleet": "node scripts/test-provider-fleet.mjs",
     "test:kodi-trip-agnostic": "node scripts/test-kodi-trip-agnostic.mjs",
+    "test:kodi-conversation-focus": "node scripts/test-conversation-focus.mjs",
     "smoke:google-places-live": "node scripts/smoke-google-places-live.mjs",
     "smoke:google-routes-live": "node scripts/smoke-google-routes-live.mjs",
     "agent:regression": "node scripts/kodi-agent-regression.mjs",

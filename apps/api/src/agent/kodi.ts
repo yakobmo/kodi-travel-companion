@@ -27,6 +27,12 @@ export interface AgentMessageRequest {
   reverseGeocodedLocation?: GoogleReverseGeocodeResult;
   routeEstimate?: GoogleRouteEstimateResult;
   tripContextClarification?: string;
+  conversationFocus?: {
+    effectiveMessage: string;
+    locationAnchor?: string;
+    correctionDetected: boolean;
+    invalidatedAgentClaims: boolean;
+  };
 }
 
 export interface AgentMessageResponse {
