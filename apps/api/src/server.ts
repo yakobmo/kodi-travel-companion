@@ -918,6 +918,9 @@ function includesHebrewLiveLocationCue(text: string) {
 
 function includesConcreteGooglePlacesCue(text: string) {
   return [
+    /\u05e1\u05d9\u05e8(?:\u05d4|\u05d5\u05ea)/u,
+    /\u05e9\u05d9\u05d8/u,
+    /\u05dc\u05e9\u05d5\u05d8/u,
     /\u05d1\u05d9\u05ea\s+\u05e7\u05e4\u05d4/u,
     /\u05e7\u05e4\u05d4/u,
     /\u05de\u05d0\u05e4(?:\u05d9\u05d9\u05d4|\u05d9\u05d4)/u,
@@ -1165,6 +1168,11 @@ function buildExternalPlacesQuery(message: string, options: { hereAndNow?: boole
 
   if (shouldReverseGeocodeCurrentLocation(message)) {
     return "school nearby";
+  }
+
+  if (includesAnyTerm(message.toLowerCase(), ["סירה", "סירות", "שיט", "לשוט", "boat", "sail"])) {
+    const anchor = message.match(/(?:ליד|near)\s+([^?.!,\n]{2,100})$/iu)?.[1]?.trim();
+    return anchor ? `boat rental and coastal destinations near ${anchor}, Greece` : "boat rental and coastal destinations nearby";
   }
 
   if (includesAnyTerm(message, ["מאפייה", "מאפיה", "לחם", "מאפים", "קונדיטוריה", "bakery"])) {

@@ -249,6 +249,13 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
     throw new Error("ai_reply_quality_rejected");
   }
 
+  const pretendsReadyToolIsPending =
+    input.externalPlacesSearch?.status === "ready" &&
+    /(?:חכ(?:ה|ו)|להמתין|אקבל\s+תוצאות|ממתין\s+לתוצאות|wait\s+(?:for|until)|waiting\s+for)/iu.test(reply.text);
+  if (pretendsReadyToolIsPending) {
+    throw new Error("ai_reply_ignored_ready_tool_evidence");
+  }
+
   const externalAnchor = input.externalPlacesSearch?.places.find(
     (place) => typeof place.lat === "number" && typeof place.lng === "number"
   );
