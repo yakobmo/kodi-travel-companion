@@ -524,6 +524,7 @@ if (
   -not $openAiAgentSource.Contains("tripState for the saved itinerary") -or
   -not $openAiAgentSource.Contains("The server attaches verified navigation links") -or
   -not $serverSource.Contains("normalizeKodiProviderReply") -or
+  -not $serverSource.Contains("respectsFreshLocationBoundary") -or
   -not $serverSource.Contains("textWithoutUnverifiedNavigation")
 ) {
   throw "Kodi orchestration must ground live-location answers and attach verified navigation outside the model."
