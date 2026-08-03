@@ -59,7 +59,7 @@ function assertAgentFirstSourceGuards() {
   );
   assertCheck(
     "agent-first geographically bounded place context",
-    openAiSource.includes("options.reasoningMode ? 28 : 20") &&
+    openAiSource.includes("options.reasoningMode ? 16 : 12") &&
       openAiSource.includes("distanceKm(") &&
       openAiSource.includes(") <= 80")
   );
@@ -69,7 +69,7 @@ function assertAgentFirstSourceGuards() {
   );
   assertCheck(
     "agent-first bounded recent message context",
-    openAiSource.includes(".slice(-16)") && openAiSource.includes("message.text.slice(0, 700)")
+    openAiSource.includes(".slice(-12)") && openAiSource.includes("message.text.slice(0, 500)")
   );
   assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));
   assertCheck("agent-first no synthetic session Kodi message", !webSource.includes("sessionKodiReminderMessage"));

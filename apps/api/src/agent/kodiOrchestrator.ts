@@ -465,7 +465,7 @@ function compactTripState(
     return undefined;
   }
 
-  const placeLimit = options.reasoningMode ? 28 : 20;
+  const placeLimit = options.reasoningMode ? 16 : 12;
   const noteLimit = options.reasoningMode ? 360 : 220;
   const rankedPlaces = rankPlacesForConversation(input.places, options.conversationText);
 
@@ -486,7 +486,7 @@ function compactTripState(
     })),
     tripArc: buildTripTimelineFromGoogleMapOrder(input).map((segment) => segment.lodging.name),
     savedPlaceDirectory: rankedPlaces
-      .slice(0, 48)
+      .slice(0, 30)
       .map((place) => ({
       id: place.id,
       name: place.name,
@@ -564,10 +564,10 @@ function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMes
       text: message.source === "agent" ? removeDeferredWorkPromises(message.text) : message.text.trim()
     }))
     .filter((message) => message.text.length > 0)
-    .slice(-16)
+    .slice(-12)
     .map((message) => ({
       author: message.author,
-      text: message.text.slice(0, 700),
+      text: message.text.slice(0, 500),
       memberId: message.memberId,
       source: message.source
     }));
@@ -645,7 +645,7 @@ async function tryBuildKodiReplyWithGeminiModel(
         ],
         generationConfig: {
           responseMimeType: "application/json",
-          maxOutputTokens: options.reasoningMode ? 1800 : 1400,
+          maxOutputTokens: options.reasoningMode ? 1100 : 900,
           temperature: options.reasoningMode ? 0.55 : 0.45
         }
       })
@@ -870,7 +870,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
             { role: "system", content: buildInstructions() },
             { role: "user", content: inputPayload }
           ],
-          max_tokens: reasoningMode ? 1800 : 1400,
+          max_tokens: reasoningMode ? 1100 : 900,
           response_format: { type: "json_object" }
         }),
         remainingTimeoutMs()
@@ -881,7 +881,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       openAiClient.responses.create({
         model: modelName,
         instructions: buildInstructions(),
-        max_output_tokens: reasoningMode ? 1800 : 1400,
+        max_output_tokens: reasoningMode ? 1100 : 900,
         text: { format: { type: "json_object" } },
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: inputPayload

@@ -1633,9 +1633,9 @@ if ($fastPlacesMentions -gt 1) {
 }
 
 if (
-  -not $openAiAgentSource.Contains("options.reasoningMode ? 28 : 20") -or
-  -not $openAiAgentSource.Contains(".slice(-16)") -or
-  -not $openAiAgentSource.Contains("message.text.slice(0, 700)") -or
+  -not $openAiAgentSource.Contains("options.reasoningMode ? 16 : 12") -or
+  -not $openAiAgentSource.Contains(".slice(-12)") -or
+  -not $openAiAgentSource.Contains("message.text.slice(0, 500)") -or
   -not $openAiAgentSource.Contains("recentMessagesAreBackgroundOnly") -or
   -not $openAiAgentSource.Contains("doNotReviveUnansweredOlderQuestions") -or
   -not $openAiAgentSource.Contains("conversationFocus: input.conversationFocus")

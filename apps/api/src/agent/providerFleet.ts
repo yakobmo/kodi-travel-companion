@@ -171,7 +171,7 @@ async function callOpenAiCompatibleProvider(provider: "groq" | "openrouter", inp
         { role: "system", content: input.instructions },
         { role: "user", content: input.payload }
       ],
-      max_tokens: input.reasoningMode ? 1800 : 1400,
+      max_tokens: input.reasoningMode ? 1100 : 900,
       temperature: input.reasoningMode ? 0.55 : 0.45,
       ...(isGroq ? { response_format: { type: "json_object" } } : {})
     })
@@ -201,7 +201,7 @@ async function callCloudflareProvider(input: FleetInput, model: string) {
           { role: "system", content: input.instructions },
           { role: "user", content: input.payload }
         ],
-        max_tokens: input.reasoningMode ? 1800 : 1400,
+        max_tokens: input.reasoningMode ? 1100 : 900,
         temperature: input.reasoningMode ? 0.55 : 0.45
       })
     },
