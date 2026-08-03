@@ -3896,6 +3896,34 @@ app.post("/api/agent/message", async (req, res) => {
   let navigationTravelMode: "DRIVE" | "WALK" = includesAnyTerm(referenceMessage, ["הליכה", "ברגל"])
     ? "WALK"
     : "DRIVE";
+  const verifiedRouteCanBePrefetched =
+    !freshCurrentLocationRequired &&
+    shouldUseRouteEstimate(referenceMessage) &&
+    tripReference.confidence !== "low" &&
+    Boolean(tripReference.origin && tripReference.destination);
+  routeToolUsageGate = verifiedRouteCanBePrefetched
+    ? authorizeTripUsageCapability({
+        usagePool,
+        capability: "google_routes",
+        triggeringMember: {
+          id: normalizedMember.id,
+          role: normalizedMember.role
+        }
+      })
+    : undefined;
+  if (verifiedRouteCanBePrefetched && routeToolUsageGate?.allowed) {
+    routeEstimate = await estimateGoogleRoute({
+      origin: { lat: Number(tripReference.origin?.lat), lng: Number(tripReference.origin?.lng) },
+      destination: { lat: Number(tripReference.destination?.lat), lng: Number(tripReference.destination?.lng) },
+      travelMode: navigationTravelMode,
+      languageCode: "he"
+    });
+    void safeRecordUsageGateEvent({
+      usageGate: routeToolUsageGate,
+      actorName: String(normalizedMember.displayName),
+      source: "kodi_agent"
+    });
+  }
   const rulesReply = freshCurrentLocationRequired
     ? buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName))
     : buildKodiReplyFromContext({

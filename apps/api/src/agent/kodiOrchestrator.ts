@@ -282,6 +282,14 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
     throw new Error("ai_reply_ignored_ready_tool_evidence");
   }
 
+  const claimsUnverifiedRouteMeasurement =
+    !input.routeEstimate?.route &&
+    /(?:כמה זמן|זמן נסיעה|מרחק|כמה רחוק|ETA)/iu.test(input.message) &&
+    /(?:\d[\d.,]*\s*(?:שעות?|דקות?|ק(?:י)?לומטר(?:ים)?|ק[״"]?מ|km|minutes?|hours?))/iu.test(reply.text);
+  if (claimsUnverifiedRouteMeasurement) {
+    throw new Error("ai_reply_unverified_route_measurement");
+  }
+
   const externalAnchor = input.externalPlacesSearch?.places.find(
     (place) => typeof place.lat === "number" && typeof place.lng === "number"
   );
