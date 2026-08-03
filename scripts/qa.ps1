@@ -969,7 +969,9 @@ if (
   -not $serverSourceForContext.Contains("tripContextClarification") -or
   -not $serverSourceForContext.Contains("tripContextConfidence") -or
   -not $serverSourceForContext.Contains("timelineReferenceConfidence") -or
-  -not $serverSourceForContext.Contains("tripReference.confidence !== `"low`"") -or
+  -not $serverSourceForContext.Contains("getAgentRouteToolRequest") -or
+  -not $serverSourceForContext.Contains("agentRouteToolRequest.originPlaceId") -or
+  -not $serverSourceForContext.Contains("routeEstimate = await estimateGoogleRoute") -or
   -not $serverSourceForContext.Contains("tryBuildKodiReply") -or
   -not $serverSourceForContext.Contains('capability: "ai_agent"') -or
   -not $serverSourceForContext.Contains("agentRuntime") -or

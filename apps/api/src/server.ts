@@ -15,7 +15,11 @@ import {
   setRuntimeSyncedTripPlacesSource
 } from "./data/localPlaces.js";
 import { searchGooglePlacesText, type GooglePlacesTextSearchResult } from "./google/placesSearch.js";
-import { estimateGoogleRoute, type GoogleRouteTravelMode } from "./google/routes.js";
+import {
+  estimateGoogleRoute,
+  type GoogleRouteEstimateResult,
+  type GoogleRouteTravelMode
+} from "./google/routes.js";
 import { importGooglePublicList } from "./google/publicListImport.js";
 import { buildDemoGoogleSourcePreview, getGoogleSourceReadiness } from "./google/sourceAdapter.js";
 import {
@@ -3883,40 +3887,12 @@ app.post("/api/agent/message", async (req, res) => {
         })
       : undefined;
   const tripReference = resolveTripReferenceForMessage(referenceMessage, tripState);
-  const canEstimateRoute =
-    !freshCurrentLocationRequired &&
-    shouldUseRouteEstimate(referenceMessage) &&
-    tripReference.confidence !== "low" &&
-    tripReference.origin &&
-    tripReference.destination;
-  let routeEstimate;
+  let routeEstimate: GoogleRouteEstimateResult | undefined;
+  let routeToolUsageGate: TripUsageGateDecision | undefined;
   let navigationDestination = tripReference.destination;
   let navigationTravelMode: "DRIVE" | "WALK" = includesAnyTerm(referenceMessage, ["הליכה", "ברגל"])
     ? "WALK"
     : "DRIVE";
-  const routesUsageGate = canEstimateRoute
-    ? authorizeTripUsageCapability({
-        usagePool,
-        capability: "google_routes",
-        triggeringMember: {
-          id: normalizedMember.id,
-          role: normalizedMember.role
-        }
-      })
-    : undefined;
-  if (canEstimateRoute && routesUsageGate?.allowed) {
-    routeEstimate = await estimateGoogleRoute({
-      origin: { lat: Number(tripReference.origin?.lat), lng: Number(tripReference.origin?.lng) },
-      destination: { lat: Number(tripReference.destination?.lat), lng: Number(tripReference.destination?.lng) },
-      travelMode: includesAnyTerm(referenceMessage, ["הליכה", "ברגל"]) ? "WALK" : "DRIVE",
-      languageCode: "he"
-    });
-    void safeRecordUsageGateEvent({
-      usageGate: routesUsageGate,
-      actorName: String(normalizedMember.displayName),
-      source: "kodi_agent"
-    });
-  }
   const rulesReply = freshCurrentLocationRequired
     ? buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName))
     : buildKodiReplyFromContext({
@@ -3976,7 +3952,7 @@ app.post("/api/agent/message", async (req, res) => {
         typeof place.lat === "number" &&
         typeof place.lng === "number"
     );
-    const agentToolRoutesUsageGate =
+    routeToolUsageGate =
       originPlace && destinationPlace
         ? authorizeTripUsageCapability({
             usagePool,
@@ -3988,7 +3964,7 @@ app.post("/api/agent/message", async (req, res) => {
           })
         : undefined;
 
-    if (originPlace && destinationPlace && agentToolRoutesUsageGate?.allowed) {
+    if (originPlace && destinationPlace && routeToolUsageGate?.allowed) {
       routeEstimate = await estimateGoogleRoute({
         origin: { lat: originPlace.lat as number, lng: originPlace.lng as number },
         destination: { lat: destinationPlace.lat as number, lng: destinationPlace.lng as number },
@@ -4003,7 +3979,7 @@ app.post("/api/agent/message", async (req, res) => {
       };
       navigationTravelMode = agentRouteToolRequest.travelMode;
       void safeRecordUsageGateEvent({
-        usageGate: agentToolRoutesUsageGate,
+        usageGate: routeToolUsageGate,
         actorName: String(normalizedMember.displayName),
         source: "kodi_agent"
       });
@@ -4035,6 +4011,12 @@ app.post("/api/agent/message", async (req, res) => {
       });
       if (finalAgentReply.reply) {
         openAiReply = finalAgentReply;
+      } else {
+        openAiReply = {
+          ...finalAgentReply,
+          reply: toolRulesReply,
+          error: finalAgentReply.error ?? "route_tool_answer_provider_unavailable"
+        };
       }
     }
   }
@@ -4142,7 +4124,7 @@ app.post("/api/agent/message", async (req, res) => {
         ? "Here-and-now request: live/current location takes precedence over planned trip timeline."
         : timelineReference.reason,
       timelineSegmentTitle: hereAndNowContext ? undefined : timelineReference.segment?.title,
-      usageGateResults: [placesUsageGate, routesUsageGate, openAiUsageGate].filter(
+      usageGateResults: [placesUsageGate, routeToolUsageGate, openAiUsageGate].filter(
         (item): item is TripUsageGateDecision => Boolean(item)
       ),
       permissionPolicy
