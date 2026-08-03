@@ -1634,7 +1634,7 @@ if ($fastPlacesMentions -gt 1) {
 
 if (
   -not $openAiAgentSource.Contains("options.reasoningMode ? 16 : 12") -or
-  -not $openAiAgentSource.Contains(".slice(-12)") -or
+  -not $openAiAgentSource.Contains(".slice(0, 12)") -or
   -not $openAiAgentSource.Contains("message.text.slice(0, 500)") -or
   -not $openAiAgentSource.Contains("recentMessagesAreBackgroundOnly") -or
   -not $openAiAgentSource.Contains("doNotReviveUnansweredOlderQuestions") -or

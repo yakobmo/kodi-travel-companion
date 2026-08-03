@@ -537,7 +537,7 @@ function compactTripState(
   };
 }
 
-function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMessages"]) {
+function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMessages"], currentMessage: string) {
   const boilerplateFragments = [
     "תשאלו אותי חופשי",
     "אני כאן",
@@ -558,15 +558,32 @@ function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMes
       .replace(/\s+/g, " ")
       .trim();
 
-  return (messages ?? [])
+  const queryTokens = Array.from(
+    new Set(currentMessage.toLocaleLowerCase().split(/[^\p{L}\p{N}]+/u).filter((token) => token.length >= 3))
+  );
+  const cleaned = (messages ?? [])
     .filter((message) => typeof message.text === "string" && message.text.trim().length > 0)
     .map((message) => ({
       ...message,
       text: message.source === "agent" ? removeDeferredWorkPromises(message.text) : message.text.trim()
     }))
-    .filter((message) => message.text.length > 0)
-    .slice(-12)
-    .map((message) => ({
+    .filter((message) => message.text.length > 0);
+
+  return cleaned
+    .map((message, index) => ({
+      message,
+      index,
+      score:
+        (index >= cleaned.length - 6 ? 100 : 0) +
+        queryTokens.reduce(
+          (score, token) => score + (message.text.toLocaleLowerCase().includes(token) ? 1 : 0),
+          0
+        )
+    }))
+    .sort((first, second) => second.score - first.score || second.index - first.index)
+    .slice(0, 12)
+    .sort((first, second) => first.index - second.index)
+    .map(({ message }) => ({
       author: message.author,
       text: message.text.slice(0, 500),
       memberId: message.memberId,
@@ -587,7 +604,7 @@ function buildAgentPayload(input: KodiReplyInput, options: { reasoningMode: bool
       doNotReviveUnansweredOlderQuestions: true,
       useHistoryOnlyForPronounsCorrectionsAndExplicitFollowUps: true
     },
-    recentMessages: sanitizeRecentMessagesForAgent(input.recentMessages),
+    recentMessages: sanitizeRecentMessagesForAgent(input.recentMessages, input.message),
     conversationFocus: input.conversationFocus,
     selectedPlace: input.selectedPlace,
     tripState: compactTripState(input.tripState, {
