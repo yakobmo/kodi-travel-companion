@@ -1403,6 +1403,7 @@ function enhanceKodiReplyWithNavigationLinks(input: {
   fallbackRecommendedPlaceId?: string;
   forceAppend?: boolean;
   travelMode?: "DRIVE" | "WALK";
+  preferTripDestination?: boolean;
 }) {
   if ((!shouldAppendNavigationLinks(input.reply) && !input.forceAppend) || hasNavigationUrl(input.reply.text)) {
     return input.reply;
@@ -1417,6 +1418,7 @@ function enhanceKodiReplyWithNavigationLinks(input: {
   const routeDestination = input.tripDestination;
   const target =
     recommendedPlace ??
+    (input.preferTripDestination ? routeDestination : undefined) ??
     (externalPlace
       ? {
           lat: externalPlace.lat,
@@ -4073,7 +4075,8 @@ app.post("/api/agent/message", async (req, res) => {
     selectedPlace: req.body?.selectedPlace,
     fallbackRecommendedPlaceId: rulesReply.recommendedPlaceId,
     forceAppend: Boolean(rulesReply.recommendedPlaceId || routeEstimate?.route || shouldAppendExternalPlaceNavigation),
-    travelMode: navigationTravelMode
+    travelMode: navigationTravelMode,
+    preferTripDestination: routeEstimate?.status === "ready"
   });
   const selectedProviderModel = openAiReply?.model;
   const selectedProvider =
