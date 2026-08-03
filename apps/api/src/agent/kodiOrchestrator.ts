@@ -471,7 +471,7 @@ function compactTripState(
     return undefined;
   }
 
-  const placeLimit = options.reasoningMode ? 60 : 40;
+  const placeLimit = options.reasoningMode ? 28 : 20;
   const noteLimit = options.reasoningMode ? 360 : 220;
   const rankedPlaces = rankPlacesForConversation(input.places, options.conversationText);
 
@@ -492,7 +492,7 @@ function compactTripState(
     })),
     tripArc: buildTripTimelineFromGoogleMapOrder(input).map((segment) => segment.lodging.name),
     savedPlaceDirectory: rankedPlaces
-      .slice(0, 80)
+      .slice(0, 48)
       .map((place) => ({
       id: place.id,
       name: place.name,

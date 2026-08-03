@@ -59,7 +59,7 @@ function assertAgentFirstSourceGuards() {
   );
   assertCheck(
     "agent-first geographically bounded place context",
-    openAiSource.includes("options.reasoningMode ? 60 : 40") &&
+    openAiSource.includes("options.reasoningMode ? 28 : 20") &&
       openAiSource.includes("distanceKm(") &&
       openAiSource.includes(") <= 80")
   );
