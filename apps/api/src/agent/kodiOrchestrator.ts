@@ -513,15 +513,21 @@ function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMes
     "אני אבדוק זאת"
   ];
 
+  const removeDeferredWorkPromises = (text: string) =>
+    text
+      .split(/(?<=[.!?\n])/u)
+      .filter((fragment) => !boilerplateFragments.some((boilerplate) => fragment.includes(boilerplate)))
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+
   return (messages ?? [])
     .filter((message) => typeof message.text === "string" && message.text.trim().length > 0)
-    .filter((message) => {
-      if (message.source !== "agent") {
-        return true;
-      }
-
-      return !boilerplateFragments.some((fragment) => message.text.includes(fragment));
-    })
+    .map((message) => ({
+      ...message,
+      text: message.source === "agent" ? removeDeferredWorkPromises(message.text) : message.text.trim()
+    }))
+    .filter((message) => message.text.length > 0)
     .slice(-16)
     .map((message) => ({
       author: message.author,
