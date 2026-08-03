@@ -3851,7 +3851,10 @@ app.post("/api/agent/message", async (req, res) => {
   });
 
   const timelineReference = resolveTimelineReferenceForMessage(referenceMessage, tripState);
-  const placesUsageGate = !freshCurrentLocationRequired && shouldUseExternalPlacesSearch(toolQueryMessage)
+  const placesUsageGate =
+    !freshCurrentLocationRequired &&
+    !shouldUseRouteEstimate(referenceMessage) &&
+    shouldUseExternalPlacesSearch(toolQueryMessage)
     ? authorizeTripUsageCapability({
         usagePool,
         capability: "google_places",

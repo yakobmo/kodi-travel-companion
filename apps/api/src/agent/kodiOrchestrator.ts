@@ -415,7 +415,11 @@ function getAgentModelCandidates(primaryModel: string) {
 
 function compactTripState(
   input: AgentMessageRequest["tripState"],
-  options: { reasoningMode: boolean; externalPlacesSearch?: AgentMessageRequest["externalPlacesSearch"] }
+  options: {
+    reasoningMode: boolean;
+    externalPlacesSearch?: AgentMessageRequest["externalPlacesSearch"];
+    conversationText: string;
+  }
 ) {
   if (!input) {
     return undefined;
@@ -440,13 +444,20 @@ function compactTripState(
       placeTypeCounts: segment.placeTypeCounts
     })),
     tripArc: buildTripTimelineFromGoogleMapOrder(input).map((segment) => segment.lodging.name),
-    savedPlaceDirectory: input.places.slice(0, 220).map((place) => ({
+    savedPlaceDirectory: input.places
+      .filter(
+        (place) =>
+          place.type === "lodging" ||
+          (place.name.length >= 4 && options.conversationText.toLocaleLowerCase().includes(place.name.toLocaleLowerCase()))
+      )
+      .slice(0, 80)
+      .map((place) => ({
       id: place.id,
       name: place.name,
       type: place.type,
       lat: place.lat,
       lng: place.lng
-    })),
+      })),
     visibleMembers: input.members
       .filter((item) => item.consent.state === "enabled" && item.liveLocation)
       .map((item) => ({
@@ -538,7 +549,8 @@ function buildAgentPayload(input: KodiReplyInput, options: { reasoningMode: bool
     selectedPlace: input.selectedPlace,
     tripState: compactTripState(input.tripState, {
       reasoningMode: options.reasoningMode,
-      externalPlacesSearch: input.externalPlacesSearch
+      externalPlacesSearch: input.externalPlacesSearch,
+      conversationText: `${(input.recentMessages ?? []).map((message) => message.text).join(" ")} ${input.message}`
     }),
     externalPlacesSearch: input.externalPlacesSearch,
     reverseGeocodedLocation: input.reverseGeocodedLocation,
