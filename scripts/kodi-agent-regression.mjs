@@ -64,8 +64,8 @@ function assertAgentFirstSourceGuards() {
       openAiSource.includes(") <= 80")
   );
   assertCheck(
-    "agent-first provider chooses optional web search",
-    openAiSource.includes("Kodi, not a") && openAiSource.includes("return true;")
+    "agent-first avoids the incompatible web-search JSON path",
+    openAiSource.includes("function shouldEnableWebSearch") && openAiSource.includes("return false;")
   );
   assertCheck(
     "agent-first bounded recent message context",

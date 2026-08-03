@@ -345,14 +345,8 @@ function buildInstructions() {
 }
 
 function shouldEnableWebSearch(input: KodiReplyInput) {
-  if (process.env.OPENAI_WEB_SEARCH_ENABLED === "false") {
-    return false;
-  }
-
-  // The Responses API exposes web search as an optional tool. Kodi, not a
-  // keyword table, decides whether to call it for the current conversation.
   void input;
-  return true;
+  return false;
 }
 
 function shouldPreferFastPlacesAnswer(input: KodiReplyInput, text: string) {
@@ -772,7 +766,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       };
     }
 
-    if (hasGeminiProvider()) {
+    if (!client && hasGeminiProvider()) {
       geminiPrimaryAttempted = true;
       try {
         const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs: remainingTimeoutMs() });

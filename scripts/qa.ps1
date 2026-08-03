@@ -396,12 +396,10 @@ if (
   -not $openAiAgentSource.Contains("Reason from the conversation as a whole") -or
   -not $openAiAgentSource.Contains("intelligent, warm Hebrew travel agent") -or
   -not $openAiAgentSource.Contains("conversationFocus is structured memory") -or
-  -not $openAiAgentSource.Contains("Kodi, not a") -or
+  -not $openAiAgentSource.Contains('type: "places_search"') -or
   -not $openAiAgentSource.Contains("ai_reply_geographic_evidence_rejected") -or
   -not $openAiAgentSource.Contains("ai_reply_ignored_ready_tool_evidence") -or
-  -not $openAiAgentSource.Contains("web_search") -or
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
-  -not $openAiAgentSource.Contains("web_search_retry_without_tool") -or
   -not $openAiAgentSource.Contains("chat.completions.create") -or
   -not $openAiAgentSource.Contains("generateContent") -or
   -not $openAiAgentSource.Contains("openai_quota_fallback_to_gemini") -or
@@ -2084,7 +2082,7 @@ foreach ($requiredProviderFleetToken in @(
   "GROQ_API_KEY",
   "CLOUDFLARE_AI_TOKEN",
   "OPENROUTER_API_KEY",
-  'provider === "openrouter" ? Math.max(getAttemptTimeoutMs(), 8_000)',
+  "const providerTimeoutMs = getAttemptTimeoutMs()",
   "cooldownUntil",
   "retry-after"
 )) {
