@@ -1369,13 +1369,18 @@ function getSelectedPlaceTarget(selectedPlace: unknown) {
   return hasCoordinates(candidate) ? candidate : undefined;
 }
 
-function buildNavigationText(target: { lat?: number; lng?: number; name?: string; label?: string; googleMapsUri?: string }) {
+function buildNavigationText(
+  target: { lat?: number; lng?: number; name?: string; label?: string; googleMapsUri?: string },
+  travelMode: "DRIVE" | "WALK" = "DRIVE"
+) {
   const label = target.name ?? target.label ?? "הנקודה";
   const mapsUrl =
     typeof target.googleMapsUri === "string" && target.googleMapsUri.length > 0
       ? target.googleMapsUri
       : hasCoordinates(target)
-        ? createNavigationLinks({ lat: target.lat, lng: target.lng, label }).googleMapsWalking
+        ? travelMode === "WALK"
+          ? createNavigationLinks({ lat: target.lat, lng: target.lng, label }).googleMapsWalking
+          : createNavigationLinks({ lat: target.lat, lng: target.lng, label }).googleMaps
         : undefined;
   const wazeUrl = hasCoordinates(target)
     ? createNavigationLinks({ lat: target.lat, lng: target.lng, label }).waze.web
@@ -1397,6 +1402,7 @@ function enhanceKodiReplyWithNavigationLinks(input: {
   selectedPlace?: unknown;
   fallbackRecommendedPlaceId?: string;
   forceAppend?: boolean;
+  travelMode?: "DRIVE" | "WALK";
 }) {
   if ((!shouldAppendNavigationLinks(input.reply) && !input.forceAppend) || hasNavigationUrl(input.reply.text)) {
     return input.reply;
@@ -1421,7 +1427,7 @@ function enhanceKodiReplyWithNavigationLinks(input: {
       : undefined) ??
     selectedPlace ??
     routeDestination;
-  const navigationText = target ? buildNavigationText(target) : "";
+  const navigationText = target ? buildNavigationText(target, input.travelMode) : "";
 
   if (!navigationText) {
     return input.reply;
@@ -1626,6 +1632,12 @@ function shouldRequireFreshCurrentLocation(
     return false;
   }
 
+  // An explicit saved-trip reference is stronger than a generic word such as
+  // "באזור". Current GPS is irrelevant for a route between planned places.
+  if (hasExplicitPlannedTripAreaCue(message)) {
+    return false;
+  }
+
   if (shouldReverseGeocodeCurrentLocation(message)) {
     return true;
   }
@@ -1635,6 +1647,26 @@ function shouldRequireFreshCurrentLocation(
   }
 
   return options.hereAndNowContext && !hasExplicitPlannedTripAreaCue(message);
+}
+
+function getAgentRouteToolRequest(reply: AgentMessageResponse | undefined) {
+  const value = reply?.metadata?.toolRequest;
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+  const candidate = value as Record<string, unknown>;
+  if (
+    candidate.type !== "route" ||
+    typeof candidate.originPlaceId !== "string" ||
+    typeof candidate.destinationPlaceId !== "string"
+  ) {
+    return undefined;
+  }
+  return {
+    originPlaceId: candidate.originPlaceId,
+    destinationPlaceId: candidate.destinationPlaceId,
+    travelMode: candidate.travelMode === "WALK" ? ("WALK" as const) : ("DRIVE" as const)
+  };
 }
 
 function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessageResponse {
@@ -3856,6 +3888,10 @@ app.post("/api/agent/message", async (req, res) => {
     tripReference.origin &&
     tripReference.destination;
   let routeEstimate;
+  let navigationDestination = tripReference.destination;
+  let navigationTravelMode: "DRIVE" | "WALK" = includesAnyTerm(referenceMessage, ["הליכה", "ברגל"])
+    ? "WALK"
+    : "DRIVE";
   const routesUsageGate = canEstimateRoute
     ? authorizeTripUsageCapability({
         usagePool,
@@ -3891,7 +3927,7 @@ app.post("/api/agent/message", async (req, res) => {
         routeEstimate,
         tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined
       });
-  const runtimeGuidance = buildKodiRuntimeGuidance({
+  let runtimeGuidance = buildKodiRuntimeGuidance({
     hereAndNowContext,
     hasFreshCurrentLocation: Boolean(requestCurrentLocation),
     freshCurrentLocationRequired,
@@ -3908,7 +3944,7 @@ app.post("/api/agent/message", async (req, res) => {
     }
   });
   const shouldCallAgentProvider = openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
-  const openAiReply =
+  let openAiReply =
     shouldCallAgentProvider
       ? await tryBuildKodiReply({
           ...req.body,
@@ -3918,12 +3954,88 @@ app.post("/api/agent/message", async (req, res) => {
           externalPlacesSearch,
           reverseGeocodedLocation,
           routeEstimate,
-          tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined,
+          tripContextClarification: undefined,
           runtimeGuidance,
           permissionPolicy,
           rulesReply
         })
       : undefined;
+  const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply?.reply) : undefined;
+  if (agentRouteToolRequest) {
+    const originPlace = tripState.places.find(
+      (place) =>
+        place.id === agentRouteToolRequest.originPlaceId &&
+        typeof place.lat === "number" &&
+        typeof place.lng === "number"
+    );
+    const destinationPlace = tripState.places.find(
+      (place) =>
+        place.id === agentRouteToolRequest.destinationPlaceId &&
+        typeof place.lat === "number" &&
+        typeof place.lng === "number"
+    );
+    const agentToolRoutesUsageGate =
+      originPlace && destinationPlace
+        ? authorizeTripUsageCapability({
+            usagePool,
+            capability: "google_routes",
+            triggeringMember: {
+              id: normalizedMember.id,
+              role: normalizedMember.role
+            }
+          })
+        : undefined;
+
+    if (originPlace && destinationPlace && agentToolRoutesUsageGate?.allowed) {
+      routeEstimate = await estimateGoogleRoute({
+        origin: { lat: originPlace.lat as number, lng: originPlace.lng as number },
+        destination: { lat: destinationPlace.lat as number, lng: destinationPlace.lng as number },
+        travelMode: agentRouteToolRequest.travelMode,
+        languageCode: "he"
+      });
+      navigationDestination = {
+        lat: destinationPlace.lat as number,
+        lng: destinationPlace.lng as number,
+        label: destinationPlace.name,
+        source: "named_place"
+      };
+      navigationTravelMode = agentRouteToolRequest.travelMode;
+      void safeRecordUsageGateEvent({
+        usageGate: agentToolRoutesUsageGate,
+        actorName: String(normalizedMember.displayName),
+        source: "kodi_agent"
+      });
+
+      runtimeGuidance = [
+        ...runtimeGuidance,
+        `The route tool was executed from ${originPlace.name} to ${destinationPlace.name}. Answer now from routeEstimate; do not promise future work.`
+      ];
+      const toolRulesReply = buildKodiReplyFromContext({
+        ...req.body,
+        message: currentMessage,
+        tripState,
+        conversationFocus,
+        externalPlacesSearch,
+        reverseGeocodedLocation,
+        routeEstimate
+      });
+      const finalAgentReply = await tryBuildKodiReply({
+        ...req.body,
+        message: currentMessage,
+        tripState,
+        conversationFocus,
+        externalPlacesSearch,
+        reverseGeocodedLocation,
+        routeEstimate,
+        runtimeGuidance,
+        permissionPolicy,
+        rulesReply: toolRulesReply
+      });
+      if (finalAgentReply.reply) {
+        openAiReply = finalAgentReply;
+      }
+    }
+  }
   if (
     openAiUsageGate.allowed &&
     openAiUsageGate.providerConfigured &&
@@ -3957,10 +4069,11 @@ app.post("/api/agent/message", async (req, res) => {
     reply: locationBoundReply,
     tripState,
     externalPlacesSearch,
-    tripDestination: tripReference.destination,
+    tripDestination: navigationDestination,
     selectedPlace: req.body?.selectedPlace,
     fallbackRecommendedPlaceId: rulesReply.recommendedPlaceId,
-    forceAppend: Boolean(rulesReply.recommendedPlaceId || routeEstimate?.route || shouldAppendExternalPlaceNavigation)
+    forceAppend: Boolean(rulesReply.recommendedPlaceId || routeEstimate?.route || shouldAppendExternalPlaceNavigation),
+    travelMode: navigationTravelMode
   });
   const selectedProviderModel = openAiReply?.model;
   const selectedProvider =
