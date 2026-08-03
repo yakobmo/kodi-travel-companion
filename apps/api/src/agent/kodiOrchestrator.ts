@@ -273,10 +273,12 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
     throw new Error("ai_reply_quality_rejected");
   }
 
-  const pretendsReadyToolIsPending =
-    input.externalPlacesSearch?.status === "ready" &&
-    /(?:חכ(?:ה|ו)|להמתין|אקבל\s+תוצאות|ממתין\s+לתוצאות|wait\s+(?:for|until)|waiting\s+for)/iu.test(reply.text);
-  if (pretendsReadyToolIsPending) {
+  const pretendsToolWorkWillContinueAfterTheReply =
+    !input.routeEstimate?.route &&
+    /(?:חכ(?:ה|ו)|המתן|להמתין|אקבל\s+תוצאות|ממתין|אני\s+(?:אחשב|מחשב|אבדוק)|אחזור\s+אלי[ךכ]|wait\s+(?:for|until)|waiting\s+for)/iu.test(
+      reply.text
+    );
+  if (pretendsToolWorkWillContinueAfterTheReply) {
     throw new Error("ai_reply_ignored_ready_tool_evidence");
   }
 
@@ -493,7 +495,11 @@ function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMes
     "אני כאן",
     "אפשר לחפש נקודה קלה",
     "אם מנהל מאשר",
-    "כשיהיה חיבור חי מלא"
+    "כשיהיה חיבור חי מלא",
+    "אנא המתן",
+    "אני מחשב",
+    "אחזור אליך",
+    "אני אבדוק זאת"
   ];
 
   return (messages ?? [])
@@ -505,7 +511,7 @@ function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMes
 
       return !boilerplateFragments.some((fragment) => message.text.includes(fragment));
     })
-    .slice(-8)
+    .slice(-16)
     .map((message) => ({
       author: message.author,
       text: message.text.slice(0, 700),

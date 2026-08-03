@@ -69,7 +69,7 @@ function assertAgentFirstSourceGuards() {
   );
   assertCheck(
     "agent-first bounded recent message context",
-    openAiSource.includes(".slice(-8)") && openAiSource.includes("message.text.slice(0, 700)")
+    openAiSource.includes(".slice(-16)") && openAiSource.includes("message.text.slice(0, 700)")
   );
   assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));
   assertCheck("agent-first no synthetic session Kodi message", !webSource.includes("sessionKodiReminderMessage"));
