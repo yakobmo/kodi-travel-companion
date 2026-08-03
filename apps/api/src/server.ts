@@ -1357,7 +1357,7 @@ function findTripPlaceById(tripState: ReturnType<typeof buildDemoTripState>, pla
 }
 
 function findFirstExternalPlaceWithCoordinates(search: GooglePlacesTextSearchResult | undefined) {
-  if (search?.status !== "ready") {
+  if (search?.status !== "ready" || search.places.length !== 1) {
     return undefined;
   }
 
@@ -1672,6 +1672,18 @@ function getAgentRouteToolRequest(reply: AgentMessageResponse | undefined) {
     originPlaceId: candidate.originPlaceId,
     destinationPlaceId: candidate.destinationPlaceId,
     travelMode: candidate.travelMode === "WALK" ? ("WALK" as const) : ("DRIVE" as const)
+  };
+}
+
+function getAgentPlacesToolRequest(reply: AgentMessageResponse | undefined) {
+  const value = reply?.metadata?.toolRequest;
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type !== "places_search" || typeof candidate.query !== "string") return undefined;
+  return {
+    query: candidate.query,
+    anchorPlaceId: typeof candidate.anchorPlaceId === "string" ? candidate.anchorPlaceId : undefined,
+    radiusMeters: typeof candidate.radiusMeters === "number" ? candidate.radiusMeters : 20_000
   };
 }
 
@@ -3851,35 +3863,8 @@ app.post("/api/agent/message", async (req, res) => {
   });
 
   const timelineReference = resolveTimelineReferenceForMessage(referenceMessage, tripState);
-  const placesUsageGate =
-    !freshCurrentLocationRequired &&
-    !shouldUseRouteEstimate(referenceMessage) &&
-    shouldUseExternalPlacesSearch(toolQueryMessage)
-    ? authorizeTripUsageCapability({
-        usagePool,
-        capability: "google_places",
-        triggeringMember: {
-          id: normalizedMember.id,
-          role: normalizedMember.role
-        }
-      })
-    : undefined;
-  const externalPlacesSearch = placesUsageGate?.allowed
-    ? await searchGooglePlacesText({
-      query: buildExternalPlacesQuery(toolQueryMessage, { hereAndNow: hereAndNowContext }),
-      ...getSearchLocationFromTripState(tripState, timelineReference, hereAndNowContext, requestCurrentLocation),
-      radiusMeters: shouldUsePreciseLocationIdentity(currentMessage) ? 120 : hereAndNowContext ? 15000 : 3000,
-      restrictToLocation: hereAndNowContext,
-      languageCode: "he"
-    })
-    : undefined;
-  if (placesUsageGate?.allowed) {
-    void safeRecordUsageGateEvent({
-      usageGate: placesUsageGate,
-      actorName: String(normalizedMember.displayName),
-      source: "kodi_agent"
-    });
-  }
+  let placesUsageGate: TripUsageGateDecision | undefined;
+  let externalPlacesSearch: GooglePlacesTextSearchResult | undefined;
   const reverseGeocodedLocation =
     requestCurrentLocation && shouldReverseGeocodeCurrentLocation(currentMessage)
       ? await reverseGeocodeLocation({
@@ -3896,34 +3881,6 @@ app.post("/api/agent/message", async (req, res) => {
   let navigationTravelMode: "DRIVE" | "WALK" = includesAnyTerm(referenceMessage, ["הליכה", "ברגל"])
     ? "WALK"
     : "DRIVE";
-  const verifiedRouteCanBePrefetched =
-    !freshCurrentLocationRequired &&
-    shouldUseRouteEstimate(referenceMessage) &&
-    tripReference.confidence !== "low" &&
-    Boolean(tripReference.origin && tripReference.destination);
-  routeToolUsageGate = verifiedRouteCanBePrefetched
-    ? authorizeTripUsageCapability({
-        usagePool,
-        capability: "google_routes",
-        triggeringMember: {
-          id: normalizedMember.id,
-          role: normalizedMember.role
-        }
-      })
-    : undefined;
-  if (verifiedRouteCanBePrefetched && routeToolUsageGate?.allowed) {
-    routeEstimate = await estimateGoogleRoute({
-      origin: { lat: Number(tripReference.origin?.lat), lng: Number(tripReference.origin?.lng) },
-      destination: { lat: Number(tripReference.destination?.lat), lng: Number(tripReference.destination?.lng) },
-      travelMode: navigationTravelMode,
-      languageCode: "he"
-    });
-    void safeRecordUsageGateEvent({
-      usageGate: routeToolUsageGate,
-      actorName: String(normalizedMember.displayName),
-      source: "kodi_agent"
-    });
-  }
   const rulesReply = freshCurrentLocationRequired
     ? buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName))
     : buildKodiReplyFromContext({
@@ -3969,6 +3926,52 @@ app.post("/api/agent/message", async (req, res) => {
           rulesReply
         })
       : undefined;
+  const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply?.reply);
+  if (agentPlacesToolRequest) {
+    const anchorPlace = agentPlacesToolRequest.anchorPlaceId
+      ? tripState.places.find(
+          (place) =>
+            place.id === agentPlacesToolRequest.anchorPlaceId &&
+            typeof place.lat === "number" &&
+            typeof place.lng === "number"
+        )
+      : undefined;
+    placesUsageGate = authorizeTripUsageCapability({
+      usagePool,
+      capability: "google_places",
+      triggeringMember: { id: normalizedMember.id, role: normalizedMember.role }
+    });
+    if (placesUsageGate.allowed) {
+      externalPlacesSearch = await searchGooglePlacesText({
+        query: agentPlacesToolRequest.query,
+        ...(anchorPlace ? { lat: anchorPlace.lat, lng: anchorPlace.lng } : {}),
+        radiusMeters: agentPlacesToolRequest.radiusMeters,
+        languageCode: "he",
+        regionCode: "GR"
+      });
+      void safeRecordUsageGateEvent({
+        usageGate: placesUsageGate,
+        actorName: String(normalizedMember.displayName),
+        source: "kodi_agent"
+      });
+      runtimeGuidance = [
+        ...runtimeGuidance,
+        `The places tool ran the agent's query${anchorPlace ? ` around ${anchorPlace.name}` : " without a geographic anchor"}. Check every result against the requested trip geography; ignore mismatches.`
+      ];
+      const toolReply = await tryBuildKodiReply({
+        ...req.body,
+        message: currentMessage,
+        tripState,
+        conversationFocus,
+        externalPlacesSearch,
+        reverseGeocodedLocation,
+        runtimeGuidance,
+        permissionPolicy,
+        rulesReply
+      });
+      if (toolReply.reply) openAiReply = toolReply;
+    }
+  }
   const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply?.reply) : undefined;
   if (agentRouteToolRequest) {
     const originPlace = tripState.places.find(

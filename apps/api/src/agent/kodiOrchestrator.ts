@@ -200,20 +200,33 @@ function toValidReply(parsed: {
       return undefined;
     }
     const candidate = parsed.toolRequest as Record<string, unknown>;
-    if (
-      candidate.type !== "route" ||
-      typeof candidate.originPlaceId !== "string" ||
-      typeof candidate.destinationPlaceId !== "string" ||
-      candidate.originPlaceId === candidate.destinationPlaceId
-    ) {
-      return undefined;
+    if (candidate.type === "route") {
+      if (
+        typeof candidate.originPlaceId !== "string" ||
+        typeof candidate.destinationPlaceId !== "string" ||
+        candidate.originPlaceId === candidate.destinationPlaceId
+      ) {
+        return undefined;
+      }
+      return {
+        type: "route",
+        originPlaceId: candidate.originPlaceId,
+        destinationPlaceId: candidate.destinationPlaceId,
+        travelMode: candidate.travelMode === "WALK" ? "WALK" : "DRIVE"
+      };
     }
-    return {
-      type: "route",
-      originPlaceId: candidate.originPlaceId,
-      destinationPlaceId: candidate.destinationPlaceId,
-      travelMode: candidate.travelMode === "WALK" ? "WALK" : "DRIVE"
-    };
+    if (candidate.type === "places_search" && typeof candidate.query === "string" && candidate.query.trim().length >= 3) {
+      return {
+        type: "places_search",
+        query: candidate.query.trim().slice(0, 300),
+        anchorPlaceId: typeof candidate.anchorPlaceId === "string" ? candidate.anchorPlaceId : undefined,
+        radiusMeters:
+          typeof candidate.radiusMeters === "number"
+            ? Math.min(Math.max(Math.round(candidate.radiusMeters), 500), 50_000)
+            : 20_000
+      };
+    }
+    return undefined;
   })();
 
   return {
@@ -319,9 +332,9 @@ function buildInstructions() {
     "Reason from the conversation as a whole. The latest message is the answer target; corrections and follow-ups in recentMessages remain binding context.",
     "conversationFocus is structured memory. When it contains a corrected location, discard earlier recommendations that conflict with it.",
     "Decide naturally what the user means. Do not behave like a keyword router, FAQ, setup wizard, or status bot.",
-    "Treat supplied tool results as evidence: Google Places for places, Routes for travel, reverse geocoding for current location, and tripState for the saved itinerary.",
-    "You can request a verified route tool. When the user asks for travel time or distance between saved trip places and routeEstimate is absent, use savedPlaceDirectory and return toolRequest with the exact originPlaceId, destinationPlaceId, and DRIVE or WALK. Resolve references such as 'this hotel' from recentMessages. Do not promise to calculate later.",
-    "When routeEstimate is supplied, answer the user's question from that result and omit toolRequest.",
+    "Treat supplied tool results as evidence: Google Places for places, Routes for travel, reverse geocoding for current location, and tripState for the saved itinerary. Tool results may be incomplete; reject any result that conflicts geographically with the request.",
+    "Choose tools yourself when they materially improve the answer. For a route between saved places return toolRequest {type:'route',originPlaceId,destinationPlaceId,travelMode}. For current place research return {type:'places_search',query,anchorPlaceId?,radiusMeters?}. Use exact IDs from savedPlaceDirectory. Do not promise future work.",
+    "When a tool result is supplied, synthesize it with your own travel reasoning and answer every part of the question. Omit toolRequest.",
     "Use live location only when it is supplied as fresh evidence. The server attaches verified navigation links; never fabricate or rewrite them.",
     "Never present a concrete place as verified unless it appears in supplied evidence. If evidence is missing, say so briefly or ask one useful clarification instead of guessing.",
     "For geographic recommendations, keep every option in the requested area and compatible with the requested activity. Explicitly reject stale suggestions from a corrected location.",
@@ -378,9 +391,11 @@ function shouldPreferFastPlacesAnswer(input: KodiReplyInput, text: string) {
 }
 
 function shouldUseReasoningModel(input: KodiReplyInput) {
-  if (process.env.KODI_REASONING_MODEL_ENABLED !== "true") {
+  if (process.env.KODI_REASONING_MODEL_ENABLED === "false") {
     return false;
   }
+
+  return true;
 
   const text = input.message.toLowerCase();
 
@@ -453,18 +468,12 @@ function compactTripState(
     })),
     tripArc: buildTripTimelineFromGoogleMapOrder(input).map((segment) => segment.lodging.name),
     savedPlaceDirectory: input.places
-      .filter(
-        (place) =>
-          place.type === "lodging" ||
-          (place.name.length >= 4 && options.conversationText.toLocaleLowerCase().includes(place.name.toLocaleLowerCase()))
-      )
-      .slice(0, 80)
       .map((place) => ({
       id: place.id,
       name: place.name,
       type: place.type,
-      lat: place.lat,
-      lng: place.lng
+      region: place.address,
+      tags: place.tags?.slice(0, 6)
       })),
     visibleMembers: input.members
       .filter((item) => item.consent.state === "enabled" && item.liveLocation)
