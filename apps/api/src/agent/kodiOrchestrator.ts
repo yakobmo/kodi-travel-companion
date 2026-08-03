@@ -436,6 +436,29 @@ function getAgentModelCandidates(primaryModel: string) {
   return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
 }
 
+function rankPlacesForConversation(places: NonNullable<AgentMessageRequest["tripState"]>["places"], text: string) {
+  const tokens = Array.from(
+    new Set(
+      text
+        .toLocaleLowerCase()
+        .split(/[^\p{L}\p{N}]+/u)
+        .filter((token) => token.length >= 3)
+    )
+  );
+
+  return places
+    .map((place, index) => {
+      const searchable = [place.name, place.address, place.note, ...(place.tags ?? [])]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase();
+      const relevance = tokens.reduce((score, token) => score + (searchable.includes(token) ? 1 : 0), 0);
+      return { place, index, relevance };
+    })
+    .sort((first, second) => second.relevance - first.relevance || first.index - second.index)
+    .map((item) => item.place);
+}
+
 function compactTripState(
   input: AgentMessageRequest["tripState"],
   options: {
@@ -450,6 +473,7 @@ function compactTripState(
 
   const placeLimit = options.reasoningMode ? 60 : 40;
   const noteLimit = options.reasoningMode ? 360 : 220;
+  const rankedPlaces = rankPlacesForConversation(input.places, options.conversationText);
 
   return {
     trip: input.trip,
@@ -467,7 +491,8 @@ function compactTripState(
       placeTypeCounts: segment.placeTypeCounts
     })),
     tripArc: buildTripTimelineFromGoogleMapOrder(input).map((segment) => segment.lodging.name),
-    savedPlaceDirectory: input.places
+    savedPlaceDirectory: rankedPlaces
+      .slice(0, 80)
       .map((place) => ({
       id: place.id,
       name: place.name,
@@ -500,7 +525,7 @@ function compactTripState(
                 { lat: place.lat, lng: place.lng }
               ) <= 80
           )
-        : input.places;
+        : rankedPlaces;
       return relevantPlaces.slice(0, placeLimit).map((place) => ({
       id: place.id,
       name: place.name,
