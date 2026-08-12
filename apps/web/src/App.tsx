@@ -2513,7 +2513,9 @@ export function App() {
     () =>
       [
         currentLocation ? "current-location-on" : "current-location-off",
-        mapAnchorLocation ? `${mapAnchorLocation.lat}:${mapAnchorLocation.lng}:${DEFAULT_NEARBY_MAP_RADIUS_KM}` : "no-anchor",
+        mapAnchorLocation
+          ? `${mapAnchorLocation.lat.toFixed(3)}:${mapAnchorLocation.lng.toFixed(3)}:${DEFAULT_NEARBY_MAP_RADIUS_KM}`
+          : "no-anchor",
         mapPlaces.map((place) => `${place.id}:${place.lat}:${place.lng}`).join("|")
       ].join("::"),
     [currentLocation, mapAnchorLocation, mapPlaces]
@@ -2560,12 +2562,8 @@ export function App() {
           .map((place) => `${place.id}:${place.lat ?? ""}:${place.lng ?? ""}:${place.name}`)
           .join("|");
         const dynamicMarkerSignature = [
-          currentLocation ? `self:${currentLocation.lat}:${currentLocation.lng}:${currentLocation.accuracyMeters ?? ""}` : "self:none",
-          ...visibleMembers.map((member) =>
-            member.liveLocation
-              ? `${member.id}:${member.liveLocation.lat}:${member.liveLocation.lng}:${member.name}`
-              : `${member.id}:none`
-          )
+          currentLocation ? "self" : "self:none",
+          ...visibleMembers.map((member) => `${member.id}:${member.name}`)
         ].join("|");
 
         const bounds = new google.maps.LatLngBounds();
@@ -2627,6 +2625,23 @@ export function App() {
           googleMapDynamicMarkersRef.current = nextDynamicMarkers;
           googleMapDynamicMarkerSignatureRef.current = dynamicMarkerSignature;
         }
+
+        let dynamicMarkerIndex = 0;
+        if (currentLocation) {
+          googleMapDynamicMarkersRef.current[dynamicMarkerIndex]?.setPosition({
+            lat: currentLocation.lat,
+            lng: currentLocation.lng
+          });
+          dynamicMarkerIndex += 1;
+        }
+        visibleMembers.forEach((member) => {
+          if (!member.liveLocation) return;
+          googleMapDynamicMarkersRef.current[dynamicMarkerIndex]?.setPosition({
+            lat: member.liveLocation.lat,
+            lng: member.liveLocation.lng
+          });
+          dynamicMarkerIndex += 1;
+        });
 
         const latitudeRadius = DEFAULT_NEARBY_MAP_RADIUS_KM / 111;
         const longitudeRadius =
