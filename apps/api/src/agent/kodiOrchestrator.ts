@@ -61,7 +61,7 @@ function getGeminiModelCandidates(primaryModel = getGeminiModel()) {
     process.env.GEMINI_AGENT_FALLBACK_MODELS?.split(",")
       .map((model) => model.trim())
       .filter(Boolean) ?? [];
-  const defaultFallbacks = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"];
+  const defaultFallbacks = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
 
   return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
 }
@@ -344,6 +344,7 @@ function buildInstructions() {
     "Decide naturally what the user means. Do not behave like a keyword router, FAQ, setup wizard, or status bot.",
     "Treat supplied tool results as evidence: Google Places for places, Routes for travel, reverse geocoding for current location, and tripState for the saved itinerary. Tool results may be incomplete; reject any result that conflicts geographically with the request.",
     "Choose tools yourself when they materially improve the answer. Use {type:'trip_lookup',query} to inspect the private itinerary, ordered lodgings, saved points, corrections, or relative references such as first/next lodging. Use {type:'route',originPlaceId,destinationPlaceId,travelMode} for verified time and distance. Use {type:'places_search',query,anchorPlaceId?,radiusMeters?} for Google place discovery. Do not promise future work.",
+    "Tool calls are immediate JSON actions, not conversational promises: return toolRequest now and keep text brief. If the user asks for travel time or distance and routeEstimate is absent, you must call route when both saved place IDs are known; otherwise call trip_lookup first. Never invent or approximate the measurement.",
     "If the user refers to trip information that is not already unambiguous in the supplied context, call trip_lookup instead of asking them to repeat data stored in the trip.",
     "When a tool result is supplied, synthesize it with your own travel reasoning and answer every part of the question. Omit toolRequest.",
     "Use live location only when it is supplied as fresh evidence. The server attaches verified navigation links; never fabricate or rewrite them.",
