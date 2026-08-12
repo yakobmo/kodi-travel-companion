@@ -1724,6 +1724,15 @@ function getAgentPlacesToolRequest(reply: AgentMessageResponse | undefined) {
   };
 }
 
+function getAgentTripMemoryRequest(reply: AgentMessageResponse | undefined) {
+  const value = reply?.metadata?.toolRequest;
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type !== "trip_memory" || !Array.isArray(candidate.placeIds)) return undefined;
+  const placeIds = candidate.placeIds.filter((id): id is string => typeof id === "string").slice(0, 12);
+  return placeIds.length > 0 ? { placeIds } : undefined;
+}
+
 function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessageResponse {
   const greeting = memberName ? `${memberName}, ` : "";
 
@@ -3949,7 +3958,7 @@ app.post("/api/agent/message", async (req, res) => {
   });
   const shouldCallAgentProvider = openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
   let openAiReply: Awaited<ReturnType<typeof tryBuildKodiReply>> | undefined;
-  const tripLookupResult = lookupTripContext(tripState, currentMessage);
+  let tripLookupResult = lookupTripContext(tripState, currentMessage);
   let activeRulesReply = rulesReply;
   const completedToolCalls = new Set<string>();
 
@@ -3972,18 +3981,24 @@ app.post("/api/agent/message", async (req, res) => {
       rulesReply: activeRulesReply
     });
 
+    const agentTripMemoryRequest = getAgentTripMemoryRequest(openAiReply.reply);
     const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
     const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
-    if (!agentPlacesToolRequest && !agentRouteToolRequest) break;
+    if (!agentTripMemoryRequest && !agentPlacesToolRequest && !agentRouteToolRequest) break;
 
     const toolSignature = JSON.stringify(
-      agentPlacesToolRequest ?? agentRouteToolRequest
+      agentTripMemoryRequest ?? agentPlacesToolRequest ?? agentRouteToolRequest
     );
     if (completedToolCalls.has(toolSignature)) {
       openAiReply = { ...openAiReply, reply: undefined, status: "error", error: "agent_repeated_tool_call" };
       break;
     }
     completedToolCalls.add(toolSignature);
+
+    if (agentTripMemoryRequest) {
+      tripLookupResult = lookupTripContext(tripState, currentMessage, agentTripMemoryRequest.placeIds);
+      continue;
+    }
 
     if (agentPlacesToolRequest) {
       const anchorPlace = agentPlacesToolRequest.anchorPlaceId

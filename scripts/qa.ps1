@@ -42,6 +42,7 @@ $requiredFiles = @(
   "apps/api/src/agent/tripReferenceResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
   "apps/api/src/agent/tripLookup.ts",
+  "apps/api/src/agent/kodiContext.ts",
   "apps/api/src/whatsapp/connector.ts",
   "apps/api/src/billing/tripUsagePool.ts",
   "apps/api/src/domain/types.ts",
@@ -393,11 +394,12 @@ if (
   -not $openAiAgentSource.Contains("ai_agent_timeout") -or
   -not $openAiAgentSource.Contains("withAiTimeout") -or
   -not $openAiAgentSource.Contains("shouldUseReasoningModel") -or
-  -not $openAiAgentSource.Contains("fallbackRulesReply") -or
-  -not $openAiAgentSource.Contains("Reason from the conversation as a whole") -or
+  -not $openAiAgentSource.Contains("full, chronological conversation") -or
   -not $openAiAgentSource.Contains("intelligent, warm Hebrew travel agent") -or
-  -not $openAiAgentSource.Contains("conversationFocus is structured memory") -or
+  -not $openAiAgentSource.Contains("Use your travel knowledge and reasoning freely") -or
   -not $openAiAgentSource.Contains('type: "places_search"') -or
+  -not $openAiAgentSource.Contains('type: "trip_memory"') -or
+  -not $openAiAgentSource.Contains("buildKodiContext") -or
   -not $openAiAgentSource.Contains("ai_reply_geographic_evidence_rejected") -or
   -not $openAiAgentSource.Contains("ai_reply_unverified_route_measurement") -or
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
@@ -405,8 +407,6 @@ if (
   -not $openAiAgentSource.Contains("generateContent") -or
   -not $openAiAgentSource.Contains("openai_error_fallback_to_gemini") -or
   -not $openAiAgentSource.Contains("paid_primary_fallback_to_free_provider_fleet") -or
-  -not $openAiAgentSource.Contains("lodgingTimeline") -or
-  -not $openAiAgentSource.Contains("tripArc") -or
   -not $openAiAgentSource.Contains("KODI_AGENT_TOTAL_BUDGET_MS") -or
   -not $openAiAgentSource.Contains("validateKodiProviderReply") -or
   -not $openAiAgentSource.Contains("reverseGeocodedLocation") -or
@@ -522,9 +522,9 @@ if (
 }
 
 if (
-  -not $openAiAgentSource.Contains("Use live location only when it is supplied as fresh evidence") -or
-  -not $openAiAgentSource.Contains("tripState for the saved itinerary") -or
-  -not $openAiAgentSource.Contains("The server attaches verified navigation links") -or
+  -not $openAiAgentSource.Contains("use fresh live location only when supplied") -or
+  -not $openAiAgentSource.Contains("kodiContext is the single authoritative trip context") -or
+  -not $openAiAgentSource.Contains("Never invent measurements, live facts, saved details, or verified places") -or
   -not $serverSource.Contains("normalizeKodiProviderReply") -or
   -not $serverSource.Contains("respectsFreshLocationBoundary") -or
   -not $serverSource.Contains("textWithoutUnverifiedNavigation")
@@ -1342,14 +1342,14 @@ if (-not $serverSource.Contains('options.hereAndNow ? "cafe"') -or -not $serverS
   throw "Kodi near-me cafe/bakery searches must use clean Google Places queries, not trip/hotel-biased text."
 }
 
-if (-not $openAiSource.Contains("Kodi speaks about himself in masculine Hebrew")) {
+if (-not $openAiSource.Contains("speaking about yourself in masculine Hebrew")) {
   throw "Kodi OpenAI prompt must keep Kodi's Hebrew self-reference masculine and consistent."
 }
 
 if (
-  -not $openAiSource.Contains("Decide naturally what the user means") -or
-  -not $openAiSource.Contains("Never present a concrete place as verified") -or
-  -not $openAiSource.Contains("Speak natural, specific Hebrew") -or
+  -not $openAiSource.Contains("decide naturally what the user means") -or
+  -not $openAiSource.Contains("Never invent measurements, live facts, saved details, or verified places") -or
+  -not $openAiSource.Contains("Answer naturally and specifically in Hebrew") -or
   -not $openAiSource.Contains("one or two relevant emoji")
 ) {
   throw "Kodi model prompt must preserve agent-first behavior: tools ground the answer, but the model reasons and writes naturally."
@@ -1631,20 +1631,19 @@ if (
   throw "Kodi must stay agent-first: normal travel questions must reach the AI provider instead of a fast-lane answer."
 }
 
-$fastPlacesMentions = ([regex]::Matches($openAiAgentSource, "shouldPreferFastPlacesAnswer")).Count
-if ($fastPlacesMentions -gt 1) {
-  throw "Kodi must not pre-route Places questions away from the model before the agent can reason."
+if (
+  -not $openAiAgentSource.Contains(".slice(-10)") -or
+  -not $openAiAgentSource.Contains("message.text.trim().slice(0, 600)")
+) {
+  throw "Kodi agent context must preserve a bounded chronological conversation."
 }
 
 if (
-  -not $openAiAgentSource.Contains("options.reasoningMode ? 16 : 12") -or
-  -not $openAiAgentSource.Contains(".slice(0, 12)") -or
-  -not $openAiAgentSource.Contains("message.text.slice(0, 500)") -or
-  -not $openAiAgentSource.Contains("recentMessagesAreBackgroundOnly") -or
-  -not $openAiAgentSource.Contains("doNotReviveUnansweredOlderQuestions") -or
-  -not $openAiAgentSource.Contains("conversationFocus: input.conversationFocus")
+  $openAiAgentSource.Contains("shouldPreferFastPlacesAnswer") -or
+  $openAiAgentSource.Contains("boilerplateFragments") -or
+  $openAiAgentSource.Contains("conversationFocus: input.conversationFocus")
 ) {
-  throw "Kodi agent context must keep recent chat as bounded weak background only."
+  throw "Kodi must not use keyword routing or phrase-by-phrase conversation patches."
 }
 
 if (-not $serverSource.Contains("/api/trips/demo/members") -or -not $serverSource.Contains("/api/trips/demo/members/stream")) {

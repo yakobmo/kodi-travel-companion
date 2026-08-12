@@ -44,8 +44,9 @@ function scheduledDateOrder(note: string | undefined) {
   return Number.MAX_SAFE_INTEGER;
 }
 
-export function lookupTripContext(tripState: TripState, query: string): TripLookupResult {
+export function lookupTripContext(tripState: TripState, query: string, placeIds: string[] = []): TripLookupResult {
   const queryTokens = tokens(query);
+  const requestedIds = new Set(placeIds.slice(0, 12));
   const matches = tripState.places
     .map((place) => {
       const searchable = [place.name, place.type, place.address, place.note, ...(place.tags ?? [])]
@@ -57,15 +58,14 @@ export function lookupTripContext(tripState: TripState, query: string): TripLook
         score: queryTokens.reduce((score, token) => score + (searchable.includes(token) ? 1 : 0), 0)
       };
     })
+    .filter((item) => requestedIds.has(item.place.id) || item.score > 0)
     .sort(
       (first, second) =>
+        Number(requestedIds.has(second.place.id)) - Number(requestedIds.has(first.place.id)) ||
         second.score - first.score ||
         (first.place.sourceIndex ?? Number.MAX_SAFE_INTEGER) - (second.place.sourceIndex ?? Number.MAX_SAFE_INTEGER)
     )
-    // The trip is a small, trusted private corpus. Keep lexical matches first,
-    // but also return the remaining directory so a Hebrew/English wording gap
-    // cannot hide an airport, lodging, or saved point from the model.
-    .slice(0, 60)
+    .slice(0, 12)
     .map(({ place }) => ({
       id: place.id,
       name: place.name,

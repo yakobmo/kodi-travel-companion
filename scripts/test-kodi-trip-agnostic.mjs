@@ -2,6 +2,7 @@
 
 import { resolveTripReferenceForMessage } from "../apps/api/dist/agent/tripReferenceResolver.js";
 import { lookupTripContext } from "../apps/api/dist/agent/tripLookup.js";
+import { buildKodiContext } from "../apps/api/dist/agent/kodiContext.js";
 
 const tripState = {
   trip: { id: "trip_austria", groupId: "group_alps", name: "Austria", groupName: "Alps family" },
@@ -77,6 +78,32 @@ if (
   !lookup.matches.some((place) => place.id === "vienna-hotel")
 ) {
   throw new Error(`Expected generic trip lookup to return arrival and ordered lodging context, received ${JSON.stringify(lookup)}`);
+}
+
+const kodiContext = buildKodiContext({
+  message: "airport first lodging",
+  tripState: scheduledTripState,
+  tripLookupResult: lookup
+});
+if (
+  kodiContext.placeDirectory.length !== scheduledTripState.places.length ||
+  kodiContext.relevantPlaceDetails.length > 12 ||
+  kodiContext.itinerary[0]?.lodging.id !== "vienna-hotel" ||
+  "places" in kodiContext ||
+  "lodgingTimeline" in kodiContext
+) {
+  throw new Error(`Expected one compact, non-duplicated Kodi context, received ${JSON.stringify(kodiContext)}`);
+}
+
+const legacyDuplicatedContextSize = JSON.stringify({
+  tripState: scheduledTripState,
+  tripLookupResult: lookup
+}).length;
+const canonicalContextSize = JSON.stringify(kodiContext).length;
+if (canonicalContextSize >= legacyDuplicatedContextSize) {
+  throw new Error(
+    `Expected canonical context (${canonicalContextSize}) to be smaller than duplicated context (${legacyDuplicatedContextSize})`
+  );
 }
 
 console.log("Kodi trip-agnostic resolver test passed.");
