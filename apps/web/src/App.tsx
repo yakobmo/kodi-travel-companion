@@ -2314,7 +2314,7 @@ export function App() {
     liveLocation: null
   };
   const managerMember = members.find((member) => member.role === "owner" || member.role === "admin") ?? activeMember;
-  const mapAnchorLocation = currentLocation ?? managerMember.liveLocation;
+  const mapAnchorLocation = currentLocation;
   const canManageDocuments = activeMember.role === "owner" || activeMember.role === "admin";
 
   async function loadTripDocuments() {
@@ -2526,17 +2526,12 @@ export function App() {
       return;
     }
 
-    const fallbackCenter =
-      mapAnchorLocation ??
-      (typeof selectedPlace?.lat === "number" && typeof selectedPlace.lng === "number"
-        ? { lat: selectedPlace.lat, lng: selectedPlace.lng }
-        : mapPlaces[0]);
-
-    if (!fallbackCenter) {
+    if (!mapAnchorLocation) {
       return;
     }
 
-    const center = { lat: Number(fallbackCenter.lat), lng: Number(fallbackCenter.lng) };
+    const anchorLocation = mapAnchorLocation;
+    const center = { lat: anchorLocation.lat, lng: anchorLocation.lng };
     let cancelled = false;
     const mapElement = googleMapElementRef.current;
 
@@ -2553,7 +2548,7 @@ export function App() {
           existingMap ??
           new google.maps.Map(mapElement, {
             center,
-            zoom: mapAnchorLocation ? 10 : 9,
+            zoom: 11,
             clickableIcons: true,
             fullscreenControl: true,
             mapTypeControl: false,
@@ -2600,17 +2595,6 @@ export function App() {
           googleMapPlaceMarkerSignatureRef.current = placeMarkerSignature;
         }
 
-        if (!mapAnchorLocation) {
-          mapPlaces.forEach((place) => {
-            if (typeof place.lat !== "number" || typeof place.lng !== "number") {
-              return;
-            }
-
-            bounds.extend({ lat: place.lat, lng: place.lng });
-            hasBounds = true;
-          });
-        }
-
         if (googleMapDynamicMarkerSignatureRef.current !== dynamicMarkerSignature) {
           googleMapDynamicMarkersRef.current.forEach((marker) => marker.setMap?.(null));
           googleMapDynamicMarkersRef.current = [];
@@ -2644,21 +2628,19 @@ export function App() {
           googleMapDynamicMarkerSignatureRef.current = dynamicMarkerSignature;
         }
 
-        if (mapAnchorLocation) {
-          const latitudeRadius = DEFAULT_NEARBY_MAP_RADIUS_KM / 111;
-          const longitudeRadius =
-            DEFAULT_NEARBY_MAP_RADIUS_KM /
-            Math.max(111 * Math.cos((mapAnchorLocation.lat * Math.PI) / 180), 1);
-          bounds.extend({
-            lat: mapAnchorLocation.lat - latitudeRadius,
-            lng: mapAnchorLocation.lng - longitudeRadius
-          });
-          bounds.extend({
-            lat: mapAnchorLocation.lat + latitudeRadius,
-            lng: mapAnchorLocation.lng + longitudeRadius
-          });
-          hasBounds = true;
-        }
+        const latitudeRadius = DEFAULT_NEARBY_MAP_RADIUS_KM / 111;
+        const longitudeRadius =
+          DEFAULT_NEARBY_MAP_RADIUS_KM /
+          Math.max(111 * Math.cos((anchorLocation.lat * Math.PI) / 180), 1);
+        bounds.extend({
+          lat: anchorLocation.lat - latitudeRadius,
+          lng: anchorLocation.lng - longitudeRadius
+        });
+        bounds.extend({
+          lat: anchorLocation.lat + latitudeRadius,
+          lng: anchorLocation.lng + longitudeRadius
+        });
+        hasBounds = true;
 
         if (hasBounds && (!existingMap || googleMapFitSignatureRef.current !== mapFitSignature)) {
           map.fitBounds(bounds, 44);
@@ -2883,14 +2865,8 @@ export function App() {
   }
 
   function openCurrentMapInGoogleMaps() {
-    const focusedLocation =
-      mapAnchorLocation ??
-      (typeof selectedPlace?.lat === "number" && typeof selectedPlace.lng === "number"
-        ? { lat: selectedPlace.lat, lng: selectedPlace.lng }
-        : mapPlaces[0]);
-
-    const url = focusedLocation
-      ? `https://www.google.com/maps/@${Number(focusedLocation.lat)},${Number(focusedLocation.lng)},10z`
+    const url = currentLocation
+      ? `https://www.google.com/maps/@${currentLocation.lat},${currentLocation.lng},11z`
       : "https://www.google.com/maps";
 
     window.open(url, "_blank", "noopener,noreferrer");
