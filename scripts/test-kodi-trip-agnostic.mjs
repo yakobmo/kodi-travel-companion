@@ -24,6 +24,7 @@ const tripState = {
       lat: 48.2082,
       lng: 16.3738,
       sourceIndex: 1,
+      note: "first lodging 25.8",
       tags: [],
       visitState: "planned"
     },
@@ -52,7 +53,24 @@ if (namedPlace.destination?.label !== "Hohensalzburg Fortress" || namedPlace.des
   throw new Error(`Expected named active-trip place, received ${JSON.stringify(namedPlace)}`);
 }
 
-const lookup = lookupTripContext(tripState, "airport first lodging");
+const scheduledTripState = {
+  ...tripState,
+  places: [
+    tripState.places[0],
+    {
+      id: "map-first-unscheduled-hotel",
+      name: "Imported Map Hotel",
+      type: "lodging",
+      lat: 48.3,
+      lng: 16.4,
+      sourceIndex: 0.5,
+      tags: [],
+      visitState: "planned"
+    },
+    ...tripState.places.slice(1)
+  ]
+};
+const lookup = lookupTripContext(scheduledTripState, "airport first lodging");
 if (
   lookup.itinerary[0]?.lodging.id !== "vienna-hotel" ||
   lookup.matches[0]?.id !== "vienna-airport" ||

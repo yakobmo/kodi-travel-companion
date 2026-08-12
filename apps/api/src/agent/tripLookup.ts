@@ -23,6 +23,27 @@ function tokens(text: string) {
   );
 }
 
+function scheduledDateOrder(note: string | undefined) {
+  const normalized = (note ?? "").toLocaleLowerCase();
+  const numeric = normalized.match(/(?:^|\D)(\d{1,2})\s*[./-]\s*(\d{1,2})(?:\D|$)/u);
+  if (numeric) {
+    const day = Number(numeric[1]);
+    const month = Number(numeric[2]);
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) return month * 32 + day;
+  }
+
+  const namedMonths: Array<[RegExp, number]> = [
+    [/(\d{1,2})\s*(?:ב|ל)?אוגוסט|(?:august|aug)\s*(\d{1,2})/iu, 8],
+    [/(\d{1,2})\s*(?:ב|ל)?ספטמבר|(?:september|sep)\s*(\d{1,2})/iu, 9]
+  ];
+  for (const [pattern, month] of namedMonths) {
+    const match = normalized.match(pattern);
+    const day = Number(match?.[1] ?? match?.[2]);
+    if (day >= 1 && day <= 31) return month * 32 + day;
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+
 export function lookupTripContext(tripState: TripState, query: string): TripLookupResult {
   const queryTokens = tokens(query);
   const matches = tripState.places
@@ -57,10 +78,21 @@ export function lookupTripContext(tripState: TripState, query: string): TripLook
       sourceIndex: place.sourceIndex
     }));
 
+  const itinerary = buildTripTimelineFromGoogleMapOrder(tripState)
+    .map((segment) => ({
+      segment,
+      savedLodging: tripState.places.find((place) => place.id === segment.lodging.id)
+    }))
+    .sort(
+      (first, second) =>
+        scheduledDateOrder(first.savedLodging?.note) - scheduledDateOrder(second.savedLodging?.note) ||
+        first.segment.index - second.segment.index
+    );
+
   return {
     query,
-    itinerary: buildTripTimelineFromGoogleMapOrder(tripState).map((segment) => ({
-      order: segment.index + 1,
+    itinerary: itinerary.map(({ segment }, index) => ({
+      order: index + 1,
       lodging: segment.lodging,
       regionHints: segment.regionHints,
       dateHints: segment.dateHints
