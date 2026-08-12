@@ -41,6 +41,7 @@ $requiredFiles = @(
   "apps/api/src/agent/openaiSpeech.ts",
   "apps/api/src/agent/tripReferenceResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
+  "apps/api/src/agent/tripLookup.ts",
   "apps/api/src/whatsapp/connector.ts",
   "apps/api/src/billing/tripUsagePool.ts",
   "apps/api/src/domain/types.ts",
@@ -2064,8 +2065,8 @@ foreach ($requiredGoogleEnvName in @("GOOGLE_MAPS_API_KEY=", "GOOGLE_OAUTH_CLIEN
   }
 }
 
-if (-not $envExampleSource.Contains("OPENAI_WEB_SEARCH_ENABLED=true")) {
-  throw ".env.example must expose OPENAI_WEB_SEARCH_ENABLED for Kodi's agentic web-search capability."
+if (-not $envExampleSource.Contains("OPENAI_WEB_SEARCH_ENABLED=false")) {
+  throw ".env.example must not advertise web search until Kodi has a provider-neutral executable web-search tool contract."
 }
 
 foreach ($requiredAiFallbackEnvName in @("GEMINI_API_KEY=", "GEMINI_AGENT_MODEL=gemini-2.5-flash-lite")) {
@@ -2106,7 +2107,7 @@ foreach ($requiredProviderEnvName in @(
 
 if (
   -not $serverSource.Contains("/api/agent/providers/readiness") -or
-  -not $serverSource.Contains("free_first_paid_last") -or
+  -not $serverSource.Contains("stable_primary_with_fallbacks") -or
   -not $serverSource.Contains("paid_last_resort") -or
   -not $serverSource.Contains("מנהל הטיול יקבל את פרטי האבחון בנפרד")
 ) {

@@ -14,6 +14,7 @@ const allowedIntents: AgentMessageResponse["intent"][] = [
 
 export interface KodiReplyInput extends AgentMessageRequest {
   rulesReply: AgentMessageResponse;
+  deadlineAt?: number;
   runtimeGuidance?: string[];
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
@@ -81,7 +82,7 @@ function getPreferredAgentProvider() {
     return "gemini";
   }
 
-  return hasFreeFleetProvider() ? "fleet" : hasGeminiProvider() ? "gemini" : "openai";
+  return hasGeminiProvider() ? "gemini" : hasFreeFleetProvider() ? "fleet" : "openai";
 }
 
 function getAgentTimeoutMs() {
@@ -226,6 +227,12 @@ function toValidReply(parsed: {
             : 20_000
       };
     }
+    if (candidate.type === "trip_lookup" && typeof candidate.query === "string" && candidate.query.trim().length >= 2) {
+      return {
+        type: "trip_lookup",
+        query: candidate.query.trim().slice(0, 300)
+      };
+    }
     return undefined;
   })();
 
@@ -275,6 +282,7 @@ function distanceKm(first: { lat: number; lng: number }, second: { lat: number; 
 }
 
 function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReplyInput) {
+  const isToolRequest = Boolean(reply.metadata?.toolRequest);
   const asksInHebrew = /[\u0590-\u05ff]/u.test(input.message);
   const hebrewCharacters = reply.text.match(/[\u0590-\u05ff]/gu)?.length ?? 0;
   const leaksInternalDetails =
@@ -282,11 +290,12 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
       reply.text
     );
 
-  if (reply.text.trim().length < 12 || leaksInternalDetails || (asksInHebrew && hebrewCharacters < 4)) {
+  if ((!isToolRequest && reply.text.trim().length < 12) || leaksInternalDetails || (!isToolRequest && asksInHebrew && hebrewCharacters < 4)) {
     throw new Error("ai_reply_quality_rejected");
   }
 
   const pretendsToolWorkWillContinueAfterTheReply =
+    !isToolRequest &&
     !input.routeEstimate?.route &&
     /(?:חכ(?:ה|ו)|המתן|להמתין|אקבל\s+תוצאות|ממתין|אני\s+(?:אחשב|מחשב|אבדוק)|אחזור\s+אלי[ךכ]|wait\s+(?:for|until)|waiting\s+for)/iu.test(
       reply.text
@@ -296,6 +305,7 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
   }
 
   const claimsUnverifiedRouteMeasurement =
+    !isToolRequest &&
     !input.routeEstimate?.route &&
     /(?:כמה זמן|זמן נסיעה|מרחק|כמה רחוק|ETA)/iu.test(input.message) &&
     /(?:\d[\d.,]*\s*(?:שעות?|דקות?|ק(?:י)?לומטר(?:ים)?|ק[״"]?מ|km|minutes?|hours?))/iu.test(reply.text);
@@ -333,7 +343,8 @@ function buildInstructions() {
     "conversationFocus is structured memory. When it contains a corrected location, discard earlier recommendations that conflict with it.",
     "Decide naturally what the user means. Do not behave like a keyword router, FAQ, setup wizard, or status bot.",
     "Treat supplied tool results as evidence: Google Places for places, Routes for travel, reverse geocoding for current location, and tripState for the saved itinerary. Tool results may be incomplete; reject any result that conflicts geographically with the request.",
-    "Choose tools yourself when they materially improve the answer. A travel-time or distance claim requires the route tool; never estimate it yourself. For a route between saved places return toolRequest {type:'route',originPlaceId,destinationPlaceId,travelMode}. For current place research return {type:'places_search',query,anchorPlaceId?,radiusMeters?}. Use exact IDs from savedPlaceDirectory. Do not promise future work.",
+    "Choose tools yourself when they materially improve the answer. Use {type:'trip_lookup',query} to inspect the private itinerary, ordered lodgings, saved points, corrections, or relative references such as first/next lodging. Use {type:'route',originPlaceId,destinationPlaceId,travelMode} for verified time and distance. Use {type:'places_search',query,anchorPlaceId?,radiusMeters?} for Google place discovery. Do not promise future work.",
+    "If the user refers to trip information that is not already unambiguous in the supplied context, call trip_lookup instead of asking them to repeat data stored in the trip.",
     "When a tool result is supplied, synthesize it with your own travel reasoning and answer every part of the question. Omit toolRequest.",
     "Use live location only when it is supplied as fresh evidence. The server attaches verified navigation links; never fabricate or rewrite them.",
     "Never present a concrete place as verified unless it appears in supplied evidence. If evidence is missing, say so briefly or ask one useful clarification instead of guessing.",
@@ -386,31 +397,8 @@ function shouldPreferFastPlacesAnswer(input: KodiReplyInput, text: string) {
 }
 
 function shouldUseReasoningModel(input: KodiReplyInput) {
-  if (process.env.KODI_REASONING_MODEL_ENABLED === "false") {
-    return false;
-  }
-
-  return true;
-
-  const text = input.message.toLowerCase();
-
-  return [
-    "budget",
-    "cash",
-    "weather",
-    "forecast",
-    "accessible",
-    "next year",
-    "plan",
-    "תקציב",
-    "מזומן",
-    "מזג",
-    "אוויר",
-    "נגיש",
-    "נגישות",
-    "שנה הבאה",
-    "תכנון"
-  ].some((term) => text.includes(term));
+  void input;
+  return process.env.KODI_REASONING_MODEL_ENABLED !== "false";
 }
 
 function getAgentModel(input: KodiReplyInput) {
@@ -615,6 +603,7 @@ function buildAgentPayload(input: KodiReplyInput, options: { reasoningMode: bool
     externalPlacesSearch: input.externalPlacesSearch,
     reverseGeocodedLocation: input.reverseGeocodedLocation,
     routeEstimate: input.routeEstimate,
+    tripLookupResult: input.tripLookupResult,
     tripContextClarification: input.tripContextClarification,
     runtimeGuidance: input.runtimeGuidance ?? [],
     permissionPolicy: input.permissionPolicy,
@@ -753,7 +742,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
   const reasoningMode = shouldUseReasoningModel(input);
   const timeoutMs = getAgentTimeoutMs();
   const preferredProvider = getPreferredAgentProvider();
-  const deadlineAt = Date.now() + getAgentTotalBudgetMs();
+  const deadlineAt = input.deadlineAt ?? Date.now() + getAgentTotalBudgetMs();
   const remainingTimeoutMs = () => Math.max(Math.min(timeoutMs, deadlineAt - Date.now()), 500);
   let geminiPrimaryAttempted = preferredProvider === "gemini" && hasGeminiProvider();
   const preOpenAiAttempts: string[] = [];

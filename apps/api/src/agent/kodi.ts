@@ -3,6 +3,7 @@ import type { GooglePlacesTextSearchResult } from "../google/placesSearch.js";
 import type { GoogleReverseGeocodeResult } from "../google/reverseGeocode.js";
 import type { GoogleRouteEstimateResult } from "../google/routes.js";
 import { buildTripTimelineFromGoogleMapOrder } from "./tripTimelineResolver.js";
+import type { TripLookupResult } from "./tripLookup.js";
 
 export interface ConversationMessage {
   author: string;
@@ -26,6 +27,7 @@ export interface AgentMessageRequest {
   externalPlacesSearch?: GooglePlacesTextSearchResult;
   reverseGeocodedLocation?: GoogleReverseGeocodeResult;
   routeEstimate?: GoogleRouteEstimateResult;
+  tripLookupResult?: TripLookupResult;
   tripContextClarification?: string;
   conversationFocus?: {
     effectiveMessage: string;

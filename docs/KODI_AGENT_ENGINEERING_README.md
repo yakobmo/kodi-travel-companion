@@ -216,6 +216,16 @@ If the agent fails, the UI should show an explicit local error and must not pers
 
 ## Current Architecture Direction
 
+Canonical runtime contract:
+
+- Kodi has one product identity even when provider failover is used.
+- A configured Gemini model is the stable primary reasoning provider by default; the free fleet is availability fallback and OpenAI is the paid last resort.
+- Provider adapters receive the same prompt, structured trip reference, retrieved conversation memory, tool contract, and validation.
+- The model decides whether to call a tool. The backend validates tool arguments, executes tools, and enforces permissions; it does not write conversational answers by keyword routing.
+- Kodi can call `trip_lookup` for the ordered itinerary and saved trip facts, so it does not ask the user to repeat information already stored in the trip.
+- Runtime tools currently exposed to the model are trip lookup, Google Routes, and Google Places. Web search and shared trip mutations are not advertised as active skills until they have real executable tool contracts.
+- The rules module is a failure/result formatter only. It is not Kodi's conversational brain.
+
 Short term:
 
 - Keep current `/api/agent/message`.

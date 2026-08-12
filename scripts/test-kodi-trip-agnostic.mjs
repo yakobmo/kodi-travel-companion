@@ -1,11 +1,22 @@
 #!/usr/bin/env node
 
 import { resolveTripReferenceForMessage } from "../apps/api/dist/agent/tripReferenceResolver.js";
+import { lookupTripContext } from "../apps/api/dist/agent/tripLookup.js";
 
 const tripState = {
   trip: { id: "trip_austria", groupId: "group_alps", name: "Austria", groupName: "Alps family" },
   summary: { name: "Austria", groupName: "Alps family" },
   places: [
+    {
+      id: "vienna-airport",
+      name: "Vienna International Airport",
+      type: "transport",
+      lat: 48.1103,
+      lng: 16.5697,
+      sourceIndex: 0,
+      tags: ["airport", "arrival"],
+      visitState: "planned"
+    },
     {
       id: "vienna-hotel",
       name: "Vienna Central Hotel",
@@ -39,6 +50,15 @@ if (firstHotel.destination?.label !== "Vienna Central Hotel" || firstHotel.desti
 const namedPlace = resolveTripReferenceForMessage("איך מגיעים ל-Hohensalzburg Fortress?", tripState);
 if (namedPlace.destination?.label !== "Hohensalzburg Fortress" || namedPlace.destination.source !== "named_place") {
   throw new Error(`Expected named active-trip place, received ${JSON.stringify(namedPlace)}`);
+}
+
+const lookup = lookupTripContext(tripState, "airport first lodging");
+if (
+  lookup.itinerary[0]?.lodging.id !== "vienna-hotel" ||
+  lookup.matches[0]?.id !== "vienna-airport" ||
+  !lookup.matches.some((place) => place.id === "vienna-hotel")
+) {
+  throw new Error(`Expected generic trip lookup to return arrival and ordered lodging context, received ${JSON.stringify(lookup)}`);
 }
 
 console.log("Kodi trip-agnostic resolver test passed.");

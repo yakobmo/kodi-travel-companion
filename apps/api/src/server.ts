@@ -84,6 +84,7 @@ import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripSta
 import { createNavigationLinks } from "./navigation/links.js";
 import { buildKodiReplyFromContext, type AgentMessageResponse, type ConversationMessage } from "./agent/kodi.js";
 import { resolveConversationFocus } from "./agent/conversationFocus.js";
+import { lookupTripContext } from "./agent/tripLookup.js";
 import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
 import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
 import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
@@ -1685,6 +1686,14 @@ function getAgentPlacesToolRequest(reply: AgentMessageResponse | undefined) {
     anchorPlaceId: typeof candidate.anchorPlaceId === "string" ? candidate.anchorPlaceId : undefined,
     radiusMeters: typeof candidate.radiusMeters === "number" ? candidate.radiusMeters : 20_000
   };
+}
+
+function getAgentTripLookupRequest(reply: AgentMessageResponse | undefined) {
+  const value = reply?.metadata?.toolRequest;
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type !== "trip_lookup" || typeof candidate.query !== "string") return undefined;
+  return { query: candidate.query };
 }
 
 function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessageResponse {
@@ -3749,9 +3758,10 @@ function buildAgentProviderReadinessPayload() {
     process.env.AI_AGENT_PROVIDER?.trim().toLowerCase() ||
     "automatic";
   const openAiOnly = preferredProvider === "openai" || preferredProvider === "openai-only";
-  const geminiFirst = preferredProvider === "gemini" || preferredProvider === "google";
+  const geminiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY);
+  const geminiFirst = preferredProvider === "gemini" || preferredProvider === "google" || (preferredProvider === "automatic" && geminiConfigured);
   return {
-    strategy: openAiOnly ? "explicit_openai" : "free_first_paid_last",
+    strategy: openAiOnly ? "explicit_openai" : "stable_primary_with_fallbacks",
     order: openAiOnly ? ["openai"] : geminiFirst ? ["gemini", ...freeFleet.order, "openai"] : [...freeFleet.order, "gemini", "openai"],
     totalBudgetMs: Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 20_000),
     safeFallback: "short_user_message_with_admin_diagnostics",
@@ -3806,6 +3816,8 @@ app.get("/api/trips/demo/agent-providers", async (req, res) => {
 
 app.post("/api/agent/message", async (req, res) => {
   const agentStartedAt = Date.now();
+  const configuredAgentBudgetMs = Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 20_000);
+  const agentDeadlineAt = agentStartedAt + Math.min(Math.max(configuredAgentBudgetMs, 10_000), 22_000);
   const { message, member, recentMessages, context, tripGroupId } = req.body ?? {};
 
   if (typeof message !== "string" || message.trim().length === 0) {
@@ -3910,44 +3922,71 @@ app.post("/api/agent/message", async (req, res) => {
     }
   });
   const shouldCallAgentProvider = openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
-  let openAiReply =
-    shouldCallAgentProvider
-      ? await tryBuildKodiReply({
-          ...req.body,
-          message: currentMessage,
-          tripState,
-          conversationFocus,
-          externalPlacesSearch,
-          reverseGeocodedLocation,
-          routeEstimate,
-          tripContextClarification: undefined,
-          runtimeGuidance,
-          permissionPolicy,
-          rulesReply
-        })
-      : undefined;
-  const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply?.reply);
-  if (agentPlacesToolRequest) {
-    const anchorPlace = agentPlacesToolRequest.anchorPlaceId
-      ? tripState.places.find(
-          (place) =>
-            place.id === agentPlacesToolRequest.anchorPlaceId &&
-            typeof place.lat === "number" &&
-            typeof place.lng === "number"
-        )
-      : undefined;
-    placesUsageGate = authorizeTripUsageCapability({
-      usagePool,
-      capability: "google_places",
-      triggeringMember: { id: normalizedMember.id, role: normalizedMember.role }
+  let openAiReply: Awaited<ReturnType<typeof tryBuildKodiReply>> | undefined;
+  let tripLookupResult;
+  let activeRulesReply = rulesReply;
+  const completedToolCalls = new Set<string>();
+
+  // One bounded agent loop: the model chooses when it needs private trip data or
+  // Google evidence. The server only authorizes and executes those tools.
+  for (let turn = 0; shouldCallAgentProvider && turn < 5 && Date.now() < agentDeadlineAt - 500; turn += 1) {
+    openAiReply = await tryBuildKodiReply({
+      ...req.body,
+      message: currentMessage,
+      tripState,
+      conversationFocus,
+      externalPlacesSearch,
+      tripLookupResult,
+      reverseGeocodedLocation,
+      routeEstimate,
+      tripContextClarification: undefined,
+      runtimeGuidance,
+      permissionPolicy,
+      deadlineAt: agentDeadlineAt,
+      rulesReply: activeRulesReply
     });
-    if (placesUsageGate.allowed) {
+
+    const tripLookupRequest = getAgentTripLookupRequest(openAiReply.reply);
+    const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
+    const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
+    if (!tripLookupRequest && !agentPlacesToolRequest && !agentRouteToolRequest) break;
+
+    const toolSignature = JSON.stringify(
+      tripLookupRequest ?? agentPlacesToolRequest ?? agentRouteToolRequest
+    );
+    if (completedToolCalls.has(toolSignature)) {
+      openAiReply = { ...openAiReply, reply: undefined, status: "error", error: "agent_repeated_tool_call" };
+      break;
+    }
+    completedToolCalls.add(toolSignature);
+
+    if (tripLookupRequest) {
+      tripLookupResult = lookupTripContext(tripState, tripLookupRequest.query);
+      continue;
+    }
+
+    if (agentPlacesToolRequest) {
+      const anchorPlace = agentPlacesToolRequest.anchorPlaceId
+        ? tripState.places.find(
+            (place) =>
+              place.id === agentPlacesToolRequest.anchorPlaceId &&
+              typeof place.lat === "number" &&
+              typeof place.lng === "number"
+          )
+        : undefined;
+      const searchLocation = anchorPlace ?? requestCurrentLocation;
+      placesUsageGate = authorizeTripUsageCapability({
+        usagePool,
+        capability: "google_places",
+        triggeringMember: { id: normalizedMember.id, role: normalizedMember.role }
+      });
+      if (!placesUsageGate.allowed) break;
       externalPlacesSearch = await searchGooglePlacesText({
         query: agentPlacesToolRequest.query,
-        ...(anchorPlace ? { lat: anchorPlace.lat, lng: anchorPlace.lng } : {}),
+        ...(searchLocation ? { lat: searchLocation.lat, lng: searchLocation.lng } : {}),
         radiusMeters: agentPlacesToolRequest.radiusMeters,
         languageCode: "he",
-        regionCode: "GR"
+        ...(searchLocation ? {} : { regionCode: "GR" })
       });
       void safeRecordUsageGateEvent({
         usageGate: placesUsageGate,
@@ -3956,24 +3995,12 @@ app.post("/api/agent/message", async (req, res) => {
       });
       runtimeGuidance = [
         ...runtimeGuidance,
-        `The places tool ran the agent's query${anchorPlace ? ` around ${anchorPlace.name}` : " without a geographic anchor"}. Check every result against the requested trip geography; ignore mismatches.`
+        `The places tool ran the agent's query${anchorPlace ? ` around ${anchorPlace.name}` : requestCurrentLocation ? " around the member's fresh location" : " without a geographic anchor"}. Check every result against the requested geography; ignore mismatches.`
       ];
-      const toolReply = await tryBuildKodiReply({
-        ...req.body,
-        message: currentMessage,
-        tripState,
-        conversationFocus,
-        externalPlacesSearch,
-        reverseGeocodedLocation,
-        runtimeGuidance,
-        permissionPolicy,
-        rulesReply
-      });
-      if (toolReply.reply) openAiReply = toolReply;
+      continue;
     }
-  }
-  const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply?.reply) : undefined;
-  if (agentRouteToolRequest) {
+
+    if (!agentRouteToolRequest) break;
     const originPlace = tripState.places.find(
       (place) =>
         place.id === agentRouteToolRequest.originPlaceId &&
@@ -4022,7 +4049,7 @@ app.post("/api/agent/message", async (req, res) => {
         ...runtimeGuidance,
         `The route tool was executed from ${originPlace.name} to ${destinationPlace.name}. Answer now from routeEstimate; do not promise future work.`
       ];
-      const toolRulesReply = buildKodiReplyFromContext({
+      activeRulesReply = buildKodiReplyFromContext({
         ...req.body,
         message: currentMessage,
         tripState,
@@ -4031,28 +4058,15 @@ app.post("/api/agent/message", async (req, res) => {
         reverseGeocodedLocation,
         routeEstimate
       });
-      const finalAgentReply = await tryBuildKodiReply({
-        ...req.body,
-        message: currentMessage,
-        tripState,
-        conversationFocus,
-        externalPlacesSearch,
-        reverseGeocodedLocation,
-        routeEstimate,
-        runtimeGuidance,
-        permissionPolicy,
-        rulesReply: toolRulesReply
-      });
-      if (finalAgentReply.reply) {
-        openAiReply = finalAgentReply;
-      } else {
-        openAiReply = {
-          ...finalAgentReply,
-          reply: toolRulesReply,
-          error: finalAgentReply.error ?? "route_tool_answer_provider_unavailable"
-        };
-      }
+      continue;
     }
+    break;
+  }
+
+  if (openAiReply?.reply && openAiReply.reply.metadata?.toolRequest) {
+    openAiReply = routeEstimate?.route
+      ? { ...openAiReply, reply: activeRulesReply, error: openAiReply.error ?? "agent_tool_loop_deadline" }
+      : { ...openAiReply, reply: undefined, status: "error", error: openAiReply.error ?? "agent_tool_loop_incomplete" };
   }
   if (
     openAiUsageGate.allowed &&
