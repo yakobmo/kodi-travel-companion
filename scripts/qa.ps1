@@ -1348,7 +1348,8 @@ if (-not $openAiSource.Contains("Kodi speaks about himself in masculine Hebrew")
 if (
   -not $openAiSource.Contains("Decide naturally what the user means") -or
   -not $openAiSource.Contains("Never present a concrete place as verified") -or
-  -not $openAiSource.Contains("Speak natural, specific Hebrew")
+  -not $openAiSource.Contains("Speak natural, specific Hebrew") -or
+  -not $openAiSource.Contains("one or two relevant emoji")
 ) {
   throw "Kodi model prompt must preserve agent-first behavior: tools ground the answer, but the model reasons and writes naturally."
 }
