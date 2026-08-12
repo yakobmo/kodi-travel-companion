@@ -1513,7 +1513,8 @@ if (
 }
 
 if (
-  -not $appSource.Contains("DEFAULT_NEARBY_MAP_RADIUS_KM = 40") -or
+  -not $appSource.Contains("DEFAULT_NEARBY_MAP_RADIUS_KM = 15") -or
+  -not $appSource.Contains("latitudeRadius = DEFAULT_NEARBY_MAP_RADIUS_KM / 111") -or
   -not $appSource.Contains("DEFAULT_VISIBLE_PLACE_LIMIT = 40") -or
   -not $appSource.Contains("const mapPlaces = useMemo(() =>") -or
   -not $appSource.Contains("filter((place) => typeof place.lat === `"number`" && typeof place.lng === `"number`")") -or

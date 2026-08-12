@@ -51,7 +51,7 @@ type BeforeInstallPromptEvent = Event & {
 type PlaceType = "lodging" | "attraction" | "water" | "food" | "transport" | "stop" | "unknown";
 type PlaceListFilter = "route" | "nearby" | "all" | "lodging" | "attractions";
 type ActivationStep = "welcome" | "google" | "manager_location" | "ready";
-const DEFAULT_NEARBY_MAP_RADIUS_KM = 40;
+const DEFAULT_NEARBY_MAP_RADIUS_KM = 15;
 const DEFAULT_VISIBLE_PLACE_LIMIT = 40;
 const LOCATION_FRESHNESS_MS = 2 * 60 * 1000;
 const LOCAL_LOCATION_AUTO_START_KEY = "kodi-location-auto-start";
@@ -2600,15 +2600,16 @@ export function App() {
           googleMapPlaceMarkerSignatureRef.current = placeMarkerSignature;
         }
 
-        mapPlaces.forEach((place) => {
-          if (typeof place.lat !== "number" || typeof place.lng !== "number") {
-            return;
-          }
+        if (!mapAnchorLocation) {
+          mapPlaces.forEach((place) => {
+            if (typeof place.lat !== "number" || typeof place.lng !== "number") {
+              return;
+            }
 
-          const position = { lat: place.lat, lng: place.lng };
-          bounds.extend(position);
-          hasBounds = true;
-        });
+            bounds.extend({ lat: place.lat, lng: place.lng });
+            hasBounds = true;
+          });
+        }
 
         if (googleMapDynamicMarkerSignatureRef.current !== dynamicMarkerSignature) {
           googleMapDynamicMarkersRef.current.forEach((marker) => marker.setMap?.(null));
@@ -2643,8 +2644,19 @@ export function App() {
           googleMapDynamicMarkerSignatureRef.current = dynamicMarkerSignature;
         }
 
-        if (currentLocation) {
-          bounds.extend({ lat: currentLocation.lat, lng: currentLocation.lng });
+        if (mapAnchorLocation) {
+          const latitudeRadius = DEFAULT_NEARBY_MAP_RADIUS_KM / 111;
+          const longitudeRadius =
+            DEFAULT_NEARBY_MAP_RADIUS_KM /
+            Math.max(111 * Math.cos((mapAnchorLocation.lat * Math.PI) / 180), 1);
+          bounds.extend({
+            lat: mapAnchorLocation.lat - latitudeRadius,
+            lng: mapAnchorLocation.lng - longitudeRadius
+          });
+          bounds.extend({
+            lat: mapAnchorLocation.lat + latitudeRadius,
+            lng: mapAnchorLocation.lng + longitudeRadius
+          });
           hasBounds = true;
         }
 
