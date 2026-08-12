@@ -277,6 +277,7 @@ function distanceKm(first: { lat: number; lng: number }, second: { lat: number; 
 
 function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReplyInput) {
   const isToolRequest = Boolean(reply.metadata?.toolRequest);
+  const asksForRouteMeasurement = /(?:מרחק|זמן נסיעה|כמה זמן|כמה רחוק|ETA)/iu.test(input.message);
   const asksInHebrew = /[\u0590-\u05ff]/u.test(input.message);
   const hebrewCharacters = reply.text.match(/[\u0590-\u05ff]/gu)?.length ?? 0;
   const leaksInternalDetails =
@@ -296,6 +297,14 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
     );
   if (pretendsToolWorkWillContinueAfterTheReply) {
     throw new Error("ai_reply_ignored_ready_tool_evidence");
+  }
+
+  const hasResolvableSavedRoute =
+    (input.tripLookupResult?.matches.filter(
+      (place) => typeof place.lat === "number" && typeof place.lng === "number"
+    ).length ?? 0) >= 2;
+  if (!isToolRequest && !input.routeEstimate?.route && asksForRouteMeasurement && hasResolvableSavedRoute) {
+    throw new Error("ai_reply_route_tool_required");
   }
 
   const claimsUnverifiedRouteMeasurement =
