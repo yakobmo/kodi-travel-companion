@@ -219,7 +219,7 @@ If the agent fails, the UI should show an explicit local error and must not pers
 Canonical runtime contract:
 
 - Kodi has one product identity even when provider failover is used.
-- A configured Gemini model is the stable primary reasoning provider by default; the free fleet is availability fallback and OpenAI is the paid last resort.
+- A configured OpenAI model is the primary reasoning provider by default; Gemini and the free fleet are availability fallbacks.
 - Provider adapters receive the same prompt, structured trip reference, retrieved conversation memory, tool contract, and validation.
 - The model decides whether to call a tool. The backend validates tool arguments, executes tools, and enforces permissions; it does not write conversational answers by keyword routing.
 - Kodi receives the complete saved-place directory and ordered lodging itinerary as private trip memory on every turn, so it does not ask the user to repeat stored information.

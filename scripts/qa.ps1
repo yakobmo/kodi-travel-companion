@@ -403,7 +403,8 @@ if (
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
   -not $openAiAgentSource.Contains("chat.completions.create") -or
   -not $openAiAgentSource.Contains("generateContent") -or
-  -not $openAiAgentSource.Contains("openai_quota_fallback_to_gemini") -or
+  -not $openAiAgentSource.Contains("openai_error_fallback_to_gemini") -or
+  -not $openAiAgentSource.Contains("paid_primary_fallback_to_free_provider_fleet") -or
   -not $openAiAgentSource.Contains("lodgingTimeline") -or
   -not $openAiAgentSource.Contains("tripArc") -or
   -not $openAiAgentSource.Contains("KODI_AGENT_TOTAL_BUDGET_MS") -or
@@ -2109,8 +2110,8 @@ foreach ($requiredProviderEnvName in @(
 
 if (
   -not $serverSource.Contains("/api/agent/providers/readiness") -or
-  -not $serverSource.Contains("stable_primary_with_fallbacks") -or
-  -not $serverSource.Contains("paid_last_resort") -or
+  -not $serverSource.Contains("paid_primary_with_free_fallbacks") -or
+  -not $serverSource.Contains("paid_primary") -or
   -not $serverSource.Contains("תקלה טכנית מנעה את השלמת התשובה")
 ) {
   throw "Kodi must expose safe provider diagnostics and explain total fleet exhaustion without inventing an answer."

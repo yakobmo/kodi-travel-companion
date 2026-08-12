@@ -5021,7 +5021,7 @@ export function App() {
                         <small>{provider.model || "לא נבחר מודל"}</small>
                         <p>{status.detail}</p>
                         <div className="agent-provider-meta">
-                          <span>{provider.role === "paid_last_resort" ? "גיבוי בתשלום" : "מסלול חינמי"}</span>
+                          <span>{provider.role === "paid_primary" ? "סוכן ראשי בתשלום" : "גיבוי חינמי"}</span>
                           {isLastActive ? <span className="agent-provider-active">ענה לאחרונה</span> : null}
                           {provider.failureCount ? <span>{provider.failureCount} כשלים אחרונים</span> : null}
                         </div>

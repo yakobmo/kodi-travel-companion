@@ -3785,12 +3785,10 @@ function buildAgentProviderReadinessPayload() {
     process.env.KODI_AGENT_PROVIDER?.trim().toLowerCase() ||
     process.env.AI_AGENT_PROVIDER?.trim().toLowerCase() ||
     "automatic";
-  const openAiOnly = preferredProvider === "openai" || preferredProvider === "openai-only";
-  const geminiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY);
-  const geminiFirst = preferredProvider === "gemini" || preferredProvider === "google" || (preferredProvider === "automatic" && geminiConfigured);
+  const openAiOnly = preferredProvider === "openai-only";
   return {
-    strategy: openAiOnly ? "explicit_openai" : "stable_primary_with_fallbacks",
-    order: openAiOnly ? ["openai"] : geminiFirst ? ["gemini", ...freeFleet.order, "openai"] : [...freeFleet.order, "gemini", "openai"],
+    strategy: openAiOnly ? "explicit_openai" : "paid_primary_with_free_fallbacks",
+    order: openAiOnly ? ["openai"] : ["openai", "gemini", ...freeFleet.order],
     totalBudgetMs: Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 20_000),
     safeFallback: "short_user_message_with_admin_diagnostics",
     providers: [
@@ -3799,7 +3797,7 @@ function buildAgentProviderReadinessPayload() {
         configured: Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY),
         state: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY ? "configured_unverified" : "not_configured",
         model: process.env.GEMINI_AGENT_MODEL?.trim() || process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash",
-        role: "free_primary"
+        role: "free_fallback"
       },
       ...freeFleet.providers.map((provider) => ({
         ...provider,
@@ -3811,7 +3809,7 @@ function buildAgentProviderReadinessPayload() {
         configured: Boolean(process.env.OPENAI_API_KEY),
         state: process.env.OPENAI_API_KEY ? "configured_unverified" : "not_configured",
         model: process.env.OPENAI_AGENT_FAST_MODEL?.trim() || "gpt-4.1-mini",
-        role: "paid_last_resort"
+        role: "paid_primary"
       }
     ],
     circuitBreaker: {

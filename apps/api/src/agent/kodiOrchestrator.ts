@@ -82,7 +82,13 @@ function getPreferredAgentProvider() {
     return "gemini";
   }
 
-  return hasGeminiProvider() ? "gemini" : hasFreeFleetProvider() ? "fleet" : "openai";
+  return process.env.OPENAI_API_KEY?.trim()
+    ? "openai"
+    : hasGeminiProvider()
+      ? "gemini"
+      : hasFreeFleetProvider()
+        ? "fleet"
+        : "openai";
 }
 
 function getAgentTimeoutMs() {
@@ -684,10 +690,17 @@ async function tryBuildKodiReplyWithGemini(
 
   const attempts: string[] = [];
   let lastError: unknown;
+  const deadlineAt = Date.now() + options.timeoutMs;
 
   for (const model of getGeminiModelCandidates()) {
+    const remainingMs = deadlineAt - Date.now();
+    if (remainingMs < 500) break;
     try {
-      const reply = await tryBuildKodiReplyWithGeminiModel(input, { ...options, model });
+      const reply = await tryBuildKodiReplyWithGeminiModel(input, {
+        ...options,
+        timeoutMs: Math.min(options.timeoutMs, remainingMs),
+        model
+      });
       if (reply) {
         return attempts.length > 0
           ? {
@@ -729,6 +742,8 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
   const preferredProvider = getPreferredAgentProvider();
   const deadlineAt = input.deadlineAt ?? Date.now() + getAgentTotalBudgetMs();
   const remainingTimeoutMs = () => Math.max(Math.min(timeoutMs, deadlineAt - Date.now()), 500);
+  const paidPrimaryTimeoutMs = () => Math.max(Math.min(8_000, remainingTimeoutMs()), 500);
+  const geminiFallbackTimeoutMs = () => Math.max(Math.min(5_500, remainingTimeoutMs()), 500);
   let geminiPrimaryAttempted = preferredProvider === "gemini" && hasGeminiProvider();
   const preOpenAiAttempts: string[] = [];
 
@@ -866,7 +881,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
           max_tokens: reasoningMode ? 1100 : 900,
           response_format: { type: "json_object" }
         }),
-        remainingTimeoutMs()
+        paidPrimaryTimeoutMs()
       );
     }
 
@@ -879,7 +894,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
         input: inputPayload
       }),
-      remainingTimeoutMs()
+      paidPrimaryTimeoutMs()
     );
   }
 
@@ -910,27 +925,6 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       }
 
       if (isOpenAiQuotaError(error)) {
-        try {
-          geminiFallbackAttempted = true;
-          const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs: remainingTimeoutMs() });
-          if (geminiReply) {
-            return {
-              ...geminiReply,
-              error: "openai_quota_fallback_to_gemini",
-              providerAttempts: [...providerAttempts, ...(geminiReply.providerAttempts ?? [])]
-            };
-          }
-        } catch (geminiError) {
-          lastError = geminiError;
-          providerAttempts.push(...((geminiError as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
-        }
-
-        if (!hasGeminiProvider()) {
-          lastError = new Error(
-            "openai_quota_exceeded_and_gemini_fallback_not_configured: set GEMINI_API_KEY or GOOGLE_AI_API_KEY"
-          );
-        }
-
         break;
       }
 
@@ -964,7 +958,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
 
   if (!geminiFallbackAttempted) {
     try {
-      const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs: remainingTimeoutMs() });
+      const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs: geminiFallbackTimeoutMs() });
       if (geminiReply) {
         return {
           ...geminiReply,
@@ -975,6 +969,20 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
     } catch (geminiError) {
       lastError = geminiError;
       providerAttempts.push(...((geminiError as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
+    }
+  }
+
+  if (hasFreeFleetProvider() && Date.now() < deadlineAt - 500) {
+    const freeFleetReply = await tryConfiguredFreeFleet();
+    providerAttempts.push(...freeFleetReply.providerAttempts);
+    if (freeFleetReply.status === "ready" && freeFleetReply.reply) {
+      return {
+        status: "ready",
+        model: freeFleetReply.model,
+        reply: freeFleetReply.reply,
+        error: "paid_primary_fallback_to_free_provider_fleet",
+        providerAttempts
+      };
     }
   }
 
