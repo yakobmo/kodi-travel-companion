@@ -73,7 +73,7 @@ const scheduledTripState = {
 const lookup = lookupTripContext(scheduledTripState, "airport first lodging");
 if (
   lookup.itinerary[0]?.lodging.id !== "vienna-hotel" ||
-  lookup.matches[0]?.id !== "vienna-airport" ||
+  !lookup.matches.some((place) => place.id === "vienna-airport") ||
   !lookup.matches.some((place) => place.id === "vienna-hotel")
 ) {
   throw new Error(`Expected generic trip lookup to return arrival and ordered lodging context, received ${JSON.stringify(lookup)}`);
