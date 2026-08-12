@@ -277,7 +277,6 @@ function distanceKm(first: { lat: number; lng: number }, second: { lat: number; 
 
 function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReplyInput) {
   const isToolRequest = Boolean(reply.metadata?.toolRequest);
-  const asksForRouteMeasurement = /(?:מרחק|זמן נסיעה|כמה זמן|כמה רחוק|ETA)/iu.test(input.message);
   const asksInHebrew = /[\u0590-\u05ff]/u.test(input.message);
   const hebrewCharacters = reply.text.match(/[\u0590-\u05ff]/gu)?.length ?? 0;
   const leaksInternalDetails =
@@ -287,24 +286,6 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
 
   if ((!isToolRequest && reply.text.trim().length < 12) || leaksInternalDetails || (!isToolRequest && asksInHebrew && hebrewCharacters < 4)) {
     throw new Error("ai_reply_quality_rejected");
-  }
-
-  const pretendsToolWorkWillContinueAfterTheReply =
-    !isToolRequest &&
-    !input.routeEstimate?.route &&
-    /(?:חכ(?:ה|ו)|המתן|להמתין|אקבל\s+תוצאות|ממתין|אני\s+(?:אחשב|מחשב|אבדוק)|אחזור\s+אלי[ךכ]|wait\s+(?:for|until)|waiting\s+for)/iu.test(
-      reply.text
-    );
-  if (pretendsToolWorkWillContinueAfterTheReply) {
-    throw new Error("ai_reply_ignored_ready_tool_evidence");
-  }
-
-  const hasResolvableSavedRoute =
-    (input.tripLookupResult?.matches.filter(
-      (place) => typeof place.lat === "number" && typeof place.lng === "number"
-    ).length ?? 0) >= 2;
-  if (!isToolRequest && !input.routeEstimate?.route && asksForRouteMeasurement && hasResolvableSavedRoute) {
-    throw new Error("ai_reply_route_tool_required");
   }
 
   const claimsUnverifiedRouteMeasurement =
@@ -347,9 +328,8 @@ function buildInstructions() {
     "Decide naturally what the user means. Do not behave like a keyword router, FAQ, setup wizard, or status bot.",
     "Treat supplied tool results as evidence: Google Places for places, Routes for travel, reverse geocoding for current location, and tripState for the saved itinerary. Tool results may be incomplete; reject any result that conflicts geographically with the request.",
     "tripLookupResult is Kodi's authoritative private trip memory: it contains the complete saved-place directory plus the lodging itinerary in travel order. Resolve references such as first/next lodging from that order; never ask the user to repeat facts present there.",
-    "Resolve ordinary category references from trip memory before asking a question: for example, 'the airport' means the sole saved airport when there is only one relevant candidate. Ask for clarification only when the stored data contains multiple genuinely plausible candidates.",
-    "Choose external tools yourself when they materially improve the answer. Use {type:'route',originPlaceId,destinationPlaceId,travelMode} for verified time and distance. Use {type:'places_search',query,anchorPlaceId?,radiusMeters?} for Google place discovery. Do not promise future work.",
-    "Tool calls are immediate JSON actions, not conversational promises: return toolRequest now and keep text brief. If the user asks for travel time or distance and routeEstimate is absent, use the saved place IDs in tripLookupResult and call route. Never invent or approximate the measurement.",
+    "Choose external tools yourself when your reasoning needs evidence. Available tools are {type:'route',originPlaceId,destinationPlaceId,travelMode} and {type:'places_search',query,anchorPlaceId?,radiusMeters?}. You may answer directly, call a tool, or ask a useful clarification; make that decision from the full conversation and trip memory.",
+    "Tool calls are immediate JSON actions, not conversational promises: return toolRequest now and keep text brief. Never invent or approximate a measurement.",
     "When a tool result is supplied, synthesize it with your own travel reasoning and answer every part of the question. Omit toolRequest.",
     "Use live location only when it is supplied as fresh evidence. The server attaches verified navigation links; never fabricate or rewrite them.",
     "Never present a concrete place as verified unless it appears in supplied evidence. If evidence is missing, say so briefly or ask one useful clarification instead of guessing.",

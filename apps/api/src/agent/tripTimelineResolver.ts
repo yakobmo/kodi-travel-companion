@@ -165,11 +165,6 @@ export function buildTripTimelineFromGoogleMapOrder(tripState: TripState): TripT
   });
 }
 
-function detectRequestedRegion(message: string, timeline: TripTimelineSegment[]) {
-  const normalized = message.toLowerCase();
-  return timeline.flatMap((segment) => segment.regionHints).find((hint) => normalized.includes(hint));
-}
-
 function detectRelativeDays(message: string) {
   const normalized = message.toLowerCase();
   const explicit = normalized.match(/(?:in|after)\s+(\d+)\s+days/);
@@ -208,27 +203,6 @@ function findCurrentSegmentIndex(tripState: TripState, timeline: TripTimelineSeg
 
 export function resolveTimelineReferenceForMessage(message: string, tripState: TripState): TripTimelineResolution {
   const timeline = buildTripTimelineFromGoogleMapOrder(tripState);
-  const requestedRegion = detectRequestedRegion(message, timeline);
-
-  if (requestedRegion) {
-    const regionMatches = timeline.filter((segment) => segment.regionHints.includes(requestedRegion));
-    const match = regionMatches[0];
-
-    if (match && hasCoordinates(match.lodging)) {
-      return {
-        confidence: regionMatches.length === 1 ? "high" : "medium",
-        reason: `Matched requested region '${requestedRegion}' to a Google map lodging segment.`,
-        segment: match,
-        referenceLocation: {
-          lat: match.lodging.lat,
-          lng: match.lodging.lng,
-          label: match.lodging.name,
-          source: "timeline_lodging"
-        }
-      };
-    }
-  }
-
   const relativeDays = detectRelativeDays(message);
   if (relativeDays !== undefined) {
     const currentIndex = findCurrentSegmentIndex(tripState, timeline);

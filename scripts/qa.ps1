@@ -399,7 +399,7 @@ if (
   -not $openAiAgentSource.Contains("conversationFocus is structured memory") -or
   -not $openAiAgentSource.Contains('type: "places_search"') -or
   -not $openAiAgentSource.Contains("ai_reply_geographic_evidence_rejected") -or
-  -not $openAiAgentSource.Contains("ai_reply_ignored_ready_tool_evidence") -or
+  -not $openAiAgentSource.Contains("ai_reply_unverified_route_measurement") -or
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
   -not $openAiAgentSource.Contains("chat.completions.create") -or
   -not $openAiAgentSource.Contains("generateContent") -or
@@ -2110,7 +2110,7 @@ if (
   -not $serverSource.Contains("/api/agent/providers/readiness") -or
   -not $serverSource.Contains("stable_primary_with_fallbacks") -or
   -not $serverSource.Contains("paid_last_resort") -or
-  -not $serverSource.Contains("מנהל הטיול יקבל את פרטי האבחון בנפרד")
+  -not $serverSource.Contains("תקלה טכנית מנעה את השלמת התשובה")
 ) {
   throw "Kodi must expose safe provider diagnostics and explain total fleet exhaustion without inventing an answer."
 }

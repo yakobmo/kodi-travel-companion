@@ -787,7 +787,7 @@ function sanitizeProviderErrorForRuntime(error: string | undefined) {
     .slice(0, 220);
 }
 
-type ProviderFailureKind = "quota" | "not_configured" | "timeout" | "auth" | "unknown";
+type ProviderFailureKind = "validation" | "quota" | "not_configured" | "timeout" | "auth" | "unknown";
 
 function classifyProviderFailure(openAiReply: KodiReplyResult | undefined): ProviderFailureKind {
   if (!openAiReply) {
@@ -806,6 +806,10 @@ function classifyProviderFailure(openAiReply: KodiReplyResult | undefined): Prov
     return "not_configured";
   }
 
+  if (combinedError.includes("ai_reply_")) {
+    return "validation";
+  }
+
   if (combinedError.includes("429") || combinedError.includes("quota") || combinedError.includes("billing")) {
     return "quota";
   }
@@ -821,12 +825,44 @@ function classifyProviderFailure(openAiReply: KodiReplyResult | undefined): Prov
   return openAiReply?.status === "not_configured" ? "not_configured" : "unknown";
 }
 
-function buildAgentUnavailableText(providerFailureKind: ProviderFailureKind) {
-  if (providerFailureKind === "timeout") {
-    return "אני מתעכב יותר מהרגיל ולא רוצה להשאיר אתכם מחכים. נסו שוב בעוד רגע.";
-  }
+function describeProviderAttempt(attempt: string) {
+  const separator = attempt.indexOf(":");
+  const provider = separator > 0 ? attempt.slice(0, separator) : "provider";
+  const reason = separator > 0 ? attempt.slice(separator + 1).toLowerCase() : attempt.toLowerCase();
+  const providerName =
+    provider === "gemini"
+      ? "Gemini"
+      : provider === "openrouter"
+        ? "OpenRouter"
+        : provider === "cloudflare"
+          ? "Cloudflare"
+          : provider === "groq"
+            ? "Groq"
+            : provider === "openai"
+              ? "OpenAI"
+              : provider;
 
-  return "אני לא מצליח להשלים תשובה אמינה כרגע. נסו שוב בעוד רגע; מנהל הטיול יקבל את פרטי האבחון בנפרד.";
+  if (reason.includes(":ready") || reason.endsWith("ready")) return undefined;
+  if (reason.includes("timeout") || reason.includes("deadline_exhausted")) return `${providerName} לא השיב בתוך מגבלת הזמן`;
+  if (reason.includes("429") || reason.includes("no credits") || reason.includes("quota") || reason.includes("billing")) {
+    return `${providerName} אינו זמין בגלל מכסה או יתרת קרדיטים`;
+  }
+  if (reason.includes("401") || reason.includes("403") || reason.includes("unauthorized") || reason.includes("api key")) {
+    return `${providerName} דחה את פרטי ההתחברות`;
+  }
+  if (reason.includes("ai_reply_")) return `${providerName} החזיר תשובה שנדחתה בבדיקת אמינות`;
+  if (reason.includes("circuit_open")) return `${providerName} הושבת זמנית לאחר כשלים חוזרים`;
+  return `${providerName} נכשל: ${sanitizeProviderErrorForRuntime(reason) ?? "שגיאה לא מזוהה"}`;
+}
+
+function buildAgentUnavailableText(openAiReply: KodiReplyResult | undefined) {
+  const details = Array.from(
+    new Set((openAiReply?.providerAttempts ?? []).map(describeProviderAttempt).filter((item): item is string => Boolean(item)))
+  );
+  if (details.length === 0 && openAiReply?.error) {
+    details.push(`מנוע הסוכן נכשל: ${sanitizeProviderErrorForRuntime(openAiReply.error) ?? "שגיאה לא מזוהה"}`);
+  }
+  return `תקלה טכנית מנעה את השלמת התשובה${details.length > 0 ? `: ${details.join("; ")}` : ""}. לא הוצגה תשובה חלקית או לא מאומתת.`;
 }
 
 function buildAgentUnavailableReply(
@@ -836,7 +872,7 @@ function buildAgentUnavailableReply(
   const providerFailureKind = classifyProviderFailure(openAiReply);
   return {
     ...baseReply,
-    text: buildAgentUnavailableText(providerFailureKind),
+    text: buildAgentUnavailableText(openAiReply),
     intent: "general",
     requiresAdminApproval: false,
     source: "agent_unavailable",
