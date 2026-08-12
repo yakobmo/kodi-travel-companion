@@ -227,12 +227,6 @@ function toValidReply(parsed: {
             : 20_000
       };
     }
-    if (candidate.type === "trip_lookup" && typeof candidate.query === "string" && candidate.query.trim().length >= 2) {
-      return {
-        type: "trip_lookup",
-        query: candidate.query.trim().slice(0, 300)
-      };
-    }
     return undefined;
   })();
 
@@ -343,9 +337,9 @@ function buildInstructions() {
     "conversationFocus is structured memory. When it contains a corrected location, discard earlier recommendations that conflict with it.",
     "Decide naturally what the user means. Do not behave like a keyword router, FAQ, setup wizard, or status bot.",
     "Treat supplied tool results as evidence: Google Places for places, Routes for travel, reverse geocoding for current location, and tripState for the saved itinerary. Tool results may be incomplete; reject any result that conflicts geographically with the request.",
-    "Choose tools yourself when they materially improve the answer. Use {type:'trip_lookup',query} to inspect the private itinerary, ordered lodgings, saved points, corrections, or relative references such as first/next lodging. Use {type:'route',originPlaceId,destinationPlaceId,travelMode} for verified time and distance. Use {type:'places_search',query,anchorPlaceId?,radiusMeters?} for Google place discovery. Do not promise future work.",
-    "Tool calls are immediate JSON actions, not conversational promises: return toolRequest now and keep text brief. If the user asks for travel time or distance and routeEstimate is absent, you must call route when both saved place IDs are known; otherwise call trip_lookup first. Never invent or approximate the measurement.",
-    "If the user refers to trip information that is not already unambiguous in the supplied context, call trip_lookup instead of asking them to repeat data stored in the trip.",
+    "tripLookupResult is Kodi's authoritative private trip memory: it contains the complete saved-place directory plus the lodging itinerary in travel order. Resolve references such as first/next lodging from that order; never ask the user to repeat facts present there.",
+    "Choose external tools yourself when they materially improve the answer. Use {type:'route',originPlaceId,destinationPlaceId,travelMode} for verified time and distance. Use {type:'places_search',query,anchorPlaceId?,radiusMeters?} for Google place discovery. Do not promise future work.",
+    "Tool calls are immediate JSON actions, not conversational promises: return toolRequest now and keep text brief. If the user asks for travel time or distance and routeEstimate is absent, use the saved place IDs in tripLookupResult and call route. Never invent or approximate the measurement.",
     "When a tool result is supplied, synthesize it with your own travel reasoning and answer every part of the question. Omit toolRequest.",
     "Use live location only when it is supplied as fresh evidence. The server attaches verified navigation links; never fabricate or rewrite them.",
     "Never present a concrete place as verified unless it appears in supplied evidence. If evidence is missing, say so briefly or ask one useful clarification instead of guessing.",

@@ -1688,14 +1688,6 @@ function getAgentPlacesToolRequest(reply: AgentMessageResponse | undefined) {
   };
 }
 
-function getAgentTripLookupRequest(reply: AgentMessageResponse | undefined) {
-  const value = reply?.metadata?.toolRequest;
-  if (!value || typeof value !== "object") return undefined;
-  const candidate = value as Record<string, unknown>;
-  if (candidate.type !== "trip_lookup" || typeof candidate.query !== "string") return undefined;
-  return { query: candidate.query };
-}
-
 function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessageResponse {
   const greeting = memberName ? `${memberName}, ` : "";
 
@@ -3923,7 +3915,7 @@ app.post("/api/agent/message", async (req, res) => {
   });
   const shouldCallAgentProvider = openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
   let openAiReply: Awaited<ReturnType<typeof tryBuildKodiReply>> | undefined;
-  let tripLookupResult;
+  const tripLookupResult = lookupTripContext(tripState, currentMessage);
   let activeRulesReply = rulesReply;
   const completedToolCalls = new Set<string>();
 
@@ -3946,24 +3938,18 @@ app.post("/api/agent/message", async (req, res) => {
       rulesReply: activeRulesReply
     });
 
-    const tripLookupRequest = getAgentTripLookupRequest(openAiReply.reply);
     const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
     const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
-    if (!tripLookupRequest && !agentPlacesToolRequest && !agentRouteToolRequest) break;
+    if (!agentPlacesToolRequest && !agentRouteToolRequest) break;
 
     const toolSignature = JSON.stringify(
-      tripLookupRequest ?? agentPlacesToolRequest ?? agentRouteToolRequest
+      agentPlacesToolRequest ?? agentRouteToolRequest
     );
     if (completedToolCalls.has(toolSignature)) {
       openAiReply = { ...openAiReply, reply: undefined, status: "error", error: "agent_repeated_tool_call" };
       break;
     }
     completedToolCalls.add(toolSignature);
-
-    if (tripLookupRequest) {
-      tripLookupResult = lookupTripContext(tripState, tripLookupRequest.query);
-      continue;
-    }
 
     if (agentPlacesToolRequest) {
       const anchorPlace = agentPlacesToolRequest.anchorPlaceId
