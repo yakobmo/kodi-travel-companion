@@ -74,7 +74,9 @@ function getPreferredAgentProvider() {
   const configuredProvider =
     process.env.KODI_AGENT_PROVIDER?.trim().toLowerCase() || process.env.AI_AGENT_PROVIDER?.trim().toLowerCase() || "";
 
-  if (configuredProvider === "openai-only" || configuredProvider === "openai") {
+  // A configured paid OpenAI connection is always Kodi's primary provider.
+  // Other providers are fallbacks only and must not bypass a paid connection.
+  if (process.env.OPENAI_API_KEY?.trim() || configuredProvider === "openai-only" || configuredProvider === "openai") {
     return "openai";
   }
 
@@ -672,7 +674,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
             { role: "system", content: buildInstructions() },
             { role: "user", content: inputPayload }
           ],
-          max_tokens: reasoningMode ? 1100 : 900,
+          max_completion_tokens: reasoningMode ? 1100 : 900,
           response_format: { type: "json_object" }
         }),
         paidPrimaryTimeoutMs()

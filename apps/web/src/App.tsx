@@ -1473,8 +1473,8 @@ export function App() {
       if (announceResult) {
         setAgentProvidersMessage(
           payload.paidConnection.configured
-            ? "החיבור נבדק: GPT מחובר ומוכן. לצפייה ביתרה הכספית יש לפתוח את חשבון OpenAI."
-            : "החיבור נבדק: GPT בתשלום עדיין אינו מחובר."
+            ? "המצב עודכן: GPT מוגדר כסוכן הראשי."
+            : "המצב עודכן: GPT בתשלום עדיין אינו מחובר."
         );
       }
     } catch {
@@ -4979,61 +4979,50 @@ export function App() {
                 <small>{getAgentMenuSummary(agentProviders, agentProvidersState)}</small>
               </span>
             </button>
-            <p>מצב קודי ושרשרת הגיבוי. מפתחות ופרטים סודיים אינם מוצגים כאן.</p>
             {agentProvidersState === "loading" ? <div className="agent-provider-message">בודק את הסוכנים...</div> : null}
             {agentProvidersMessage ? <div className={`agent-provider-message ${agentProvidersState === "error" ? "error" : "success"}`} role="status">{agentProvidersMessage}</div> : null}
             {agentProviders ? (
               <>
+                <div className="agent-paid-setup">
+                  <strong>{agentProviders.paidConnection.configured ? "GPT בתשלום מחובר כסוכן הראשי" : "חיבור GPT בתשלום"}</strong>
+                  <p>
+                    {agentProviders.paidConnection.configured
+                      ? "קודי פונה תחילה ל־GPT. רק אם הוא אינו זמין, המערכת עוברת לגיבוי חינמי."
+                      : "כדי שקודי יעבוד באופן קבוע ומקצועי, יש להפעיל חיוב לפי שימוש ולחבר מפתח API."}
+                  </p>
+                  <div>
+                    <a href={agentProviders.paidConnection.billingUrl} rel="noreferrer" target="_blank">
+                      {agentProviders.paidConnection.configured ? "יתרה ושימוש ב־OpenAI" : "הפעלת תשלום ב־OpenAI"} <ExternalLink size={14} aria-hidden="true" />
+                    </a>
+                    {!agentProviders.paidConnection.configured ? (
+                      <a href={agentProviders.paidConnection.apiKeysUrl} rel="noreferrer" target="_blank">יצירת מפתח API <ExternalLink size={14} aria-hidden="true" /></a>
+                    ) : null}
+                  </div>
+                </div>
                 <div className="agent-active-summary">
-                  <span>הסוכן האחרון שענה</span>
+                  <span>פעיל לאחרונה</span>
                   <strong>{getAgentProviderName(agentProviders.lastActiveProvider?.provider ?? agentProviders.lastSuccessfulFreeFallback?.provider ?? "עדיין לא ידוע")}</strong>
                   {agentProviders.lastActiveProvider ? (
                     <small>{agentProviders.lastActiveProvider.model} · {(agentProviders.lastActiveProvider.latencyMs / 1000).toFixed(1)} שניות</small>
-                  ) : <small>הנתון יתעדכן לאחר תשובת AI הבאה.</small>}
+                  ) : <small>יתעדכן לאחר התשובה הבאה.</small>}
                 </div>
-                <div className="agent-provider-order" aria-label="סדר מעבר בין הסוכנים">
-                  {agentProviders.order.map((provider, index) => <span key={`${provider}-${index}`}>{index + 1}. {getAgentProviderName(provider)}</span>)}
-                </div>
+                <strong className="agent-fallback-title">גיבויים חינמיים</strong>
                 <div className="agent-provider-list">
-                  {agentProviders.providers.map((provider) => {
+                  {agentProviders.providers.filter((provider) => provider.role !== "paid_primary").map((provider) => {
                     const status = getAgentProviderStatus(provider);
                     const isLastActive = agentProviders.lastActiveProvider?.provider === provider.provider || (!agentProviders.lastActiveProvider && agentProviders.lastSuccessfulFreeFallback?.provider === provider.provider);
                     return (
                       <article className={`agent-provider-card agent-provider-${status.tone}`} key={provider.provider}>
                         <div><strong>{getAgentProviderName(provider.provider)}</strong><span className="agent-provider-status">{status.label}</span></div>
                         <small>{provider.model || "לא נבחר מודל"}</small>
-                        <p>{status.detail}</p>
-                        <div className="agent-provider-meta">
-                          <span>{provider.role === "paid_primary" ? "סוכן ראשי בתשלום" : "גיבוי חינמי"}</span>
-                          {isLastActive ? <span className="agent-provider-active">ענה לאחרונה</span> : null}
-                          {provider.failureCount ? <span>{provider.failureCount} כשלים אחרונים</span> : null}
-                        </div>
+                        {isLastActive ? <span className="agent-provider-active">ענה לאחרונה</span> : null}
                       </article>
                     );
                   })}
                 </div>
-                <small className="agent-credit-note"><strong>{agentProviders.paidConnection.balance.label}</strong><span>{agentProviders.paidConnection.balance.detail}</span></small>
-                <div className="agent-paid-setup">
-                  <strong>{agentProviders.paidConnection.configured ? "יתרה וחיוב של GPT" : "הפעלת GPT בתשלום לפי שימוש"}</strong>
-                  <p>
-                    {agentProviders.paidConnection.configured
-                      ? "GPT כבר מחובר לקודי. היתרה הכספית המדויקת מוצגת ומנוהלת בחשבון OpenAI."
-                      : "אין צורך במנוי חודשי. פותחים חיוב מראש, יוצרים מפתח ומחברים אותו לשרת המאובטח של האפליקציה."}
-                  </p>
-                  <div>
-                    <a href={agentProviders.paidConnection.billingUrl} rel="noreferrer" target="_blank">
-                      {agentProviders.paidConnection.configured ? "פתח יתרה ב־OpenAI" : "פתיחת חיוב ב־OpenAI"} <ExternalLink size={14} aria-hidden="true" />
-                    </a>
-                    {!agentProviders.paidConnection.configured ? (
-                      <a href={agentProviders.paidConnection.apiKeysUrl} rel="noreferrer" target="_blank">יצירת מפתח API <ExternalLink size={14} aria-hidden="true" /></a>
-                    ) : null}
-                  </div>
-                  <small>המפתח נשמר בשרת בלבד ואינו מוצג למשתתפי הטיול.</small>
-                </div>
                 <button className="secondary-menu-action" disabled={agentProvidersState === "loading"} onClick={() => void loadAgentProviders(true)} type="button">
-                  {agentProvidersState === "loading" ? "בודק חיבור..." : "בדוק חיבור"}
+                  {agentProvidersState === "loading" ? "מרענן..." : "רענן מצב"}
                 </button>
-                <small>נבדק לאחרונה: {new Date(agentProviders.checkedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}</small>
               </>
             ) : null}
           </section>

@@ -536,13 +536,17 @@ $webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encod
 if (
   -not $webAppSource.Contains('LOCAL_AGENT_SETUP_INTRO_KEY') -or
   -not $webAppSource.Contains('הפעל את קודי המקצועי') -or
-  -not $webAppSource.Contains('פתח יתרה ב־OpenAI') -or
+  -not $webAppSource.Contains('יתרה ושימוש ב־OpenAI') -or
+  -not $webAppSource.Contains('GPT בתשלום מחובר כסוכן הראשי') -or
+  -not $webAppSource.Contains('גיבויים חינמיים') -or
   -not $webAppSource.Contains('void loadAgentProviders(true)') -or
   -not $webAppSource.Contains('getAgentMenuSummary(agentProviders, agentProvidersState)') -or
   -not $serverSource.Contains('paidConnection: {') -or
-  -not $serverSource.Contains('provider_portal_only')
+  -not $serverSource.Contains('provider_portal_only') -or
+  -not $openAiAgentSource.Contains('max_completion_tokens') -or
+  $openAiAgentSource.Contains('max_tokens: reasoningMode')
 ) {
-  throw "Kodi paid-agent onboarding must be visible in the first conversation and expose an honest connection status in agent management."
+  throw "Kodi paid-agent onboarding must put the working paid provider first and show free fallbacks separately."
 }
 
 $placesMenuPosition = $webAppSource.IndexOf('trip-places-menu')
