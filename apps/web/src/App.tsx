@@ -57,6 +57,7 @@ const LOCATION_FRESHNESS_MS = 2 * 60 * 1000;
 const LOCAL_LOCATION_AUTO_START_KEY = "kodi-location-auto-start";
 const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
 const LOCAL_REMOVED_PLACE_IDS_KEY = "kodi-removed-place-ids";
+const LOCAL_AGENT_SETUP_INTRO_KEY = "kodi-agent-setup-intro-v1";
 const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
 const retiredDemoMemberIds = new Set(["dad", "noa", "grandma"]);
 const retiredDemoNames = new Set(["אבא", "אמא", "נועה", "סבתא", "QA"]);
@@ -513,6 +514,48 @@ interface AgentProvidersResponse {
     model: string;
     at: string;
   };
+  paidConnection: {
+    provider: "openai";
+    configured: boolean;
+    billingUrl: string;
+    apiKeysUrl: string;
+    balance: {
+      status: "provider_portal_only";
+      exactAvailable: false;
+      label: string;
+      detail: string;
+    };
+  };
+}
+
+function shouldShowAgentSetupIntro() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(LOCAL_AGENT_SETUP_INTRO_KEY) !== "dismissed";
+  } catch {
+    return true;
+  }
+}
+
+function rememberAgentSetupIntro() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LOCAL_AGENT_SETUP_INTRO_KEY, "dismissed");
+  } catch {
+    // The introduction remains dismissible for this session when storage is blocked.
+  }
+}
+
+function getAgentMenuSummary(agentProviders: AgentProvidersResponse | null, state: string) {
+  if (state === "loading") return "בודק זמינות...";
+  if (state === "error") return "נדרשת בדיקה";
+  if (!agentProviders) return "מצב הסוכן והתשלום";
+  if (!agentProviders.paidConnection.configured) return "נדרשת הפעלת GPT";
+  if (agentProviders.lastActiveProvider?.provider === "openai") return "GPT פעיל";
+  if (agentProviders.lastActiveProvider) {
+    return `GPT מחובר · כרגע ${getAgentProviderName(agentProviders.lastActiveProvider.provider)}`;
+  }
+  return "GPT מחובר ומוכן";
 }
 
 function getAgentProviderName(provider: string) {
@@ -1335,6 +1378,7 @@ export function App() {
   const [agentProviders, setAgentProviders] = useState<AgentProvidersResponse | null>(null);
   const [agentProvidersState, setAgentProvidersState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [agentProvidersMessage, setAgentProvidersMessage] = useState("");
+  const [showAgentSetupIntro, setShowAgentSetupIntro] = useState(shouldShowAgentSetupIntro);
   const [tripDocuments, setTripDocuments] = useState<TripDocument[]>([]);
   const [documentState, setDocumentState] = useState<"idle" | "loading" | "uploading" | "ready" | "error">("idle");
   const [documentMessage, setDocumentMessage] = useState("");
@@ -1442,6 +1486,18 @@ export function App() {
 
     setAgentProvidersState("loading");
     setAgentProvidersMessage("");
+    setOpenMenuSection("agents");
+    void loadAgentProviders();
+  }
+
+  function dismissAgentSetupIntro() {
+    rememberAgentSetupIntro();
+    setShowAgentSetupIntro(false);
+  }
+
+  function openAgentManagement() {
+    dismissAgentSetupIntro();
+    setSecondaryMenuOpen(true);
     setOpenMenuSection("agents");
     void loadAgentProviders();
   }
@@ -2316,6 +2372,11 @@ export function App() {
   const managerMember = members.find((member) => member.role === "owner" || member.role === "admin") ?? activeMember;
   const mapAnchorLocation = currentLocation;
   const canManageDocuments = activeMember.role === "owner" || activeMember.role === "admin";
+
+  useEffect(() => {
+    if (!(activeMember.role === "owner" || activeMember.role === "admin")) return;
+    void loadAgentProviders();
+  }, [activeMember.id, activeMember.role]);
 
   async function loadTripDocuments() {
     setDocumentState("loading");
@@ -4903,6 +4964,67 @@ export function App() {
             )}
           </div>
         </section>
+        {(activeMember.role === "owner" || activeMember.role === "admin") ? (
+          <section className={`menu-block agent-providers-menu ${openMenuSection === "agents" ? "menu-block-open" : ""}`} aria-label="ניהול סוכנים">
+            <button aria-expanded={openMenuSection === "agents"} className="menu-block-toggle" onClick={toggleAgentProvidersMenu} type="button">
+              <span className="agent-menu-toggle-copy">
+                <span>ניהול סוכנים</span>
+                <small>{getAgentMenuSummary(agentProviders, agentProvidersState)}</small>
+              </span>
+            </button>
+            <p>מצב קודי ושרשרת הגיבוי. מפתחות ופרטים סודיים אינם מוצגים כאן.</p>
+            {agentProvidersState === "loading" ? <div className="agent-provider-message">בודק את הסוכנים...</div> : null}
+            {agentProvidersMessage ? <div className="agent-provider-message error" role="status">{agentProvidersMessage}</div> : null}
+            {agentProviders ? (
+              <>
+                <div className="agent-active-summary">
+                  <span>הסוכן האחרון שענה</span>
+                  <strong>{getAgentProviderName(agentProviders.lastActiveProvider?.provider ?? agentProviders.lastSuccessfulFreeFallback?.provider ?? "עדיין לא ידוע")}</strong>
+                  {agentProviders.lastActiveProvider ? (
+                    <small>{agentProviders.lastActiveProvider.model} · {(agentProviders.lastActiveProvider.latencyMs / 1000).toFixed(1)} שניות</small>
+                  ) : <small>הנתון יתעדכן לאחר תשובת AI הבאה.</small>}
+                </div>
+                <div className="agent-provider-order" aria-label="סדר מעבר בין הסוכנים">
+                  {agentProviders.order.map((provider, index) => <span key={`${provider}-${index}`}>{index + 1}. {getAgentProviderName(provider)}</span>)}
+                </div>
+                <div className="agent-provider-list">
+                  {agentProviders.providers.map((provider) => {
+                    const status = getAgentProviderStatus(provider);
+                    const isLastActive = agentProviders.lastActiveProvider?.provider === provider.provider || (!agentProviders.lastActiveProvider && agentProviders.lastSuccessfulFreeFallback?.provider === provider.provider);
+                    return (
+                      <article className={`agent-provider-card agent-provider-${status.tone}`} key={provider.provider}>
+                        <div><strong>{getAgentProviderName(provider.provider)}</strong><span className="agent-provider-status">{status.label}</span></div>
+                        <small>{provider.model || "לא נבחר מודל"}</small>
+                        <p>{status.detail}</p>
+                        <div className="agent-provider-meta">
+                          <span>{provider.role === "paid_primary" ? "סוכן ראשי בתשלום" : "גיבוי חינמי"}</span>
+                          {isLastActive ? <span className="agent-provider-active">ענה לאחרונה</span> : null}
+                          {provider.failureCount ? <span>{provider.failureCount} כשלים אחרונים</span> : null}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                <small className="agent-credit-note"><strong>{agentProviders.paidConnection.balance.label}</strong><span>{agentProviders.paidConnection.balance.detail}</span></small>
+                {!agentProviders.paidConnection.configured ? (
+                  <div className="agent-paid-setup">
+                    <strong>הפעלת GPT בתשלום לפי שימוש</strong>
+                    <p>אין צורך במנוי חודשי. פותחים חיוב מראש, יוצרים מפתח ומחברים אותו לשרת המאובטח של האפליקציה.</p>
+                    <div>
+                      <a href={agentProviders.paidConnection.billingUrl} rel="noreferrer" target="_blank">פתיחת חיוב ב־OpenAI <ExternalLink size={14} aria-hidden="true" /></a>
+                      <a href={agentProviders.paidConnection.apiKeysUrl} rel="noreferrer" target="_blank">יצירת מפתח API <ExternalLink size={14} aria-hidden="true" /></a>
+                    </div>
+                    <small>המפתח נשמר בשרת בלבד ואינו מוצג למשתתפי הטיול.</small>
+                  </div>
+                ) : null}
+                <button className="secondary-menu-action" disabled={agentProvidersState === "loading"} onClick={() => void loadAgentProviders()} type="button">
+                  {agentProvidersState === "loading" ? "בודק..." : "בדוק עכשיו"}
+                </button>
+                <small>נבדק לאחרונה: {new Date(agentProviders.checkedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}</small>
+              </>
+            ) : null}
+          </section>
+        ) : null}
         <section className={`menu-block documents-menu ${openMenuSection === "documents" ? "menu-block-open" : ""}`} aria-label="המסמכים של קודי">
           <button aria-expanded={openMenuSection === "documents"} className="menu-block-toggle" onClick={toggleDocumentsMenu} type="button">
             המסמכים של קודי
@@ -4966,85 +5088,6 @@ export function App() {
             </div>
           ) : null}
         </section>
-        {(activeMember.role === "owner" || activeMember.role === "admin") ? (
-          <section className={`menu-block agent-providers-menu ${openMenuSection === "agents" ? "menu-block-open" : ""}`} aria-label="ניהול סוכנים">
-            <button
-              aria-expanded={openMenuSection === "agents"}
-              className="menu-block-toggle"
-              onClick={toggleAgentProvidersMenu}
-              type="button"
-            >
-              ניהול סוכנים
-            </button>
-            <p>מצב קודי ושרשרת הגיבוי. מפתחות ופרטים סודיים אינם מוצגים כאן.</p>
-            {agentProvidersState === "loading" ? <div className="agent-provider-message">בודק את הסוכנים...</div> : null}
-            {agentProvidersMessage ? <div className="agent-provider-message error" role="status">{agentProvidersMessage}</div> : null}
-            {agentProviders ? (
-              <>
-                <div className="agent-active-summary">
-                  <span>הסוכן האחרון שענה</span>
-                  <strong>
-                    {getAgentProviderName(
-                      agentProviders.lastActiveProvider?.provider ??
-                        agentProviders.lastSuccessfulFreeFallback?.provider ??
-                        "עדיין לא ידוע"
-                    )}
-                  </strong>
-                  {agentProviders.lastActiveProvider ? (
-                    <small>
-                      {agentProviders.lastActiveProvider.model} · {(agentProviders.lastActiveProvider.latencyMs / 1000).toFixed(1)} שניות
-                    </small>
-                  ) : (
-                    <small>הנתון יתעדכן לאחר תשובת AI הבאה.</small>
-                  )}
-                </div>
-                <div className="agent-provider-order" aria-label="סדר מעבר בין הסוכנים">
-                  {agentProviders.order.map((provider, index) => (
-                    <span key={`${provider}-${index}`}>
-                      {index + 1}. {getAgentProviderName(provider)}
-                    </span>
-                  ))}
-                </div>
-                <div className="agent-provider-list">
-                  {agentProviders.providers.map((provider) => {
-                    const status = getAgentProviderStatus(provider);
-                    const isLastActive =
-                      agentProviders.lastActiveProvider?.provider === provider.provider ||
-                      (!agentProviders.lastActiveProvider &&
-                        agentProviders.lastSuccessfulFreeFallback?.provider === provider.provider);
-                    return (
-                      <article className={`agent-provider-card agent-provider-${status.tone}`} key={provider.provider}>
-                        <div>
-                          <strong>{getAgentProviderName(provider.provider)}</strong>
-                          <span className="agent-provider-status">{status.label}</span>
-                        </div>
-                        <small>{provider.model || "לא נבחר מודל"}</small>
-                        <p>{status.detail}</p>
-                        <div className="agent-provider-meta">
-                          <span>{provider.role === "paid_primary" ? "סוכן ראשי בתשלום" : "גיבוי חינמי"}</span>
-                          {isLastActive ? <span className="agent-provider-active">ענה לאחרונה</span> : null}
-                          {provider.failureCount ? <span>{provider.failureCount} כשלים אחרונים</span> : null}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-                <small className="agent-credit-note">
-                  יתרה מדויקת אינה זמינה מכל הספקים. כשמכסה נגמרת קודי מזהה את השגיאה, מסמן אותה כאן ועובר אוטומטית לסוכן הבא.
-                </small>
-                <button
-                  className="secondary-menu-action"
-                  disabled={agentProvidersState === "loading"}
-                  onClick={() => void loadAgentProviders()}
-                  type="button"
-                >
-                  {agentProvidersState === "loading" ? "בודק..." : "בדוק עכשיו"}
-                </button>
-                <small>נבדק לאחרונה: {new Date(agentProviders.checkedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}</small>
-              </>
-            ) : null}
-          </section>
-        ) : null}
         <section className={`menu-block invite-menu ${openMenuSection === "invite" ? "menu-block-open" : ""}`} data-consent-model="per-device-location-consent" data-invite-model="whatsapp-style-share-link">
           <button
             aria-expanded={openMenuSection === "invite"}
@@ -5389,6 +5432,29 @@ export function App() {
         </nav>
 
         <div className="messages" aria-live="polite" onScroll={updateMessageScrollIntent} ref={messagesContainerRef}>
+          {showAgentSetupIntro &&
+          agentProvidersState !== "idle" &&
+          agentProvidersState !== "loading" &&
+          (activeMember.role === "owner" || activeMember.role === "admin") ? (
+            <article className="message kodi agent-setup-intro" aria-label="הפעלת הסוכן המקצועי">
+              <div className="message-header">
+                <strong>קודי</strong>
+              </div>
+              <p>
+                {agentProviders?.paidConnection.configured
+                  ? "הסוכן המקצועי GPT מחובר ומוכן לעבודה שוטפת. אפשר לראות בכל עת מי פעיל ומה מצב החיבור בניהול הסוכנים. 👋"
+                  : "כדי שאוכל לעבוד באופן שוטף, מקצועי וזמין לאורך הטיול, מומלץ להפעיל את הסוכן הראשי GPT בתשלום לפי שימוש. הסוכנים החינמיים יישארו זמינים כגיבוי. 👋"}
+              </p>
+              <div className="agent-setup-intro-actions">
+                <button onClick={openAgentManagement} type="button">
+                  {agentProviders?.paidConnection.configured ? "הצג ניהול סוכנים" : "הפעל את קודי המקצועי"}
+                </button>
+                <button className="secondary-agent-intro-action" onClick={dismissAgentSetupIntro} type="button">
+                  {agentProviders?.paidConnection.configured ? "הבנתי" : "אמשיך כרגע בחינם"}
+                </button>
+              </div>
+            </article>
+          ) : null}
           {visibleChatMessages.map((message, index) => (
             <article
               className={`message${message.author === "קודי" ? " kodi" : ""}${

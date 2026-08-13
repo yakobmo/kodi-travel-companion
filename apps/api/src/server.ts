@@ -3828,6 +3828,18 @@ function buildAgentProviderReadinessPayload() {
     },
     lastSuccessfulFreeFallback: freeFleet.lastSuccessfulProvider,
     lastActiveProvider: lastAgentProviderRuntime,
+    paidConnection: {
+      provider: "openai",
+      configured: Boolean(process.env.OPENAI_API_KEY),
+      billingUrl: "https://platform.openai.com/settings/organization/billing/overview",
+      apiKeysUrl: "https://platform.openai.com/api-keys",
+      balance: {
+        status: "provider_portal_only",
+        exactAvailable: false,
+        label: "היתרה מנוהלת בחשבון OpenAI",
+        detail: "קודי אינו מציג מספר משוער כיתרה. שימוש ויתרה כספית מדויקים זמינים בחשבון הספק."
+      }
+    },
     checkedAt: new Date().toISOString()
   };
 }

@@ -1750,6 +1750,18 @@ input {
   border-color: #bfe7f2;
 }
 
+.agent-menu-toggle-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-menu-toggle-copy small {
+  color: #55727a;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .agent-active-summary {
   display: grid;
   gap: 4px;
@@ -1874,6 +1886,78 @@ input {
   color: #315963;
   font-size: 12px;
   font-weight: 800;
+}
+
+.agent-credit-note {
+  display: grid;
+  gap: 3px;
+}
+
+.agent-credit-note strong {
+  color: #174f42;
+  font-size: 12px;
+}
+
+.agent-paid-setup {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid #bfe7f2;
+  border-radius: 9px;
+  background: #f4fbfd;
+}
+
+.agent-paid-setup p,
+.agent-paid-setup small {
+  margin: 0 !important;
+  color: #526663;
+  font-size: 12px;
+}
+
+.agent-paid-setup > div {
+  display: grid;
+  gap: 7px;
+}
+
+.agent-paid-setup a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  background: #096b5c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.agent-setup-intro {
+  border-color: #9fd5df;
+  background: #f3fbfd;
+}
+
+.agent-setup-intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.agent-setup-intro-actions button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #096b5c;
+  color: #fff;
+  font-weight: 900;
+}
+
+.agent-setup-intro-actions .secondary-agent-intro-action {
+  border: 1px solid #b7d8df;
+  background: #fff;
+  color: #315963;
 }
 
 .agent-provider-message.error {

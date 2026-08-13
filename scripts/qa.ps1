@@ -534,6 +534,27 @@ if (
 
 $webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encoding UTF8
 if (
+  -not $webAppSource.Contains('LOCAL_AGENT_SETUP_INTRO_KEY') -or
+  -not $webAppSource.Contains('הפעל את קודי המקצועי') -or
+  -not $webAppSource.Contains('getAgentMenuSummary(agentProviders, agentProvidersState)') -or
+  -not $serverSource.Contains('paidConnection: {') -or
+  -not $serverSource.Contains('provider_portal_only')
+) {
+  throw "Kodi paid-agent onboarding must be visible in the first conversation and expose an honest connection status in agent management."
+}
+
+$placesMenuPosition = $webAppSource.IndexOf('trip-places-menu')
+$agentsMenuPosition = $webAppSource.IndexOf('agent-providers-menu')
+$documentsMenuPosition = $webAppSource.IndexOf('documents-menu')
+if (
+  $placesMenuPosition -lt 0 -or
+  $agentsMenuPosition -le $placesMenuPosition -or
+  $documentsMenuPosition -le $agentsMenuPosition
+) {
+  throw "Hamburger order must be trip places, agent management, then Kodi documents."
+}
+
+if (
   -not $webAppSource.Contains("buildAgentTripStateForKodi") -or
   -not $webAppSource.Contains("tripState: agentTripState") -or
   -not $webAppSource.Contains("googleMapsContext") -or
