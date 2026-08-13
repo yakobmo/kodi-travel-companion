@@ -1965,6 +1965,11 @@ input {
   color: #982f2f;
 }
 
+.agent-provider-message.success {
+  background: #e4f7ee;
+  color: #17634f;
+}
+
 .place-filter-chips {
   display: flex;
   flex-wrap: wrap;

@@ -1444,7 +1444,7 @@ export function App() {
     openSecondaryMenu();
   }
 
-  async function loadAgentProviders() {
+  async function loadAgentProviders(announceResult = false) {
     if (agentProvidersRequestInFlightRef.current) {
       return;
     }
@@ -1470,6 +1470,13 @@ export function App() {
       const payload = (await response.json()) as AgentProvidersResponse;
       setAgentProviders(payload);
       setAgentProvidersState("ready");
+      if (announceResult) {
+        setAgentProvidersMessage(
+          payload.paidConnection.configured
+            ? "החיבור נבדק: GPT מחובר ומוכן. לצפייה ביתרה הכספית יש לפתוח את חשבון OpenAI."
+            : "החיבור נבדק: GPT בתשלום עדיין אינו מחובר."
+        );
+      }
     } catch {
       setAgentProvidersState("error");
       setAgentProvidersMessage("לא הצלחתי לבדוק כרגע את הסוכנים. אפשר לנסות שוב.");
@@ -4974,7 +4981,7 @@ export function App() {
             </button>
             <p>מצב קודי ושרשרת הגיבוי. מפתחות ופרטים סודיים אינם מוצגים כאן.</p>
             {agentProvidersState === "loading" ? <div className="agent-provider-message">בודק את הסוכנים...</div> : null}
-            {agentProvidersMessage ? <div className="agent-provider-message error" role="status">{agentProvidersMessage}</div> : null}
+            {agentProvidersMessage ? <div className={`agent-provider-message ${agentProvidersState === "error" ? "error" : "success"}`} role="status">{agentProvidersMessage}</div> : null}
             {agentProviders ? (
               <>
                 <div className="agent-active-summary">
@@ -5006,19 +5013,25 @@ export function App() {
                   })}
                 </div>
                 <small className="agent-credit-note"><strong>{agentProviders.paidConnection.balance.label}</strong><span>{agentProviders.paidConnection.balance.detail}</span></small>
-                {!agentProviders.paidConnection.configured ? (
-                  <div className="agent-paid-setup">
-                    <strong>הפעלת GPT בתשלום לפי שימוש</strong>
-                    <p>אין צורך במנוי חודשי. פותחים חיוב מראש, יוצרים מפתח ומחברים אותו לשרת המאובטח של האפליקציה.</p>
-                    <div>
-                      <a href={agentProviders.paidConnection.billingUrl} rel="noreferrer" target="_blank">פתיחת חיוב ב־OpenAI <ExternalLink size={14} aria-hidden="true" /></a>
+                <div className="agent-paid-setup">
+                  <strong>{agentProviders.paidConnection.configured ? "יתרה וחיוב של GPT" : "הפעלת GPT בתשלום לפי שימוש"}</strong>
+                  <p>
+                    {agentProviders.paidConnection.configured
+                      ? "GPT כבר מחובר לקודי. היתרה הכספית המדויקת מוצגת ומנוהלת בחשבון OpenAI."
+                      : "אין צורך במנוי חודשי. פותחים חיוב מראש, יוצרים מפתח ומחברים אותו לשרת המאובטח של האפליקציה."}
+                  </p>
+                  <div>
+                    <a href={agentProviders.paidConnection.billingUrl} rel="noreferrer" target="_blank">
+                      {agentProviders.paidConnection.configured ? "פתח יתרה ב־OpenAI" : "פתיחת חיוב ב־OpenAI"} <ExternalLink size={14} aria-hidden="true" />
+                    </a>
+                    {!agentProviders.paidConnection.configured ? (
                       <a href={agentProviders.paidConnection.apiKeysUrl} rel="noreferrer" target="_blank">יצירת מפתח API <ExternalLink size={14} aria-hidden="true" /></a>
-                    </div>
-                    <small>המפתח נשמר בשרת בלבד ואינו מוצג למשתתפי הטיול.</small>
+                    ) : null}
                   </div>
-                ) : null}
-                <button className="secondary-menu-action" disabled={agentProvidersState === "loading"} onClick={() => void loadAgentProviders()} type="button">
-                  {agentProvidersState === "loading" ? "בודק..." : "בדוק עכשיו"}
+                  <small>המפתח נשמר בשרת בלבד ואינו מוצג למשתתפי הטיול.</small>
+                </div>
+                <button className="secondary-menu-action" disabled={agentProvidersState === "loading"} onClick={() => void loadAgentProviders(true)} type="button">
+                  {agentProvidersState === "loading" ? "בודק חיבור..." : "בדוק חיבור"}
                 </button>
                 <small>נבדק לאחרונה: {new Date(agentProviders.checkedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}</small>
               </>

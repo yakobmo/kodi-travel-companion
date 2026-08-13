@@ -536,6 +536,8 @@ $webAppSource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw -Encod
 if (
   -not $webAppSource.Contains('LOCAL_AGENT_SETUP_INTRO_KEY') -or
   -not $webAppSource.Contains('הפעל את קודי המקצועי') -or
+  -not $webAppSource.Contains('פתח יתרה ב־OpenAI') -or
+  -not $webAppSource.Contains('void loadAgentProviders(true)') -or
   -not $webAppSource.Contains('getAgentMenuSummary(agentProviders, agentProvidersState)') -or
   -not $serverSource.Contains('paidConnection: {') -or
   -not $serverSource.Contains('provider_portal_only')
