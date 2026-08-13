@@ -8,6 +8,7 @@ export function buildKodiContext(input: AgentMessageRequest) {
     trip: tripState.trip,
     summary: tripState.summary,
     itinerary: input.tripLookupResult?.itinerary ?? [],
+    stayCalendar: input.tripLookupResult?.stayCalendar ?? [],
     placeDirectory: tripState.places.map((place) => ({
       id: place.id,
       name: place.name,

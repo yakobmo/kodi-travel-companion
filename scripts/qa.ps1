@@ -42,6 +42,7 @@ $requiredFiles = @(
   "apps/api/src/agent/tripReferenceResolver.ts",
   "apps/api/src/agent/tripTimelineResolver.ts",
   "apps/api/src/agent/tripLookup.ts",
+  "apps/api/src/agent/stayCalendar.ts",
   "apps/api/src/agent/kodiContext.ts",
   "apps/api/src/whatsapp/connector.ts",
   "apps/api/src/billing/tripUsagePool.ts",

@@ -106,4 +106,23 @@ if (canonicalContextSize >= legacyDuplicatedContextSize) {
   );
 }
 
+const datedTripState = {
+  ...tripState,
+  places: [
+    { ...tripState.places[1], id: "night-one", name: "First Stay", note: "לינה לילה ראשון 25.8", sourceIndex: 8 },
+    { ...tripState.places[1], id: "nights-two-five", name: "Second Stay", note: "26 אוגוסט ועד 30 לאוגוסט", sourceIndex: 20 },
+    { ...tripState.places[1], id: "september-range", name: "September Stay", note: "לינה מה 3-6 בספטמבר", sourceIndex: 2 }
+  ]
+};
+const datedLookup = lookupTripContext(datedTripState, "איפה ישנים בלילה השני?");
+if (
+  datedLookup.stayCalendar[1]?.lodging.id !== "nights-two-five" ||
+  datedLookup.stayCalendar[1]?.date !== "08-26" ||
+  datedLookup.itinerary[2]?.lodging.id !== "september-range" ||
+  datedLookup.itinerary[2]?.checkIn !== "09-03" ||
+  datedLookup.itinerary[2]?.checkOut !== "09-06"
+) {
+  throw new Error(`Expected a date-expanded stay calendar independent of map order, received ${JSON.stringify(datedLookup)}`);
+}
+
 console.log("Kodi trip-agnostic resolver test passed.");
