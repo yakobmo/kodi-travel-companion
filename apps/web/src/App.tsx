@@ -1360,6 +1360,7 @@ export function App() {
   const [locationState, setLocationState] = useState<"idle" | "requesting" | "enabled" | "error">("idle");
   const [locationPermissionState, setLocationPermissionState] = useState<LocationPermissionState>("unknown");
   const [locationSyncState, setLocationSyncState] = useState<"idle" | "synced" | "blocked" | "error">("idle");
+  const [locationShareState, setLocationShareState] = useState<"idle" | "sharing" | "shared" | "error">("idle");
   const [memberRealtimeState, setMemberRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [chatRealtimeState, setChatRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [actionApprovalState, setActionApprovalState] = useState<"idle" | "checking" | "approved" | "blocked" | "error">(
@@ -3975,6 +3976,88 @@ export function App() {
     }
   }
 
+  async function shareMyLocationToGroup() {
+    if (!("geolocation" in navigator) || locationShareState === "sharing") {
+      setLocationShareState("error");
+      return;
+    }
+
+    setLocationShareState("sharing");
+    setLocationState("requesting");
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 10_000
+        });
+      });
+      const nextLocation: CurrentLocationState = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracyMeters: position.coords.accuracy,
+        updatedAt: new Date().toISOString()
+      };
+      const response = await fetch(`${apiBaseUrl}/api/trips/demo/members/${activeMember.id}/location`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lat: nextLocation.lat,
+          lng: nextLocation.lng,
+          accuracyMeters: nextLocation.accuracyMeters,
+          consentGranted: true
+        })
+      });
+      if (!response.ok) throw new Error(`Location share failed with ${response.status}`);
+
+      const payload = (await response.json()) as { member: TripMemberLocationResponse["members"][number] };
+      setCurrentLocation(nextLocation);
+      setLocationState("enabled");
+      setLocationPermissionState("granted");
+      setLocationSyncState("synced");
+      rememberLocationAutoStart();
+      setMembers((currentMembers) =>
+        currentMembers.map((member) =>
+          member.id === activeMember.id
+            ? {
+                ...member,
+                locationSharing: payload.member.consent.state,
+                liveLocation: payload.member.liveLocation
+                  ? {
+                      lat: payload.member.liveLocation.lat,
+                      lng: payload.member.liveLocation.lng,
+                      label: payload.member.displayLabel ?? "מיקום חי במפה",
+                      updatedMinutesAgo: payload.member.updatedMinutesAgo ?? 0
+                    }
+                  : member.liveLocation
+              }
+            : member
+        )
+      );
+
+      const localLocationMessage: ChatMessage = {
+        id: `local-location-share-${Date.now()}`,
+        author: activeMember.name,
+        text: `שיתפתי את המיקום שלי 📍\nhttps://www.google.com/maps?q=${nextLocation.lat},${nextLocation.lng}`,
+        memberId: activeMember.id,
+        source: "member",
+        createdAt: new Date().toISOString()
+      };
+      setMessages((currentMessages) => [...currentMessages, localLocationMessage]);
+      const savedMessage = await persistChatMessage(localLocationMessage);
+      setMessages((currentMessages) =>
+        currentMessages.map((message) => (message.id === localLocationMessage.id ? savedMessage : message))
+      );
+      await refreshTripEvents();
+      setLocationShareState("shared");
+      window.setTimeout(() => setLocationShareState("idle"), 2500);
+    } catch (error) {
+      setLocationState("error");
+      if (isPermissionDenied(error)) setLocationPermissionState("denied");
+      setLocationShareState("error");
+    }
+  }
+
   async function submitChatText(
     rawText: string,
     options: {
@@ -5598,6 +5681,23 @@ export function App() {
           }`}
           onSubmit={sendMessageWithPersistence}
         >
+          <button
+            className="composer-location-share"
+            disabled={locationShareState === "sharing"}
+            onClick={shareMyLocationToGroup}
+            type="button"
+          >
+            <MapPin size={16} aria-hidden="true" />
+            <span>
+              {locationShareState === "sharing"
+                ? "מאתר ושולח..."
+                : locationShareState === "shared"
+                  ? "המיקום נשלח"
+                  : locationShareState === "error"
+                    ? "לא ניתן לשלוח — נסה שוב"
+                    : "שלח את המיקום שלי"}
+            </span>
+          </button>
           {speechState === "listening" ? (
             <div className="voice-recording-indicator" aria-live="assertive" role="status">
               <span className="recording-dot" aria-hidden="true" />

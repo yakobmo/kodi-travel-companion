@@ -385,6 +385,7 @@ async function updateSupabaseMemberLocation(input: {
   lat: number;
   lng: number;
   accuracyMeters?: number;
+  consentGranted?: boolean;
 }) {
   if (getActiveDemoStorageDriverName() !== "supabase") {
     return null;
@@ -400,7 +401,7 @@ async function updateSupabaseMemberLocation(input: {
     return { ok: false as const, error: "member_not_found" };
   }
 
-  if (member.consent.state !== "enabled") {
+  if (member.consent.state !== "enabled" && !input.consentGranted) {
     return { ok: false as const, error: "location_sharing_not_enabled" };
   }
 
@@ -410,6 +411,17 @@ async function updateSupabaseMemberLocation(input: {
   }
 
   const updatedAt = new Date().toISOString();
+  if (input.consentGranted && member.consent.state !== "enabled") {
+    const { error: consentError } = await supabase.from("location_sharing_consents").upsert({
+      member_id: getSupabaseMemberUuidByAppId(input.memberId),
+      trip_group_id: DEMO_TRIP_GROUP_UUID,
+      state: "enabled",
+      updated_at: updatedAt
+    });
+    if (consentError) {
+      throw new Error(`Supabase location consent update failed: ${consentError.message}`);
+    }
+  }
   const { error } = await supabase.from("live_locations").upsert({
     member_id: getSupabaseMemberUuidByAppId(input.memberId),
     trip_group_id: DEMO_TRIP_GROUP_UUID,
@@ -673,6 +685,7 @@ export function updateDemoMemberLocation(input: {
   lat: number;
   lng: number;
   accuracyMeters?: number;
+  consentGranted?: boolean;
 }) {
   const demoMembers = loadDemoTripMembers();
   const memberIndex = demoMembers.findIndex((item) => item.member.id === input.memberId);
@@ -682,13 +695,16 @@ export function updateDemoMemberLocation(input: {
   }
 
   const member = demoMembers[memberIndex];
-  if (member.consent.state !== "enabled") {
+  if (member.consent.state !== "enabled" && !input.consentGranted) {
     return { ok: false as const, error: "location_sharing_not_enabled" };
   }
 
   const updatedAt = new Date().toISOString();
   demoMembers[memberIndex] = {
     ...member,
+    consent: input.consentGranted
+      ? { ...member.consent, state: "enabled", updatedAt }
+      : member.consent,
     liveLocation: {
       memberId: member.member.id,
       tripGroupId: member.member.tripGroupId,
@@ -711,6 +727,7 @@ export async function updateDemoMemberLocationAsync(input: {
   lat: number;
   lng: number;
   accuracyMeters?: number;
+  consentGranted?: boolean;
 }) {
   const supabaseResult = await updateSupabaseMemberLocation(input);
   if (supabaseResult) {
@@ -725,13 +742,16 @@ export async function updateDemoMemberLocationAsync(input: {
   }
 
   const member = demoMembers[memberIndex];
-  if (member.consent.state !== "enabled") {
+  if (member.consent.state !== "enabled" && !input.consentGranted) {
     return { ok: false as const, error: "location_sharing_not_enabled" };
   }
 
   const updatedAt = new Date().toISOString();
   demoMembers[memberIndex] = {
     ...member,
+    consent: input.consentGranted
+      ? { ...member.consent, state: "enabled", updatedAt }
+      : member.consent,
     liveLocation: {
       memberId: member.member.id,
       tripGroupId: member.member.tripGroupId,

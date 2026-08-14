@@ -2439,6 +2439,7 @@ input {
   direction: ltr;
   grid-template-columns: 72px 48px minmax(0, 1fr);
   grid-template-areas:
+    "location location location"
     "recording recording recording"
     "send mic text";
   gap: 8px;
@@ -2446,6 +2447,27 @@ input {
   border-top: 1px solid #cfe6ef;
   padding-bottom: max(14px, env(safe-area-inset-bottom));
   background: #ffffff;
+}
+
+.composer .composer-location-share {
+  grid-area: location;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px solid #9bd9e8;
+  background: #eaf9fd;
+  color: #07536b;
+  font-weight: 900;
+  direction: rtl;
+  cursor: pointer;
+}
+
+.composer .composer-location-share:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .composer .voice-conversation-toggle {
@@ -2778,6 +2800,7 @@ input {
   .composer {
     grid-template-columns: 72px 48px minmax(0, 1fr);
     grid-template-areas:
+      "location location location"
       "recording recording recording"
       "send mic text";
     padding: 10px;

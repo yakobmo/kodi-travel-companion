@@ -3581,7 +3581,7 @@ app.post("/api/trips/demo/messages", async (req, res) => {
 
 app.post("/api/trips/demo/members/:memberId/location", async (req, res) => {
   const { memberId } = req.params;
-  const { lat, lng, accuracyMeters } = req.body ?? {};
+  const { lat, lng, accuracyMeters, consentGranted } = req.body ?? {};
 
   if (typeof lat !== "number" || typeof lng !== "number") {
     res.status(400).json({ error: "lat and lng are required numbers" });
@@ -3593,7 +3593,12 @@ app.post("/api/trips/demo/members/:memberId/location", async (req, res) => {
     return;
   }
 
-  const result = await updateDemoMemberLocationAsync({ memberId, lat, lng, accuracyMeters });
+  if (consentGranted !== undefined && typeof consentGranted !== "boolean") {
+    res.status(400).json({ error: "consentGranted must be a boolean when provided" });
+    return;
+  }
+
+  const result = await updateDemoMemberLocationAsync({ memberId, lat, lng, accuracyMeters, consentGranted });
 
   if (!result.ok) {
     res.status(result.error === "member_not_found" ? 404 : 403).json({ error: result.error });
