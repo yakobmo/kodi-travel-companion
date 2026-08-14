@@ -82,7 +82,12 @@ import {
 } from "./data/localGroupRoute.js";
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
-import { buildKodiReplyFromContext, type AgentMessageResponse, type ConversationMessage } from "./agent/kodi.js";
+import {
+  buildKodiReplyFromContext,
+  type AgentMessageRequest,
+  type AgentMessageResponse,
+  type ConversationMessage
+} from "./agent/kodi.js";
 import { resolveConversationFocus } from "./agent/conversationFocus.js";
 import { lookupTripContext } from "./agent/tripLookup.js";
 import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
@@ -1731,6 +1736,55 @@ function getAgentTripMemoryRequest(reply: AgentMessageResponse | undefined) {
   if (candidate.type !== "trip_memory" || !Array.isArray(candidate.placeIds)) return undefined;
   const placeIds = candidate.placeIds.filter((id): id is string => typeof id === "string").slice(0, 12);
   return placeIds.length > 0 ? { placeIds } : undefined;
+}
+
+function getAgentMemberLocationsRequest(reply: AgentMessageResponse | undefined) {
+  const value = reply?.metadata?.toolRequest;
+  if (!value || typeof value !== "object") return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type !== "member_locations") return undefined;
+  return {
+    scope: candidate.scope === "member" ? ("member" as const) : ("all" as const),
+    memberName: typeof candidate.memberName === "string" ? candidate.memberName.trim() : undefined
+  };
+}
+
+function executeMemberLocationsTool(input: {
+  scope: "all" | "member";
+  memberName?: string;
+  requester: { id: string; role: string };
+  tripState: ReturnType<typeof buildDemoTripState>;
+}) {
+  const authorized = input.requester.role === "owner" || input.requester.role === "admin";
+  const normalizedTarget = input.memberName?.toLocaleLowerCase("he-IL");
+  const candidates =
+    input.scope === "member" && normalizedTarget
+      ? input.tripState.members.filter((item) =>
+          item.member.displayName.toLocaleLowerCase("he-IL").includes(normalizedTarget)
+        )
+      : input.tripState.members;
+
+  return {
+    scope: input.scope,
+    requestedName: input.memberName,
+    authorized,
+    members: candidates.map((item) => {
+      const mayExpose =
+        authorized && item.consent.state === "enabled" && Boolean(item.liveLocation);
+      return {
+        name: item.member.displayName,
+        role: item.member.role,
+        sharing: mayExpose ? ("available" as const) : ("not_shared" as const),
+        ...(mayExpose && item.liveLocation
+          ? {
+              updatedAt: item.liveLocation.updatedAt,
+              accuracyMeters: item.liveLocation.accuracyMeters,
+              mapsUrl: `https://www.google.com/maps?q=${item.liveLocation.lat},${item.liveLocation.lng}`
+            }
+          : {})
+      };
+    })
+  };
 }
 
 function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessageResponse {
@@ -3892,12 +3946,6 @@ app.post("/api/agent/message", async (req, res) => {
     return;
   }
 
-  const permissionPolicy =
-    context && typeof context === "object"
-      ? (context as { permissionPolicy?: { operationalChangesRequireAdmin?: boolean; canShareLiveLocation?: boolean } })
-          .permissionPolicy
-      : undefined;
-
   const requestCurrentLocation = getRequestCurrentLocation(req.body);
   const currentMessage = message.trim();
   const conversationFocus = resolveConversationFocus(currentMessage, recentMessages as ConversationMessage[]);
@@ -3911,6 +3959,11 @@ app.post("/api/agent/message", async (req, res) => {
     normalizedMember,
     requestCurrentLocation
   );
+  const verifiedRequester = tripState.members.find((item) => item.member.id === normalizedMember.id)?.member;
+  const permissionPolicy = {
+    operationalChangesRequireAdmin: true,
+    canShareLiveLocation: verifiedRequester?.role === "owner" || verifiedRequester?.role === "admin"
+  };
   const usagePool = buildDemoTripUsagePool({
     tripGroupId: tripState.trip.groupId,
     members: tripState.members
@@ -3971,6 +4024,7 @@ app.post("/api/agent/message", async (req, res) => {
   const shouldCallAgentProvider = openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
   let openAiReply: Awaited<ReturnType<typeof tryBuildKodiReply>> | undefined;
   let tripLookupResult = lookupTripContext(tripState, currentMessage);
+  let memberLocationResult: AgentMessageRequest["memberLocationResult"];
   let activeRulesReply = rulesReply;
   const completedToolCalls = new Set<string>();
 
@@ -3984,6 +4038,7 @@ app.post("/api/agent/message", async (req, res) => {
       conversationFocus,
       externalPlacesSearch,
       tripLookupResult,
+      memberLocationResult,
       reverseGeocodedLocation,
       routeEstimate,
       tripContextClarification: undefined,
@@ -3996,10 +4051,11 @@ app.post("/api/agent/message", async (req, res) => {
     const agentTripMemoryRequest = getAgentTripMemoryRequest(openAiReply.reply);
     const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
     const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
-    if (!agentTripMemoryRequest && !agentPlacesToolRequest && !agentRouteToolRequest) break;
+    const agentMemberLocationsRequest = getAgentMemberLocationsRequest(openAiReply.reply);
+    if (!agentTripMemoryRequest && !agentPlacesToolRequest && !agentRouteToolRequest && !agentMemberLocationsRequest) break;
 
     const toolSignature = JSON.stringify(
-      agentTripMemoryRequest ?? agentPlacesToolRequest ?? agentRouteToolRequest
+      agentTripMemoryRequest ?? agentPlacesToolRequest ?? agentRouteToolRequest ?? agentMemberLocationsRequest
     );
     if (completedToolCalls.has(toolSignature)) {
       openAiReply = { ...openAiReply, reply: undefined, status: "error", error: "agent_repeated_tool_call" };
@@ -4009,6 +4065,19 @@ app.post("/api/agent/message", async (req, res) => {
 
     if (agentTripMemoryRequest) {
       tripLookupResult = lookupTripContext(tripState, currentMessage, agentTripMemoryRequest.placeIds);
+      continue;
+    }
+
+    if (agentMemberLocationsRequest) {
+      memberLocationResult = executeMemberLocationsTool({
+        ...agentMemberLocationsRequest,
+        requester: { id: normalizedMember.id, role: verifiedRequester?.role ?? "viewer" },
+        tripState
+      });
+      runtimeGuidance = [
+        ...runtimeGuidance,
+        "The authorized member-locations lookup completed. Answer directly from memberLocationResult. A not_shared result means unavailable or not consented; do not reveal or infer coordinates."
+      ];
       continue;
     }
 

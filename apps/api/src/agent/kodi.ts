@@ -29,6 +29,19 @@ export interface AgentMessageRequest {
   routeEstimate?: GoogleRouteEstimateResult;
   tripLookupResult?: TripLookupResult;
   tripContextClarification?: string;
+  memberLocationResult?: {
+    scope: "all" | "member";
+    requestedName?: string;
+    authorized: boolean;
+    members: Array<{
+      name: string;
+      role: MemberRole;
+      sharing: "available" | "not_shared";
+      updatedAt?: string;
+      accuracyMeters?: number;
+      mapsUrl?: string;
+    }>;
+  };
   conversationFocus?: {
     effectiveMessage: string;
     locationAnchor?: string;

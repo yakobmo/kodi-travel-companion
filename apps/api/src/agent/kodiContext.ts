@@ -28,6 +28,7 @@ export function buildKodiContext(input: AgentMessageRequest) {
           ageGroup: item.member.ageGroup,
           location: item.liveLocation
         }))
-    }
+    },
+    memberLocationResult: input.memberLocationResult
   };
 }

@@ -2400,7 +2400,11 @@ export function App() {
     liveLocation: null
   };
   const managerMember = members.find((member) => member.role === "owner" || member.role === "admin") ?? activeMember;
-  const mapAnchorLocation = currentLocation;
+  const mapAnchorLocation = managerMember.liveLocation
+    ? { lat: managerMember.liveLocation.lat, lng: managerMember.liveLocation.lng }
+    : activeMember.id === managerMember.id
+      ? currentLocation
+      : null;
   const canManageDocuments = activeMember.role === "owner" || activeMember.role === "admin";
 
   useEffect(() => {
@@ -3295,7 +3299,7 @@ export function App() {
           context: {
             permissionPolicy: {
               operationalChangesRequireAdmin: true,
-              canShareLiveLocation: false
+              canShareLiveLocation: activeMember.role === "owner" || activeMember.role === "admin"
             },
             currentLocation: agentCurrentLocation
               ? {
