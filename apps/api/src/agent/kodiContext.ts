@@ -19,14 +19,15 @@ export function buildKodiContext(input: AgentMessageRequest) {
     currentGroupState: {
       destination: tripState.groupDestination,
       route: tripState.groupRoute,
-      visibleMembers: tripState.members
-        .filter((item) => item.consent.state === "enabled" && item.liveLocation)
-        .map((item) => ({
+      members: tripState.members.map((item) => ({
           id: item.member.id,
           name: item.member.displayName,
           role: item.member.role,
           ageGroup: item.member.ageGroup,
-          location: item.liveLocation
+          locationSharing:
+            item.consent.state === "enabled" && item.liveLocation
+              ? "available_through_member_locations_tool"
+              : "not_shared"
         }))
     },
     memberLocationResult: input.memberLocationResult

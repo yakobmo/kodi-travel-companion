@@ -1787,6 +1787,33 @@ function executeMemberLocationsTool(input: {
   };
 }
 
+function buildMemberLocationsToolReply(
+  result: NonNullable<AgentMessageRequest["memberLocationResult"]>
+): AgentMessageResponse {
+  if (!result.authorized) {
+    return {
+      author: "קודי",
+      intent: "group_location",
+      requiresAdminApproval: false,
+      source: "rules",
+      text: "מיקומים של חברי קבוצה זמינים למנהל הטיול בלבד, ורק לאחר שכל חבר אישר שיתוף מהמכשיר שלו."
+    };
+  }
+
+  const rows = result.members.map((member) =>
+    member.sharing === "available" && member.mapsUrl
+      ? `${member.name}: ${member.mapsUrl}${member.updatedAt ? ` (עודכן ${new Date(member.updatedAt).toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" })})` : ""}`
+      : `${member.name}: אין כרגע מיקום משותף`
+  );
+  return {
+    author: "קודי",
+    intent: "group_location",
+    requiresAdminApproval: false,
+    source: "rules",
+    text: rows.length > 0 ? `זה מצב שיתוף המיקום כרגע 🧭\n${rows.join("\n")}` : "לא מצאתי חבר קבוצה בשם שביקשת."
+  };
+}
+
 function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessageResponse {
   const greeting = memberName ? `${memberName}, ` : "";
 
@@ -4052,7 +4079,12 @@ app.post("/api/agent/message", async (req, res) => {
     const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
     const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
     const agentMemberLocationsRequest = getAgentMemberLocationsRequest(openAiReply.reply);
-    if (!agentTripMemoryRequest && !agentPlacesToolRequest && !agentRouteToolRequest && !agentMemberLocationsRequest) break;
+    if (
+      !agentTripMemoryRequest &&
+      !agentPlacesToolRequest &&
+      !agentRouteToolRequest &&
+      !agentMemberLocationsRequest
+    ) break;
 
     const toolSignature = JSON.stringify(
       agentTripMemoryRequest ?? agentPlacesToolRequest ?? agentRouteToolRequest ?? agentMemberLocationsRequest
@@ -4183,6 +4215,14 @@ app.post("/api/agent/message", async (req, res) => {
     openAiReply = routeEstimate?.route
       ? { ...openAiReply, reply: activeRulesReply, error: openAiReply.error ?? "agent_tool_loop_deadline" }
       : { ...openAiReply, reply: undefined, status: "error", error: openAiReply.error ?? "agent_tool_loop_incomplete" };
+  }
+  if (memberLocationResult && (!openAiReply?.reply || openAiReply.status !== "ready")) {
+    openAiReply = {
+      status: "ready",
+      model: openAiReply?.model,
+      error: openAiReply?.error,
+      reply: buildMemberLocationsToolReply(memberLocationResult)
+    };
   }
   if (
     openAiUsageGate.allowed &&

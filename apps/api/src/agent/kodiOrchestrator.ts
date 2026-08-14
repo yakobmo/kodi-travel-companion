@@ -312,6 +312,17 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
     throw new Error("ai_reply_quality_rejected");
   }
 
+  const exposesLocationEvidence = /(?:google\.(?:com|co\.il)\/maps|maps\.app\.goo\.gl|-?\d{1,3}\.\d{3,}\s*[,،]\s*-?\d{1,3}\.\d{3,})/iu.test(
+    reply.text
+  );
+  const hasAuthorizedLocationEvidence = Boolean(
+    input.memberLocationResult?.authorized &&
+      input.memberLocationResult.members.some((member) => member.sharing === "available" && member.mapsUrl)
+  );
+  if (!isToolRequest && exposesLocationEvidence && !hasAuthorizedLocationEvidence) {
+    throw new Error("ai_reply_unauthorized_location_evidence");
+  }
+
   const claimsUnverifiedRouteMeasurement =
     !isToolRequest &&
     !input.routeEstimate?.route &&

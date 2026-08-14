@@ -1963,8 +1963,14 @@ if ($serverSource.Contains("agent_not_implemented") -or $serverSource.Contains("
 }
 
 $kodiSource = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -Encoding utf8
-if (-not $kodiSource.Contains("buildVisibleLocationSummary")) {
-  throw "Kodi agent is missing TripState-based location summary logic."
+$kodiContextSource = Get-Content (Join-Path $root "apps\api\src\agent\kodiContext.ts") -Raw -Encoding utf8
+$kodiOrchestratorSource = Get-Content (Join-Path $root "apps\api\src\agent\kodiOrchestrator.ts") -Raw -Encoding utf8
+if (
+  -not $kodiOrchestratorSource.Contains("member_locations") -or
+  -not $kodiContextSource.Contains("memberLocationResult") -or
+  -not $serverSource.Contains("executeMemberLocationsTool")
+) {
+  throw "Kodi must expose member locations through the authorized agent tool, not scripted location answers."
 }
 
 if (

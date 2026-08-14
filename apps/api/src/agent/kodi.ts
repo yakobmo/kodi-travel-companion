@@ -161,25 +161,6 @@ function summarizeRecentConversation(
   };
 }
 
-function buildVisibleLocationSummary(tripState?: TripState) {
-  if (!tripState) {
-    return {
-      visibleNames: [],
-      hiddenCount: 0,
-      totalMembers: 0
-    };
-  }
-
-  const visibleMembers = tripState.members.filter((item) => item.consent.state === "enabled" && item.liveLocation);
-  const hiddenMembers = tripState.members.filter((item) => item.consent.state !== "enabled" || !item.liveLocation);
-
-  return {
-    visibleNames: visibleMembers.map((item) => item.member.displayName),
-    hiddenCount: hiddenMembers.length,
-    totalMembers: tripState.members.length
-  };
-}
-
 function getRecommendationPreferences(message: string) {
   return {
     wantsWater: includesAny(message, ["מים", "רטוב", "מעיין", "בריכה", "חוף"]),
@@ -719,7 +700,6 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
   const message = input.message.trim();
   const memberName = input.member?.displayName ?? "אני";
   const selected = input.selectedPlace?.name ?? "המלון הקרוב";
-  const locationSummary = buildVisibleLocationSummary(input.tripState);
   const conversationSummary = summarizeRecentConversation(input.recentMessages, message, input.tripState);
   const needsText = conversationSummary.mentionedNeeds.length > 0 ? conversationSummary.mentionedNeeds.join(", ") : "";
   const externalPlacesContext = buildExternalPlacesContext(input.externalPlacesSearch);
@@ -968,26 +948,6 @@ export function buildKodiReplyFromContext(input: AgentMessageRequest): AgentMess
         `כן, יש באזור אפשרויות רלוונטיות. ${externalPlacesContext} ` +
         "הייתי בודק קודם את המרחק מהמלון/המיקום שלכם, זמינות, ביקורות עדכניות ותנאי דרך או ים אם זה פעילות חוץ. " +
         "אם זו פעילות כמו סירה, כדאי לוודא מזג אוויר, ביטוח, רישיון נדרש, שעות החזרה ועלות סופית לפני שסוגרים."
-    };
-  }
-
-  if (includesAny(message, ["איפה כולם", "איפה כל", "מיקום הקבוצה", "מיקום של", "כולם", "נפגשים", "קרוב למי"])) {
-    const visibleNames =
-      locationSummary.visibleNames.length > 0 ? locationSummary.visibleNames.join(", ") : "אף אחד עדיין לא משתף מיקום";
-    const hiddenText =
-      locationSummary.hiddenCount > 0
-        ? ` יש ${locationSummary.hiddenCount} חברי קבוצה שלא מציגים מיקום כרגע, ואני לא חושף אותם בלי הסכמה.`
-        : "";
-
-    return {
-      author: "קודי",
-      intent: "group_location",
-      requiresAdminApproval: false,
-      source: "rules",
-      text:
-        `אני מסתכל על מצב הטיול. כרגע אני רואה מיקום משותף של: ${visibleNames}.${hiddenText} ` +
-        `${needsText ? `אני גם לוקח בחשבון: ${needsText}. ` : ""}` +
-        "אפשר להשתמש בזה כדי להציע נקודת מפגש נוחה."
     };
   }
 
