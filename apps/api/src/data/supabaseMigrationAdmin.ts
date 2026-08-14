@@ -8,6 +8,9 @@ const relationalRouteMigrationSqlPath = fileURLToPath(
 );
 const setupStateMigrationSqlPath = fileURLToPath(new URL("../../../../supabase/setup-state-migration.sql", import.meta.url));
 const eventLogMigrationSqlPath = fileURLToPath(new URL("../../../../supabase/event-log-migration.sql", import.meta.url));
+const identityMigrationSqlPath = fileURLToPath(
+  new URL("../../../../supabase/identity-and-whatsapp-migration.sql", import.meta.url)
+);
 
 export interface SupabaseGrantApplyResult {
   configured: boolean;
@@ -19,7 +22,31 @@ export interface SupabaseGrantApplyResult {
 }
 
 export interface SupabaseMigrationApplyResult extends SupabaseGrantApplyResult {
-  migration: "relational_routes" | "setup_state" | "event_log";
+  migration: "relational_routes" | "setup_state" | "event_log" | "identity_and_whatsapp";
+}
+
+export async function applySupabaseIdentityAndWhatsAppMigration(): Promise<SupabaseMigrationApplyResult> {
+  const checkedAt = new Date().toISOString();
+  const databaseUrl = getDatabaseUrl();
+  if (!databaseUrl) return {
+    migration: "identity_and_whatsapp", configured: false, authorized: true, applied: false, verified: false,
+    checkedAt, error: "missing_SUPABASE_DB_URL_or_DATABASE_URL"
+  };
+  const sql = postgres(databaseUrl, { ssl: "require", max: 1, idle_timeout: 5, connect_timeout: 20 });
+  try {
+    await sql.unsafe(await readFile(identityMigrationSqlPath, "utf8"));
+    const rows = await sql`select
+      to_regclass('public.trip_member_contacts') as contacts_table,
+      to_regclass('public.whatsapp_message_receipts') as receipts_table`;
+    const verified = rows[0]?.contacts_table === "trip_member_contacts" && rows[0]?.receipts_table === "whatsapp_message_receipts";
+    return { migration: "identity_and_whatsapp", configured: true, authorized: true, applied: true, verified, checkedAt,
+      error: verified ? undefined : "identity_and_whatsapp_migration_verification_failed" };
+  } catch (error) {
+    return { migration: "identity_and_whatsapp", configured: true, authorized: true, applied: false, verified: false,
+      checkedAt, error: error instanceof Error ? error.message : "unknown_identity_migration_error" };
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
 }
 
 export function isValidMigrationAdminToken(input: string | undefined) {

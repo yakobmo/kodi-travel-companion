@@ -106,6 +106,25 @@ create table if not exists public.trip_members (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.trip_member_contacts (
+  member_id uuid primary key references public.trip_members(id) on delete cascade,
+  trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
+  phone_e164 text not null,
+  whatsapp_wa_id text,
+  phone_verified_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (trip_group_id, phone_e164),
+  unique (trip_group_id, whatsapp_wa_id)
+);
+
+create table if not exists public.whatsapp_message_receipts (
+  provider_message_id text primary key,
+  trip_group_id uuid not null references public.trip_groups(id) on delete cascade,
+  sender_wa_id text not null,
+  received_at timestamptz not null default now()
+);
+
 do $$
 begin
   if not exists (
@@ -246,6 +265,8 @@ create table if not exists public.demo_storage_states (
 );
 
 create index if not exists trip_members_trip_group_id_idx on public.trip_members(trip_group_id);
+create index if not exists trip_member_contacts_phone_idx on public.trip_member_contacts(trip_group_id, phone_e164);
+create index if not exists whatsapp_message_receipts_received_idx on public.whatsapp_message_receipts(received_at desc);
 create index if not exists trip_places_trip_group_id_idx on public.trip_places(trip_group_id);
 create index if not exists trip_places_type_idx on public.trip_places(type);
 create unique index if not exists trip_places_trip_group_source_place_idx
@@ -322,6 +343,8 @@ end $$;
 
 alter table public.trip_groups enable row level security;
 alter table public.trip_members enable row level security;
+alter table public.trip_member_contacts enable row level security;
+alter table public.whatsapp_message_receipts enable row level security;
 alter table public.trip_places enable row level security;
 alter table public.location_sharing_consents enable row level security;
 alter table public.live_locations enable row level security;

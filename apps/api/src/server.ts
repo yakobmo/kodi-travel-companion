@@ -1,5 +1,6 @@
 import express from "express";
 import webpush from "web-push";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { buildHealthPayload } from "./health.js";
 import {
@@ -59,11 +60,18 @@ import {
 import { checkSupabaseRuntime } from "./data/supabaseStatus.js";
 import {
   applySupabaseEventLogMigration,
+  applySupabaseIdentityAndWhatsAppMigration,
   applySupabaseRelationalRouteMigration,
   applySupabaseSetupStateMigration,
   applySupabaseServiceRoleGrants,
   isValidMigrationAdminToken
 } from "./data/supabaseMigrationAdmin.js";
+import {
+  claimWhatsAppMessage,
+  findMemberIdByWhatsAppId,
+  linkMemberWhatsAppContact,
+  normalizePhoneE164
+} from "./data/memberContacts.js";
 import {
   getDemoTripEventLogStatus,
   loadDemoTripEventsAsync,
@@ -110,6 +118,15 @@ import {
 } from "./agent/tripTimelineResolver.js";
 import { canMemberRunAgentAction, isAgentActionType } from "./permissions/agentActions.js";
 import type { AgeGroup, TripEventType, TripPlace } from "./domain/types.js";
+import { createTripInviteToken, verifyTripInviteToken } from "./security/tripAccess.js";
+
+declare global {
+  namespace Express {
+    interface Request {
+      rawBody?: Buffer;
+    }
+  }
+}
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
@@ -2112,7 +2129,26 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "12mb" }));
+app.use(
+  express.json({
+    limit: "12mb",
+    verify(req, _res, buffer) {
+      (req as express.Request).rawBody = Buffer.from(buffer);
+    }
+  })
+);
+
+function hasValidWhatsAppSignature(req: express.Request) {
+  const appSecret = process.env.WHATSAPP_APP_SECRET?.trim();
+  // Enforce Meta signatures as soon as the App Secret is configured. Keeping
+  // this transitional path avoids cutting off the already-live connector.
+  if (!appSecret) return true;
+  const signatureHeader = req.header("x-hub-signature-256") ?? "";
+  if (!signatureHeader.startsWith("sha256=") || !req.rawBody) return false;
+  const provided = Buffer.from(signatureHeader.slice(7), "hex");
+  const expected = createHmac("sha256", appSecret).update(req.rawBody).digest();
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
+}
 
 const documentMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 const documentCategories = new Set<TripDocumentCategory>(["flights", "insurance", "lodging", "tickets", "personal", "other"]);
@@ -2228,7 +2264,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 async function processWhatsAppInboundMessage(message: ReturnType<typeof parseWhatsAppWebhookPayload>[number]) {
-  if (processedWhatsAppMessageIds.has(message.messageId)) {
+  if (processedWhatsAppMessageIds.has(message.messageId) || !(await claimWhatsAppMessage(message.messageId, message.from))) {
     return {
       status: "duplicate" as const,
       providerMessageId: message.messageId,
@@ -2238,12 +2274,20 @@ async function processWhatsAppInboundMessage(message: ReturnType<typeof parseWha
 
   rememberProcessedWhatsAppMessage(message.messageId);
 
-  const displayName = message.profileName?.trim() || `WhatsApp ${message.fromMasked}`;
-  const member = await addDemoTripMemberAsync({
-    displayName,
-    ageGroup: "adult",
-    role: "member"
-  });
+  const linkedMemberId = await findMemberIdByWhatsAppId(message.from);
+  const member = (await loadDemoTripMembersAsync()).find((item) => item.member.id === linkedMemberId);
+  if (!member) {
+    const outbound = await sendWhatsAppTextMessage({
+      to: message.from,
+      text: "המספר הזה עדיין לא מקושר לקבוצת הטיול. יש לפתוח את קישור ההזמנה שקיבלת ממנהל הטיול ולהצטרף דרכו."
+    });
+    return {
+      status: "failed" as const,
+      providerMessageId: message.messageId,
+      fromMasked: message.fromMasked,
+      outbound
+    };
+  }
   const memberMessage = await appendDemoTripMessageAsync({
     author: member.member.displayName,
     text: message.text,
@@ -2469,6 +2513,11 @@ function handleWhatsAppWebhookVerification(req: express.Request, res: express.Re
 }
 
 function handleWhatsAppWebhookPost(req: express.Request, res: express.Response) {
+  if (!isWhatsAppWebhookDryRun(req) && !hasValidWhatsAppSignature(req)) {
+    res.status(401).json({ error: "invalid_whatsapp_signature" });
+    return;
+  }
+
   const readiness = getWhatsAppConnectorReadiness();
   const messages = parseWhatsAppWebhookPayload(req.body);
   const dryRun = isWhatsAppWebhookDryRun(req);
@@ -2711,11 +2760,52 @@ app.get("/api/trips/demo/members", async (_req, res) => {
   });
 });
 
+app.post("/api/trips/demo/invites", async (req, res) => {
+  const actorMemberId = typeof req.body?.actorMemberId === "string" ? req.body.actorMemberId.trim() : "";
+  const actor = (await loadDemoTripMembersAsync()).find((item) => item.member.id === actorMemberId)?.member;
+  if (!actor || !actor.canManageMembers) {
+    res.status(403).json({ error: "invite_creation_not_allowed" });
+    return;
+  }
+
+  try {
+    const token = createTripInviteToken(actor.id);
+    const baseUrl = getPublicAppUrlFromRequest(req).replace(/\/$/, "");
+    res.json({
+      tripGroupId: "group_family_greece_demo",
+      inviteUrl: `${baseUrl}/?join=${encodeURIComponent(token)}`,
+      expiresInSeconds: 60 * 60 * 24 * 7
+    });
+  } catch (error) {
+    console.error("Trip invite creation failed", error);
+    res.status(503).json({ error: "invite_security_not_configured" });
+  }
+});
+
+app.get("/api/trips/demo/invites/:token", (req, res) => {
+  const verification = verifyTripInviteToken(req.params.token);
+  if (!verification.ok) {
+    res.status(verification.reason === "expired" ? 410 : 404).json({ valid: false, reason: verification.reason });
+    return;
+  }
+  res.json({ valid: true, tripGroupId: verification.payload.tripGroupId });
+});
+
 app.post("/api/trips/demo/members", async (req, res) => {
-  const { displayName, age, ageGroup, whatsAppPhone } = req.body ?? {};
+  const { displayName, age, ageGroup, whatsAppPhone, inviteToken } = req.body ?? {};
+
+  const invite = verifyTripInviteToken(inviteToken);
+  if (!invite.ok) {
+    res.status(invite.reason === "expired" ? 410 : 403).json({ error: `invite_${invite.reason}` });
+    return;
+  }
 
   if (typeof displayName !== "string" || displayName.trim().length < 2) {
     res.status(400).json({ error: "displayName is required" });
+    return;
+  }
+  if (!normalizePhoneE164(whatsAppPhone)) {
+    res.status(400).json({ error: "valid_whatsapp_phone_required" });
     return;
   }
 
@@ -2730,15 +2820,22 @@ app.post("/api/trips/demo/members", async (req, res) => {
   );
 
   if (existingMember) {
+    const contactLink = await linkMemberWhatsAppContact({
+      memberId: existingMember.member.id,
+      phone: whatsAppPhone,
+      verified: false
+    });
+    const whatsappWelcome = await sendKodiJoinWhatsAppWelcome({
+      memberName: existingMember.member.displayName,
+      rawRecipient: whatsAppPhone,
+      appUrl: getPublicAppUrlFromRequest(req)
+    });
     res.json({
       tripGroupId: "group_family_greece_demo",
       member: existingMember,
       existingMember: true,
-      whatsappWelcome: {
-        attempted: false,
-        status: "skipped",
-        reason: "existing_member"
-      },
+      contactLink,
+      whatsappWelcome,
       members: currentMembers
     });
     return;
@@ -2749,6 +2846,12 @@ app.post("/api/trips/demo/members", async (req, res) => {
     ageGroup: safeAgeGroup,
     age: safeAge,
     role: "member"
+  });
+
+  const contactLink = await linkMemberWhatsAppContact({
+    memberId: member.member.id,
+    phone: whatsAppPhone,
+    verified: false
   });
 
   await safeRecordTripEvent({
@@ -2776,6 +2879,7 @@ app.post("/api/trips/demo/members", async (req, res) => {
     member,
     welcomeMessage,
     whatsappWelcome,
+    contactLink,
     members: await loadDemoTripMembersAsync()
   });
 });
@@ -3528,44 +3632,37 @@ app.post("/api/trips/demo/group-route/progress", async (req, res) => {
 });
 
 app.post("/api/trips/demo/messages", async (req, res) => {
-  const { author, text, memberId, source } = req.body ?? {};
-
-  if (typeof author !== "string" || author.trim().length < 1) {
-    res.status(400).json({ error: "author is required" });
-    return;
-  }
+  const { text, memberId } = req.body ?? {};
 
   if (typeof text !== "string" || text.trim().length < 1) {
     res.status(400).json({ error: "text is required" });
     return;
   }
 
-  if (memberId !== undefined && typeof memberId !== "string") {
-    res.status(400).json({ error: "memberId must be a string when provided" });
-    return;
-  }
-
-  if (source !== undefined && !["member", "agent", "system"].includes(source)) {
-    res.status(400).json({ error: "source must be member, agent or system" });
+  const member = typeof memberId === "string"
+    ? (await loadDemoTripMembersAsync()).find((item) => item.member.id === memberId)?.member
+    : undefined;
+  if (!member) {
+    res.status(403).json({ error: "known_member_required" });
     return;
   }
 
   const message = await appendDemoTripMessageAsync({
-    author: author.trim(),
+    author: member.displayName,
     text: text.trim(),
     memberId,
-    source
+    source: "member"
   });
   await safeRecordTripEvent({
     eventType: "message_created",
     actorMemberId: memberId,
-    actorName: author.trim(),
+    actorName: member.displayName,
     relatedEntityId: message.id,
-    summary: `${author.trim()} sent a ${message.source} message.`
+    summary: `${member.displayName} sent a member message.`
   });
   void sendChatMessageNotifications({
     messageId: message.id,
-    author: author.trim(),
+    author: member.displayName,
     text: message.text,
     source: message.source,
     senderMemberId: memberId
@@ -4423,8 +4520,14 @@ app.get(/.*/, (req, res, next) => {
   res.sendFile("index.html", { root: webDistDir });
 });
 
-app.listen(port, () => {
-  console.log(`AI Travel Companion API listening on port ${port}`);
+async function startServer() {
+  const identityMigration = await applySupabaseIdentityAndWhatsAppMigration();
+  if (identityMigration.configured && !identityMigration.verified) {
+    throw new Error(`Identity storage migration failed: ${identityMigration.error ?? "verification_failed"}`);
+  }
+
+  app.listen(port, () => {
+    console.log(`AI Travel Companion API listening on port ${port}`);
   void ensureWhatsAppBusinessAccountSubscription()
     .then((result) => {
       if (result.attempted) {
@@ -4436,4 +4539,10 @@ app.listen(port, () => {
     .catch((error) => {
       console.error("WhatsApp WABA app subscription check failed", error);
     });
+  });
+}
+
+void startServer().catch((error) => {
+  console.error("Server startup failed", error);
+  process.exitCode = 1;
 });

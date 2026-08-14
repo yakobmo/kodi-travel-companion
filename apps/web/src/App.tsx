@@ -1329,6 +1329,7 @@ export function App() {
   });
   const [inviteCopyState, setInviteCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [inviteShareState, setInviteShareState] = useState<"idle" | "sharing" | "shared" | "copied" | "error">("idle");
+  const [tripInviteUrl, setTripInviteUrl] = useState("");
   const [memberActionState, setMemberActionState] = useState<"idle" | "working" | "done" | "error">("idle");
   const [memberActionTargetId, setMemberActionTargetId] = useState<string | null>(null);
   const [memberActionMessage, setMemberActionMessage] = useState("");
@@ -2612,10 +2613,6 @@ export function App() {
     mapPlaces.length > 0
       ? `מפת הטיול · ${mapPlaces.length} נקודות עם מיקום · המיקום שלך מוצג מעליה`
       : "מפת הטיול נטענת · נקודות בלי קואורדינטות זמינות ברשימה";
-  const tripInviteUrl =
-    typeof window === "undefined"
-      ? "https://kodi-travel-companion.onrender.com?join=group_family_greece_demo"
-      : `${window.location.origin}${window.location.pathname}?join=group_family_greece_demo`;
   const visibleMembers = useMemo(
     () => members.filter((member) => member.locationSharing === "enabled" && member.liveLocation),
     [members]
@@ -2633,6 +2630,32 @@ export function App() {
   );
   const recentTripEvents = tripEvents.slice(0, 3);
   const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
+
+  useEffect(() => {
+    if (openMenuSection !== "invite" || !(activeMember.role === "owner" || activeMember.role === "admin")) return;
+    let cancelled = false;
+    void fetch(`${apiBaseUrl}/api/trips/demo/invites`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actorMemberId: activeMember.id })
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Invite creation failed with ${response.status}`);
+        return (await response.json()) as { inviteUrl: string };
+      })
+      .then((payload) => {
+        if (!cancelled) setTripInviteUrl(payload.inviteUrl);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTripInviteUrl("");
+          setInviteShareState("error");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMember.id, activeMember.role, apiBaseUrl, openMenuSection]);
 
   useEffect(() => {
     if (!googleMapsApiKey || !googleMapElementRef.current) {
@@ -4165,6 +4188,7 @@ export function App() {
     setInviteShareState("idle");
 
     try {
+      if (!tripInviteUrl) throw new Error("invite_unavailable");
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(tripInviteUrl);
       } else {
@@ -4180,6 +4204,11 @@ export function App() {
   async function shareTripInvite() {
     setInviteCopyState("idle");
     setInviteShareState("sharing");
+
+    if (!tripInviteUrl) {
+      setInviteShareState("error");
+      return;
+    }
 
     const shareData = {
       title: "הצטרפות לקבוצת הטיול בקודי",
@@ -4319,11 +4348,24 @@ export function App() {
           displayName: name,
           age: safeAge,
           ageGroup: getAgeGroupFromDraft(joinDraft.age),
-          whatsAppPhone: joinDraft.whatsAppPhone.trim()
+          whatsAppPhone: joinDraft.whatsAppPhone.trim(),
+          inviteToken: initialJoinToken
         })
       });
 
       if (!response.ok) {
+        if (response.status === 410) {
+          setMemberActionState("error");
+          setMemberActionTargetId(null);
+          setMemberActionMessage("קישור ההזמנה פג. בקשו ממנהל הטיול קישור חדש.");
+          return;
+        }
+        if (response.status === 403) {
+          setMemberActionState("error");
+          setMemberActionTargetId(null);
+          setMemberActionMessage("קישור ההזמנה אינו תקין. בקשו ממנהל הטיול לשלוח אותו מחדש.");
+          return;
+        }
         throw new Error(`Join failed with ${response.status}`);
       }
 
@@ -4643,16 +4685,20 @@ export function App() {
               />
             </label>
             <label>
-              מספר ווטסאפ לקבלת הודעת ברוך הבא מקודי (לא חובה)
+              מספר ווטסאפ לחיבור מאובטח לקבוצה
               <input
                 aria-label="מספר ווטסאפ לקבלת הודעת ברוך הבא"
                 inputMode="tel"
                 onChange={(event) => setJoinDraft((draft) => ({ ...draft, whatsAppPhone: event.target.value }))}
                 placeholder="+972501234567"
+                required
                 value={joinDraft.whatsAppPhone}
               />
             </label>
-            <button disabled={joinDraft.name.trim().length < 2 || memberActionState === "working"} type="submit">
+            <button
+              disabled={joinDraft.name.trim().length < 2 || joinDraft.whatsAppPhone.replace(/\D/g, "").length < 8 || memberActionState === "working"}
+              type="submit"
+            >
               {memberActionState === "working" && memberActionTargetId === "join" ? "מצרף..." : "הצטרפות לקבוצה"}
             </button>
           </form>
@@ -5229,13 +5275,13 @@ export function App() {
             הזמנת משתתפים
           </button>
           <p>שלחו קישור כמו בקבוצת וואטסאפ. מי שמקבל נכנס, כותב שם, מאשר מיקום ומצטרף.</p>
-          <input aria-label="קישור הזמנה בתפריט ניהול" dir="ltr" readOnly value={tripInviteUrl} />
+          <input aria-label="קישור הזמנה בתפריט ניהול" dir="ltr" placeholder="יוצר קישור מאובטח..." readOnly value={tripInviteUrl} />
           <div className="invite-menu-actions">
-            <button disabled={inviteShareState === "sharing"} onClick={shareTripInvite} type="button">
+            <button disabled={inviteShareState === "sharing" || !tripInviteUrl} onClick={shareTripInvite} type="button">
               <Share2 size={16} aria-hidden="true" />
               {inviteShareState === "sharing" ? "פותח שיתוף..." : "שתף הזמנה"}
             </button>
-            <button className="secondary-menu-action" onClick={copyTripInviteLink} type="button">
+            <button className="secondary-menu-action" disabled={!tripInviteUrl} onClick={copyTripInviteLink} type="button">
               העתק קישור
             </button>
           </div>
