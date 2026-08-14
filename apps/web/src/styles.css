@@ -330,10 +330,14 @@ input {
 }
 
 .join-shell {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  height: var(--kodi-app-height, 100dvh);
+  min-height: 0;
   display: grid;
   place-items: center;
   padding: 18px;
+  overflow-y: auto;
   background:
     linear-gradient(90deg, rgba(38, 66, 61, 0.08) 1px, transparent 1px),
     linear-gradient(rgba(38, 66, 61, 0.08) 1px, transparent 1px),
@@ -2617,7 +2621,14 @@ input {
 
   .app-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: clamp(170px, 32vh, 260px) minmax(0, 1fr);
     grid-template-rows: clamp(170px, 32dvh, 260px) minmax(0, 1fr);
+  }
+
+  .join-shell {
+    align-items: start;
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
   }
 
   .secondary-menu {

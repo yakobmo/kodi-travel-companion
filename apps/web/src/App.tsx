@@ -1610,6 +1610,29 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const updateVisibleAppHeight = () => {
+      const visibleHeight = Math.round(window.visualViewport?.height ?? window.innerHeight);
+      if (visibleHeight > 0) {
+        document.documentElement.style.setProperty("--kodi-app-height", `${visibleHeight}px`);
+      }
+    };
+
+    updateVisibleAppHeight();
+    window.addEventListener("resize", updateVisibleAppHeight);
+    window.addEventListener("orientationchange", updateVisibleAppHeight);
+    window.visualViewport?.addEventListener("resize", updateVisibleAppHeight);
+    window.visualViewport?.addEventListener("scroll", updateVisibleAppHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateVisibleAppHeight);
+      window.removeEventListener("orientationchange", updateVisibleAppHeight);
+      window.visualViewport?.removeEventListener("resize", updateVisibleAppHeight);
+      window.visualViewport?.removeEventListener("scroll", updateVisibleAppHeight);
+      document.documentElement.style.removeProperty("--kodi-app-height");
+    };
+  }, []);
+
+  useEffect(() => {
     const standalone =
       window.matchMedia?.("(display-mode: standalone)").matches ||
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true;

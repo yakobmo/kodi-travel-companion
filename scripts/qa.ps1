@@ -281,11 +281,19 @@ if (
 }
 
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
-if (-not $webStylesSource.Contains("height: var(--kodi-app-height, 100dvh)")) {
+$webAppEarlySource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
+if (
+  -not $webStylesSource.Contains("height: var(--kodi-app-height, 100dvh)") -or
+  -not $webStylesSource.Contains("grid-template-rows: clamp(170px, 32vh, 260px) minmax(0, 1fr)") -or
+  -not $webStylesSource.Contains(".join-shell {") -or
+  -not $webStylesSource.Contains("overflow-y: auto") -or
+  -not $webAppEarlySource.Contains('window.visualViewport?.height ?? window.innerHeight') -or
+  -not $webAppEarlySource.Contains('style.setProperty("--kodi-app-height"') -or
+  -not $webAppEarlySource.Contains('visualViewport?.addEventListener("resize"')
+) {
   throw "Mobile app height must follow the live visual viewport so the chat composer stays visible on cold start."
 }
 
-$webAppEarlySource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
 if (
   -not $webAppEarlySource.Contains("beforeinstallprompt") -or
   -not $webAppEarlySource.Contains("installKodiShortcut") -or
