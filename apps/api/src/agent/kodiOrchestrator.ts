@@ -304,7 +304,7 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
   const asksInHebrew = /[\u0590-\u05ff]/u.test(input.message);
   const hebrewCharacters = reply.text.match(/[\u0590-\u05ff]/gu)?.length ?? 0;
   const leaksInternalDetails =
-    /(?:OPENAI_API_KEY|GEMINI_API_KEY|OPENROUTER_API_KEY|\/api\/agent\/|system prompt|Render dashboard)/i.test(
+    /(?:OPENAI_API_KEY|GEMINI_API_KEY|OPENROUTER_API_KEY|\/api\/agent\/|system prompt|Render dashboard|not_shared|available_through_member_locations_tool|member_locations)/i.test(
       reply.text
     );
 
