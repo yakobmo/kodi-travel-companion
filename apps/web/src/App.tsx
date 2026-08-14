@@ -58,6 +58,7 @@ const LOCAL_LOCATION_AUTO_START_KEY = "kodi-location-auto-start";
 const LOCAL_SETUP_COMPLETE_KEY = "kodi-trip-setup-complete";
 const LOCAL_REMOVED_PLACE_IDS_KEY = "kodi-removed-place-ids";
 const LOCAL_AGENT_SETUP_INTRO_KEY = "kodi-agent-setup-intro-v1";
+const LOCAL_ACTIVE_MEMBER_ID_KEY = "kodi-active-member-id";
 const GOOGLE_MAPS_SCRIPT_ID = "kodi-google-maps-js";
 const retiredDemoMemberIds = new Set(["dad", "noa", "grandma"]);
 const retiredDemoNames = new Set(["אבא", "אמא", "נועה", "סבתא", "QA"]);
@@ -1270,6 +1271,16 @@ function getInitialJoinToken() {
   return new URLSearchParams(window.location.search).get("join") ?? "";
 }
 
+function getRememberedMemberId() {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(LOCAL_ACTIVE_MEMBER_ID_KEY)?.trim() ?? "";
+}
+
+function rememberActiveMember(memberId: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LOCAL_ACTIVE_MEMBER_ID_KEY, memberId);
+}
+
 function getAgeGroupFromDraft(ageDraft: string) {
   const age = Number(ageDraft);
   if (!Number.isFinite(age)) {
@@ -1293,8 +1304,11 @@ function getAgeGroupFromDraft(ageDraft: string) {
 
 export function App() {
   const initialJoinToken = getInitialJoinToken();
-  const [showActivation, setShowActivation] = useState(!initialJoinToken && !getLocalSetupCompleted());
-  const [showJoinFlow, setShowJoinFlow] = useState(Boolean(initialJoinToken));
+  const rememberedMemberId = getRememberedMemberId();
+  const [showActivation, setShowActivation] = useState(
+    !initialJoinToken && !rememberedMemberId && !getLocalSetupCompleted()
+  );
+  const [showJoinFlow, setShowJoinFlow] = useState(Boolean(initialJoinToken && !rememberedMemberId));
   const [activationStep, setActivationStep] = useState<ActivationStep>("welcome");
   const [setupState, setSetupState] = useState<TripSetupStateResponse | null>(null);
   const [googleSourcePreview, setGoogleSourcePreview] = useState<GoogleSourcePreviewResponse | null>(null);
@@ -1346,7 +1360,7 @@ export function App() {
   const [eventRealtimeState, setEventRealtimeState] = useState<"idle" | "live" | "error">("idle");
   const [eventLogDriver, setEventLogDriver] = useState<"file" | "supabase" | "unknown">("unknown");
   const [members, setMembers] = useState<DemoMember[]>(normalizeTripMembers(demoMembers as DemoMember[]));
-  const [activeMemberId, setActiveMemberId] = useState("mom");
+  const [activeMemberId, setActiveMemberId] = useState(rememberedMemberId || "mom");
   const [draft, setDraft] = useState("");
   const [speechState, setSpeechState] = useState<"idle" | "listening" | "unsupported" | "error">("idle");
   const [isKodiThinking, setIsKodiThinking] = useState(false);
@@ -1387,6 +1401,7 @@ export function App() {
   const [documentVisibility, setDocumentVisibility] = useState<TripDocumentVisibility>("group");
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installState, setInstallState] = useState<"idle" | "ready" | "installed" | "unavailable">("idle");
+  const [showInstallNudge, setShowInstallNudge] = useState(Boolean(rememberedMemberId));
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfigResponse | null>(null);
   const [notificationState, setNotificationState] = useState<
     "idle" | "checking" | "unsupported" | "not_configured" | "permission_needed" | "requesting" | "active" | "blocked" | "error"
@@ -4333,8 +4348,12 @@ export function App() {
     }
 
     setActiveMemberId(joinedMember.id);
+    rememberActiveMember(joinedMember.id);
+    rememberLocalSetupCompleted();
+    setShowInstallNudge(true);
     setShowJoinFlow(false);
     setShowActivation(false);
+    window.history.replaceState({}, "", window.location.pathname);
     if (welcomeMessage) {
       setMessages((currentMessages) => mergeChatMessages(currentMessages, [welcomeMessage]));
     }
@@ -5514,6 +5533,31 @@ export function App() {
           </div>
           <div className="active-speaker-note">כותבים עכשיו בשם {activeMember.name}</div>
         </header>
+
+        {showInstallNudge && installState !== "installed" ? (
+          <section className="install-nudge" aria-label="התקנת קודי כאפליקציה">
+            <div>
+              <strong>קודי בלחיצה אחת ממסך הבית</strong>
+              <span>
+                {installPrompt
+                  ? "התקנה חד־פעמית — אחר כך נכנסים מהאייקון בלי קישור ההזמנה."
+                  : "באייפון: לחצי שיתוף ואז „הוספה למסך הבית”. באנדרואיד: פתחי את תפריט הדפדפן ובחרי „התקנת אפליקציה”."}
+              </span>
+            </div>
+            <button onClick={installKodiShortcut} type="button">
+              <Download size={17} aria-hidden="true" />
+              <span>{installPrompt ? "התקיני את קודי" : "הוראות התקנה"}</span>
+            </button>
+            <button
+              aria-label="סגירת הצעת ההתקנה"
+              className="install-nudge-close"
+              onClick={() => setShowInstallNudge(false)}
+              type="button"
+            >
+              ×
+            </button>
+          </section>
+        ) : null}
 
         <nav className="dashboard-shortcuts" aria-label="קיצורי דרך לאפליקציות">
           <a className="dashboard-shortcut" href="https://www.airbnb.com/" rel="noreferrer" target="_blank">
