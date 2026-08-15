@@ -4389,8 +4389,32 @@ app.post("/api/agent/message", async (req, res) => {
     };
   }
 
+  let publishedMessage: Awaited<ReturnType<typeof appendDemoTripMessageAsync>> | undefined;
+  if (req.body?.publishToGroup === true && verifiedRequester) {
+    publishedMessage = await appendDemoTripMessageAsync({
+      author: "קודי",
+      text: reply.text,
+      source: "agent"
+    });
+    await safeRecordTripEvent({
+      eventType: "message_created",
+      actorName: "קודי",
+      relatedEntityId: publishedMessage.id,
+      summary: `Kodi replied publicly to ${verifiedRequester.displayName}.`
+    });
+    void sendChatMessageNotifications({
+      messageId: publishedMessage.id,
+      author: "קודי",
+      text: publishedMessage.text,
+      source: "agent"
+    }).catch((error) => {
+      console.warn("Kodi public reply notification send failed", error);
+    });
+  }
+
   res.json({
     ...reply,
+    publishedMessage,
     agentRuntime: {
       aiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
       aiModel: openAiReply?.model,

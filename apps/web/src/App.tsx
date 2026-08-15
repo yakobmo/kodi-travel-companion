@@ -180,6 +180,7 @@ interface AgentMessageResponse {
   intent: string;
   requiresAdminApproval: boolean;
   source: string;
+  publishedMessage?: ChatMessage;
   contextSummary?: {
     tripGroupId: string;
     memberId: string;
@@ -3349,7 +3350,8 @@ export function App() {
                 }
               : undefined
           },
-          selectedPlace: shouldAttachSelectedPlaceToAgent(text) ? selectedPlace : undefined
+          selectedPlace: shouldAttachSelectedPlaceToAgent(text) ? selectedPlace : undefined,
+          publishToGroup: true
         })
       });
 
@@ -3358,7 +3360,7 @@ export function App() {
       }
 
       const data = (await response.json()) as AgentMessageResponse;
-      return data.text;
+      return data;
     } catch (error) {
       console.warn("Kodi agent request failed", error);
       return null;
@@ -3909,13 +3911,20 @@ export function App() {
     setMessages(nextMessages);
 
     if (shouldAskKodi) {
-      const reply = await requestKodiReply(text, nextMessages);
-      if (!reply) {
+      const response = await requestKodiReply(text, nextMessages);
+      if (!response) {
         setMessages((currentMessages) => [...currentMessages, buildKodiConnectionErrorMessage()]);
         return;
       }
-      const localKodiMessage = { id: `local-kodi-${Date.now()}`, author: "קודי" as const, text: reply };
-      setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
+      const reply = response.text;
+      const localKodiMessage: ChatMessage = response.publishedMessage ?? {
+        id: `local-kodi-${Date.now()}`,
+        author: "קודי",
+        text: reply,
+        source: "agent",
+        createdAt: new Date().toISOString()
+      };
+      setMessages((currentMessages) => mergeChatMessages(currentMessages, [localKodiMessage]));
       if (shouldSpeakKodiReply(text)) {
         speakKodiMessage(reply, localKodiMessage.id);
       }
@@ -3930,14 +3939,16 @@ export function App() {
   ) {
     setIsKodiThinking(true);
     try {
-      const reply = await requestKodiReply(text, nextMessages, currentLocationOverride);
-      if (!reply) {
+      const response = await requestKodiReply(text, nextMessages, currentLocationOverride);
+      if (!response) {
         setMessages((currentMessages) => [...currentMessages, buildKodiConnectionErrorMessage()]);
         return;
       }
 
+      const reply = response.text;
+
       setIsKodiThinking(false);
-      const localKodiMessage: ChatMessage = {
+      const localKodiMessage: ChatMessage = response.publishedMessage ?? {
         id: `local-kodi-${Date.now()}`,
         author: "קודי",
         text: reply,
@@ -3945,16 +3956,12 @@ export function App() {
         createdAt: new Date().toISOString()
       };
 
-      setMessages((currentMessages) => [...currentMessages, localKodiMessage]);
+      setMessages((currentMessages) => mergeChatMessages(currentMessages, [localKodiMessage]));
       prefetchKodiSpeech(reply);
       if (speakReply || shouldSpeakKodiReply(text)) {
         speakKodiMessage(reply, localKodiMessage.id);
       }
 
-      const savedKodiMessage = await persistChatMessage(localKodiMessage);
-      setMessages((currentMessages) =>
-        currentMessages.map((message) => (message.id === localKodiMessage.id ? savedKodiMessage : message))
-      );
     } finally {
       setIsKodiThinking(false);
     }
@@ -4122,7 +4129,26 @@ export function App() {
     setDraft("");
     setMessages(nextMessages);
 
-    const savedUserMessagePromise = persistChatMessage(localUserMessage);
+    const savedUserMessage = await persistChatMessage(localUserMessage);
+    if (!savedUserMessage.id || savedUserMessage.id.startsWith("local-")) {
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        {
+          id: `local-publication-error-${Date.now()}`,
+          author: "מערכת",
+          text: "ההודעה לא נשמרה בשיחה הקבוצתית ולכן קודי לא הופעל. בדקו את החיבור ונסו שוב.",
+          source: "system",
+          createdAt: new Date().toISOString()
+        }
+      ]);
+      return;
+    }
+    setMessages((currentMessages) =>
+      currentMessages.map((message) => (message.id === localUserMessage.id ? savedUserMessage : message))
+    );
+    const publicMessages = nextMessages.map((message) =>
+      message.id === localUserMessage.id ? savedUserMessage : message
+    );
 
     if (shouldAskKodi) {
       const hasReliableLocation = isFreshCurrentLocation(currentLocation);
@@ -4133,7 +4159,7 @@ export function App() {
         const freshLocation = await getFreshCurrentLocationForAgent(text);
 
         if (freshLocation) {
-          await askKodiAndAppendReply(text, nextMessages, options.speakReply, freshLocation);
+          await askKodiAndAppendReply(text, publicMessages, options.speakReply, freshLocation);
         } else {
           const locationRequestMessage: ChatMessage = {
             id: `local-location-request-${Date.now()}`,
@@ -4146,14 +4172,9 @@ export function App() {
           setMessages((currentMessages) => [...currentMessages, locationRequestMessage]);
         }
       } else {
-        await askKodiAndAppendReply(text, nextMessages, options.speakReply);
+        await askKodiAndAppendReply(text, publicMessages, options.speakReply);
       }
     }
-
-    const savedUserMessage = await savedUserMessagePromise;
-    setMessages((currentMessages) =>
-      currentMessages.map((message) => (message.id === localUserMessage.id ? savedUserMessage : message))
-    );
   }
 
   async function sendMessageWithPersistence(event: FormEvent<HTMLFormElement>) {
