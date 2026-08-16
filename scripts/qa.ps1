@@ -1220,13 +1220,21 @@ if (-not $appSource.Contains("openSelectedPlaceInWaze")) {
 
 if (
   -not $appSource.Contains('target: "waze" | "maps" | "walking"') -or
-  -not $appSource.Contains('target === "walking" ? links.googleMapsWalking : links.googleMaps') -or
+  -not $appSource.Contains('links.googleMapsPlace') -or
   -not $appSource.Contains('openPlaceNavigation(place, "maps")')
 ) {
-  throw "Hamburger place cards must open each point in Google Maps, not only focus the internal map."
+  throw "Hamburger map buttons must open the Google Maps place card, not driving directions or only the internal map."
 }
 
 $navigationLinksSource = Get-Content (Join-Path $root "apps\api\src\navigation\links.ts") -Raw
+if (
+  -not $navigationLinksSource.Contains("googleMapsPlace") -or
+  -not $navigationLinksSource.Contains("/maps/search/") -or
+  -not $navigationLinksSource.Contains("placeSearchQuery")
+) {
+  throw "Google Maps place links must search by attraction name and coordinates so the public place card can open."
+}
+
 if (
   -not $navigationLinksSource.Contains("googleMapsWalking") -or
   -not $navigationLinksSource.Contains("travelmode=walking") -or

@@ -114,6 +114,7 @@ interface NavigationLinksResponse {
     app: string;
     web: string;
   };
+  googleMapsPlace: string;
   googleMaps: string;
   googleMapsWalking: string;
 }
@@ -2965,7 +2966,12 @@ export function App() {
       }
 
       const links = (await response.json()) as NavigationLinksResponse;
-      const href = target === "waze" ? links.waze.web : target === "walking" ? links.googleMapsWalking : links.googleMaps;
+      const href =
+        target === "waze"
+          ? links.waze.web
+          : target === "walking"
+            ? links.googleMapsWalking
+            : links.googleMapsPlace;
       window.open(href, "_blank", "noopener,noreferrer");
       setNavigationState("idle");
     } catch {
