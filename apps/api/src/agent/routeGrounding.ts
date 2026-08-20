@@ -41,11 +41,30 @@ export function getRouteGroundedPlaceIds(message: string, places: RouteGrounding
   );
 }
 
+export function getExplicitlyMentionedPlaceIds(message: string, places: RouteGroundingPlace[]) {
+  const normalizedMessage = normalize(message);
+  return new Set(
+    places
+      .filter((place) =>
+        [place.name, place.address]
+          .filter((value): value is string => Boolean(value))
+          .some((value) => normalize(value).length >= 4 && normalizedMessage.includes(normalize(value)))
+      )
+      .map((place) => place.id)
+  );
+}
+
 export function areRouteEndpointsGrounded(
   groundedPlaceIds: Iterable<string>,
   originPlaceId: string,
-  destinationPlaceId: string
+  destinationPlaceId: string,
+  explicitlyMentionedPlaceIds: Iterable<string> = []
 ) {
   const groundedIds = new Set(groundedPlaceIds);
-  return groundedIds.has(originPlaceId) && groundedIds.has(destinationPlaceId);
+  const endpoints = new Set([originPlaceId, destinationPlaceId]);
+  return (
+    groundedIds.has(originPlaceId) &&
+    groundedIds.has(destinationPlaceId) &&
+    [...explicitlyMentionedPlaceIds].every((placeId) => endpoints.has(placeId))
+  );
 }

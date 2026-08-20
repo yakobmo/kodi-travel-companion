@@ -97,7 +97,11 @@ import {
   type ConversationMessage
 } from "./agent/kodi.js";
 import { resolveConversationFocus } from "./agent/conversationFocus.js";
-import { areRouteEndpointsGrounded, getRouteGroundedPlaceIds } from "./agent/routeGrounding.js";
+import {
+  areRouteEndpointsGrounded,
+  getExplicitlyMentionedPlaceIds,
+  getRouteGroundedPlaceIds
+} from "./agent/routeGrounding.js";
 import { lookupTripContext } from "./agent/tripLookup.js";
 import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
 import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
@@ -4242,21 +4246,30 @@ app.post("/api/agent/message", async (req, res) => {
     const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
     const agentMemberLocationsRequest = getAgentMemberLocationsRequest(openAiReply.reply);
     const groundedRoutePlaceIds = getRouteGroundedPlaceIds(referenceMessage, tripLookupResult.matches);
+    const explicitlyMentionedRoutePlaceIds = getExplicitlyMentionedPlaceIds(
+      referenceMessage,
+      tripLookupResult.matches
+    );
     if (
       agentRouteToolRequest &&
       !areRouteEndpointsGrounded(
         groundedRoutePlaceIds,
         agentRouteToolRequest.originPlaceId,
-        agentRouteToolRequest.destinationPlaceId
+        agentRouteToolRequest.destinationPlaceId,
+        explicitlyMentionedRoutePlaceIds
       )
     ) {
       const groundedRouteCandidates = tripLookupResult.matches
         .filter((place) => groundedRoutePlaceIds.has(place.id))
         .map((place) => `${place.name} (${place.id})`)
         .join(", ");
+      const requiredExplicitCandidates = tripLookupResult.matches
+        .filter((place) => explicitlyMentionedRoutePlaceIds.has(place.id))
+        .map((place) => `${place.name} (${place.id})`)
+        .join(", ");
       runtimeGuidance = [
         ...runtimeGuidance,
-        `The proposed route endpoints were not both grounded in the user's wording and active conversational context. The only grounded route candidates for this turn are: ${groundedRouteCandidates || "none"}. Choose origin and destination only from these candidates and infer their direction from the user's natural-language request. If two endpoints are not available, do not substitute an unrelated place.`
+        `The proposed route endpoints were not both grounded in the user's wording and active conversational context. The grounded route candidates are: ${groundedRouteCandidates || "none"}. Places explicitly named or addressed in the conversation and therefore mandatory in the route are: ${requiredExplicitCandidates || "none"}. Choose origin and destination only from the grounded candidates, include every mandatory explicit place, and infer direction from the user's natural-language request. If two endpoints are not available, do not substitute an unrelated place.`
       ];
       openAiReply = undefined;
       continue;
