@@ -1717,6 +1717,33 @@ function shouldRequireFreshCurrentLocation(
   return options.hereAndNowContext && !hasExplicitPlannedTripAreaCue(message);
 }
 
+function resolveExplicitSavedRouteEndpoints(
+  message: string,
+  places: ReturnType<typeof buildDemoTripState>["places"]
+) {
+  const normalizedMessage = message.toLocaleLowerCase("he");
+  const matches = places
+    .filter(
+      (place) =>
+        place.name.trim().length >= 4 &&
+        typeof place.lat === "number" &&
+        typeof place.lng === "number"
+    )
+    .map((place) => ({
+      place,
+      position: normalizedMessage.indexOf(place.name.toLocaleLowerCase("he"))
+    }))
+    .filter((match) => match.position >= 0)
+    .sort((first, second) => first.position - second.position || second.place.name.length - first.place.name.length)
+    .filter(
+      (match, index, all) =>
+        all.findIndex((candidate) => candidate.place.id === match.place.id) === index
+    );
+
+  if (matches.length < 2) return undefined;
+  return { origin: matches[0].place, destination: matches[1].place };
+}
+
 function getAgentRouteToolRequest(reply: AgentMessageResponse | undefined) {
   const value = reply?.metadata?.toolRequest;
   if (!value || typeof value !== "object") {
@@ -4125,6 +4152,35 @@ app.post("/api/agent/message", async (req, res) => {
   let navigationTravelMode: "DRIVE" | "WALK" = includesAnyTerm(referenceMessage, ["הליכה", "ברגל"])
     ? "WALK"
     : "DRIVE";
+  const explicitRouteEndpoints = shouldUseRouteEstimate(referenceMessage)
+    ? resolveExplicitSavedRouteEndpoints(referenceMessage, tripState.places)
+    : undefined;
+  if (explicitRouteEndpoints) {
+    routeToolUsageGate = authorizeTripUsageCapability({
+      usagePool,
+      capability: "google_routes",
+      triggeringMember: { id: normalizedMember.id, role: normalizedMember.role }
+    });
+    if (routeToolUsageGate.allowed) {
+      routeEstimate = await estimateGoogleRoute({
+        origin: { lat: Number(explicitRouteEndpoints.origin.lat), lng: Number(explicitRouteEndpoints.origin.lng) },
+        destination: { lat: Number(explicitRouteEndpoints.destination.lat), lng: Number(explicitRouteEndpoints.destination.lng) },
+        travelMode: navigationTravelMode,
+        languageCode: "he"
+      });
+      navigationDestination = {
+        lat: Number(explicitRouteEndpoints.destination.lat),
+        lng: Number(explicitRouteEndpoints.destination.lng),
+        label: explicitRouteEndpoints.destination.name,
+        source: "named_place"
+      };
+      void safeRecordUsageGateEvent({
+        usageGate: routeToolUsageGate,
+        actorName: String(normalizedMember.displayName),
+        source: "kodi_agent"
+      });
+    }
+  }
   const rulesReply = freshCurrentLocationRequired
     ? buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName))
     : buildKodiReplyFromContext({
