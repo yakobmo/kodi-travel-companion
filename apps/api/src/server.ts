@@ -4250,9 +4250,13 @@ app.post("/api/agent/message", async (req, res) => {
         agentRouteToolRequest.destinationPlaceId
       )
     ) {
+      const groundedRouteCandidates = tripLookupResult.matches
+        .filter((place) => groundedRoutePlaceIds.has(place.id))
+        .map((place) => `${place.name} (${place.id})`)
+        .join(", ");
       runtimeGuidance = [
         ...runtimeGuidance,
-        "The proposed route endpoints were not both grounded in the places retrieved for the user's wording. Re-read the saved point names, notes, dates, and tags in placeDirectory. Request trip_memory for the exact candidate IDs if needed, then submit a corrected route tool call."
+        `The proposed route endpoints were not both grounded in the user's wording and active conversational context. The only grounded route candidates for this turn are: ${groundedRouteCandidates || "none"}. Choose origin and destination only from these candidates and infer their direction from the user's natural-language request. If two endpoints are not available, do not substitute an unrelated place.`
       ];
       openAiReply = undefined;
       continue;
