@@ -9,7 +9,8 @@ export type KodiToolRequest =
 export const KODI_TOOL_CONTRACT =
   "Available tools: trip_memory(placeIds), route(originPlaceId,destinationPlaceId,travelMode), " +
   "places_search(query,anchorPlaceId?,radiusMeters?), and member_locations(scope,memberName?). " +
-  "Request at most one tool at a time through toolRequest, using exact place IDs from placeDirectory.";
+  "Request at most one tool at a time through toolRequest, using exact place IDs from placeDirectory. " +
+  "Use places_search whenever the answer depends on a real nearby venue, current opening status, rating, or live place availability; general knowledge is not evidence for those facts.";
 
 export function parseKodiToolRequest(value: unknown): KodiToolRequest | undefined {
   if (!value || typeof value !== "object") return undefined;
@@ -65,4 +66,3 @@ export function parseKodiToolRequest(value: unknown): KodiToolRequest | undefine
 export function getKodiToolRequest(reply: AgentMessageResponse | undefined) {
   return parseKodiToolRequest(reply?.metadata?.toolRequest);
 }
-
