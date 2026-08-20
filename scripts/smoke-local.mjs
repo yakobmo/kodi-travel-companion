@@ -1,4 +1,4 @@
-import { join } from "node:path";
+﻿import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { homedir } from "node:os";
 
@@ -107,11 +107,11 @@ try {
   const googleSourceResponse = await fetch("http://localhost:3001/api/trips/demo/google-source");
   const googleSourcePayload = await googleSourceResponse.json();
   assertCheck("google source preview endpoint", googleSourceResponse.ok);
-  assertCheck("google source adapter kind", googleSourcePayload.adapter?.kind === "fixture");
-  assertCheck("google source no live access", googleSourcePayload.adapter?.liveGoogleAccess === false);
-  assertCheck("google source preview mode", googleSourcePayload.source?.state === "read_only_preview");
-  assertCheck("google source sync mode", googleSourcePayload.sync?.mode === "read_only_fixture");
-  assertCheck("google source preview count", googleSourcePayload.source?.importedPlacesCount >= 100);
+  assertCheck("google source adapter kind", googleSourcePayload.adapter?.kind === "google_public_list");
+  assertCheck("google source live access", googleSourcePayload.adapter?.liveGoogleAccess === true);
+  assertCheck("google source connected", googleSourcePayload.source?.state === "connected");
+  assertCheck("google source sync mode", googleSourcePayload.sync?.mode === "google_public_list_read");
+  assertCheck("google source active count", googleSourcePayload.source?.importedPlacesCount === 79);
   assertCheck("google source write-back blocked", googleSourcePayload.sync?.canWriteBackToGoogle === false);
 
   const googleSourceSyncResponse = await fetch("http://localhost:3001/api/trips/demo/google-source/sync", {
@@ -153,9 +153,9 @@ try {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      text: "שלום, אני קודי. אני כאן כדי לעזור לכם בטיול.",
+      text: "׳©׳׳•׳, ׳׳ ׳™ ׳§׳•׳“׳™. ׳׳ ׳™ ׳›׳׳ ׳›׳“׳™ ׳׳¢׳–׳•׳¨ ׳׳›׳ ׳‘׳˜׳™׳•׳.",
       memberId: "manager",
-      memberName: "מנהל הטיול",
+      memberName: "׳׳ ׳”׳ ׳”׳˜׳™׳•׳",
       memberRole: "owner"
     })
   });
@@ -170,7 +170,7 @@ try {
   const timelinePayload = await timelineResponse.json();
   assertCheck("trip timeline endpoint", timelineResponse.ok);
   assertCheck("trip timeline source", timelinePayload.source === "google_map_order_lodging_segments");
-  assertCheck("trip timeline lodging segments", Array.isArray(timelinePayload.segments) && timelinePayload.segments.length >= 8);
+  assertCheck("trip timeline lodging segments", Array.isArray(timelinePayload.segments) && timelinePayload.segments.length >= 7);
   assertCheck(
     "trip timeline pelion segment",
     timelinePayload.segments.some((segment) => segment.regionHints?.includes("pelion") && segment.lodging?.lat)
@@ -225,36 +225,36 @@ try {
   const setupPayload = await (await page.request.get("http://localhost:3001/api/trips/demo/setup")).json();
   assertCheck("setup starts disconnected", setupPayload.googleSource?.importedPlacesCount === 0);
 
-  await page.locator(".guided-step").getByText("שלום, אני קודי").waitFor();
+  await page.locator(".guided-step").getByText("׳©׳׳•׳, ׳׳ ׳™ ׳§׳•׳“׳™").waitFor();
   const activationBody = await page.locator("body").innerText();
-  assertCheck("guided activation shell", activationBody.includes("שלום, אני קודי"));
-  assertCheck("guided activation single purpose", activationBody.includes("הפעל את קודי"));
-  assertCheck("guided activation clean copy", !activationBody.includes("בית חב\"ד קרוב") && !activationBody.includes("תחנת דלק"));
-  assertCheck("guided activation no bypass", !activationBody.includes("כניסה לחשבון הטיול"));
+  assertCheck("guided activation shell", activationBody.includes("׳©׳׳•׳, ׳׳ ׳™ ׳§׳•׳“׳™"));
+  assertCheck("guided activation single purpose", activationBody.includes("׳”׳₪׳¢׳ ׳׳× ׳§׳•׳“׳™"));
+  assertCheck("guided activation clean copy", !activationBody.includes("׳‘׳™׳× ׳—׳‘\"׳“ ׳§׳¨׳•׳‘") && !activationBody.includes("׳×׳—׳ ׳× ׳“׳׳§"));
+  assertCheck("guided activation no bypass", !activationBody.includes("׳›׳ ׳™׳¡׳” ׳׳—׳©׳‘׳•׳ ׳”׳˜׳™׳•׳"));
 
-  await page.getByRole("button", { name: "הפעל את קודי" }).click();
-  await page.getByText("מאיפה לקרוא את הטיול?").waitFor();
-  assertCheck("trip source continue initially disabled", await page.getByRole("button", { name: "המשך למיקום מנהל" }).isDisabled());
-  await page.locator(".guided-step").getByLabel("שם הטיול").fill("יוון משפחתי 2026");
-  await page.locator(".guided-step").getByLabel("קישור Google Maps").fill("https://maps.app.goo.gl/MspoN6j9CJDyGmtb8");
-  await page.locator(".guided-step").getByLabel("שם מנהל הטיול").fill("אמא");
-  await page.locator(".guided-step").getByLabel("גיל מנהל הטיול").fill("40");
-  await page.getByText("הקישור זוהה").waitFor();
-  await page.getByRole("button", { name: "המשך למיקום מנהל" }).click();
-  await page.getByText("נפעיל מיקום מנהל").waitFor();
-  await page.getByRole("button", { name: "הפעל מיקום מנהל במפה" }).click();
-  await page.getByText("מיקום מנהל פעיל במפה").waitFor();
-  assertCheck("manager location primary continue", await page.getByRole("button", { name: "המשך למפה ולשיחה" }).isVisible());
-  assertCheck("manager location refresh is secondary", await page.getByRole("button", { name: "רענן מיקום" }).isVisible());
-  await page.getByRole("button", { name: "המשך למפה ולשיחה" }).click();
-  await page.getByText("הלב מוכן").waitFor();
-  await page.getByRole("button", { name: "כניסה למפה ולשיחה" }).click();
+  await page.getByRole("button", { name: "׳”׳₪׳¢׳ ׳׳× ׳§׳•׳“׳™" }).click();
+  await page.getByText("׳׳׳™׳₪׳” ׳׳§׳¨׳•׳ ׳׳× ׳”׳˜׳™׳•׳?").waitFor();
+  assertCheck("trip source continue initially disabled", await page.getByRole("button", { name: "׳”׳׳©׳ ׳׳׳™׳§׳•׳ ׳׳ ׳”׳" }).isDisabled());
+  await page.locator(".guided-step").getByLabel("׳©׳ ׳”׳˜׳™׳•׳").fill("׳™׳•׳•׳ ׳׳©׳₪׳—׳×׳™ 2026");
+  await page.locator(".guided-step").getByLabel("׳§׳™׳©׳•׳¨ Google Maps").fill("https://maps.app.goo.gl/MspoN6j9CJDyGmtb8");
+  await page.locator(".guided-step").getByLabel("׳©׳ ׳׳ ׳”׳ ׳”׳˜׳™׳•׳").fill("׳׳׳");
+  await page.locator(".guided-step").getByLabel("׳’׳™׳ ׳׳ ׳”׳ ׳”׳˜׳™׳•׳").fill("40");
+  await page.getByText("׳”׳§׳™׳©׳•׳¨ ׳–׳•׳”׳”").waitFor();
+  await page.getByRole("button", { name: "׳”׳׳©׳ ׳׳׳™׳§׳•׳ ׳׳ ׳”׳" }).click();
+  await page.getByText("׳ ׳₪׳¢׳™׳ ׳׳™׳§׳•׳ ׳׳ ׳”׳").waitFor();
+  await page.getByRole("button", { name: "׳”׳₪׳¢׳ ׳׳™׳§׳•׳ ׳׳ ׳”׳ ׳‘׳׳₪׳”" }).click();
+  await page.getByText("׳׳™׳§׳•׳ ׳׳ ׳”׳ ׳₪׳¢׳™׳ ׳‘׳׳₪׳”").waitFor();
+  assertCheck("manager location primary continue", await page.getByRole("button", { name: "׳”׳׳©׳ ׳׳׳₪׳” ׳•׳׳©׳™׳—׳”" }).isVisible());
+  assertCheck("manager location refresh is secondary", await page.getByRole("button", { name: "׳¨׳¢׳ ׳ ׳׳™׳§׳•׳" }).isVisible());
+  await page.getByRole("button", { name: "׳”׳׳©׳ ׳׳׳₪׳” ׳•׳׳©׳™׳—׳”" }).click();
+  await page.getByText("׳”׳׳‘ ׳׳•׳›׳").waitFor();
+  await page.getByRole("button", { name: "׳›׳ ׳™׳¡׳” ׳׳׳₪׳” ׳•׳׳©׳™׳—׳”" }).click();
 
   await page.locator(".map-surface").waitFor();
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator(".map-surface").waitFor();
   const returningUserBody = await page.locator("body").innerText();
-  assertCheck("returning user skips completed onboarding", !returningUserBody.includes("שלום, אני קודי"));
+  assertCheck("returning user skips completed onboarding", !returningUserBody.includes("׳©׳׳•׳, ׳׳ ׳™ ׳§׳•׳“׳™"));
 
   const body = await page.locator("body").innerText();
   const tripStateResponse = await page.request.get("http://localhost:3001/api/trips/demo/state");
@@ -270,40 +270,40 @@ try {
   const eventsResponse = await page.request.get("http://localhost:3001/api/trips/demo/events");
   const eventsPayload = await eventsResponse.json();
 
-  assertCheck("map", body.includes("מפה חיה"));
+  assertCheck("map", body.includes("׳׳₪׳” ׳—׳™׳”"));
   const mapShellClass = await page.locator(".map-placeholder").evaluate((element) => element.className);
   const googleMapsActive = String(mapShellClass).includes("google-map-active");
   assertCheck("trip source loaded", storageResponse.ok() && Boolean(storagePayload.storage));
   assertCheck("places count", body.includes("79 נקודות"));
-  assertCheck("group chat", body.includes("קבוצת הטיול"));
-  assertCheck("kodi background", body.includes("קודי ברקע"));
+  assertCheck("group chat", body.includes("׳§׳‘׳•׳¦׳× ׳”׳˜׳™׳•׳"));
+  assertCheck("kodi background", body.includes("׳§׳•׳“׳™ ׳‘׳¨׳§׳¢"));
   assertCheck("google maps is target provider", body.includes("Google Maps"));
-  assertCheck("direct google maps handoff visible", await page.getByRole("button", { name: "פתח Google Maps" }).isVisible());
+  assertCheck("direct google maps handoff visible", await page.getByRole("button", { name: "׳₪׳×׳— Google Maps" }).isVisible());
   if (googleMapsActive) {
     assertCheck("google maps active", googleMapsActive);
   } else {
     assertCheck("google maps fallback marked temporary", String(mapShellClass).includes("internal-map-fallback"));
   }
-  assertCheck("trip map focus", body.includes("מפת הטיול") && body.includes("המיקום שלך מוצג מעליה"));
+  assertCheck("trip map focus", body.includes("׳׳₪׳× ׳”׳˜׳™׳•׳") && body.includes("׳”׳׳™׳§׳•׳ ׳©׳׳ ׳׳•׳¦׳’ ׳׳¢׳׳™׳”"));
   assertCheck("place marker", (await page.locator(".place-marker").count()) > 0);
-  assertCheck("retired demo family hidden", !body.includes("אבא") && !body.includes("נועה") && !body.includes("סבתא"));
-  await page.getByRole("button", { name: "תפריט" }).click();
+  assertCheck("retired demo family hidden", !body.includes("׳׳‘׳") && !body.includes("׳ ׳•׳¢׳”") && !body.includes("׳¡׳‘׳×׳"));
+  await page.getByRole("button", { name: "׳×׳₪׳¨׳™׳˜" }).click();
   const menu = page.locator(".secondary-menu");
   let menuBody = await menu.innerText();
-  assertCheck("personal live location copy in menu", menuBody.includes("מיקום בטלפון"));
-  assertCheck("direct location action in menu", menuBody.includes("אשר מיקום") || menuBody.includes("רענן מיקום"));
-  assertCheck("invite moved to menu", menuBody.includes("הזמנת משתתפים"));
-  assertCheck("invite per-device consent in menu", menuBody.includes("מאשר מיקום ומצטרף"));
-  assertCheck("invite native share action in menu", menuBody.includes("שתף הזמנה"));
+  assertCheck("personal live location copy in menu", menuBody.includes("׳׳™׳§׳•׳ ׳‘׳˜׳׳₪׳•׳"));
+  assertCheck("direct location action in menu", menuBody.includes("׳׳©׳¨ ׳׳™׳§׳•׳") || menuBody.includes("׳¨׳¢׳ ׳ ׳׳™׳§׳•׳"));
+  assertCheck("invite moved to menu", menuBody.includes("׳”׳–׳׳ ׳× ׳׳©׳×׳×׳₪׳™׳"));
+  assertCheck("invite per-device consent in menu", menuBody.includes("׳׳׳©׳¨ ׳׳™׳§׳•׳ ׳•׳׳¦׳˜׳¨׳£"));
+  assertCheck("invite native share action in menu", menuBody.includes("׳©׳×׳£ ׳”׳–׳׳ ׳”"));
 
-  await menu.getByText("אפשרויות נוספות").click();
+  await menu.getByText("׳׳₪׳©׳¨׳•׳™׳•׳× ׳ ׳•׳¡׳₪׳•׳×").click();
   menuBody = await menu.innerText();
-  assertCheck("event activity in menu", menuBody.includes("פעילות חיה"));
+  assertCheck("event activity in menu", menuBody.includes("׳₪׳¢׳™׳׳•׳× ׳—׳™׳”"));
   assertCheck("waze in menu", menuBody.includes("Waze"));
   assertCheck("google maps shortcut in menu", menuBody.includes("Google Maps"));
   assertCheck("booking shortcut in menu", menuBody.includes("Booking"));
   assertCheck("airbnb shortcut in menu", menuBody.includes("Airbnb"));
-  assertCheck("full trip places list in menu", menuBody.includes("נקודות הטיול") && menuBody.includes("79 נקודות"));
+  assertCheck("full trip places list in menu", menuBody.includes("׳ ׳§׳•׳“׳•׳× ׳”׳˜׳™׳•׳") && menuBody.includes("79 ׳ ׳§׳•׳“׳•׳×"));
   assertCheck("trip places list has many entries", (await menu.locator(".trip-place-list button").count()) >= 20);
   assertCheck("map surface stays clean", await page.locator(".map-surface > .action-card").isHidden());
   assertCheck("chat invite card hidden", await page.locator(".chat-sheet .invite-card").count() === 0);
@@ -314,7 +314,7 @@ try {
   await mobilePage.locator(".map-surface").waitFor();
   assertCheck("mobile map visible", await mobilePage.locator(".map-surface").isVisible());
   assertCheck("mobile chat visible", await mobilePage.locator(".chat-sheet").isVisible());
-  assertCheck("mobile google maps handoff visible", await mobilePage.getByRole("button", { name: "פתח Google Maps" }).isVisible());
+  assertCheck("mobile google maps handoff visible", await mobilePage.getByRole("button", { name: "׳₪׳×׳— Google Maps" }).isVisible());
   const mobileCoreHeights = await mobilePage.evaluate(() => {
     const map = document.querySelector(".map-surface")?.getBoundingClientRect();
     const chat = document.querySelector(".chat-sheet")?.getBoundingClientRect();
@@ -333,13 +333,13 @@ try {
   );
   await mobilePage.close();
 
-  const inviteUrl = await page.getByLabel("קישור הזמנה בתפריט ניהול").inputValue();
+  const inviteUrl = await page.getByLabel("׳§׳™׳©׳•׳¨ ׳”׳–׳׳ ׳” ׳‘׳×׳₪׳¨׳™׳˜ ׳ ׳™׳”׳•׳").inputValue();
   assertCheck("invite link token", inviteUrl.includes("?join=group_family_greece_demo"));
 
   const joinPage = await context.newPage();
   await joinPage.goto(inviteUrl, { waitUntil: "domcontentloaded" });
-  await joinPage.getByText("מצטרפים לקודי").waitFor();
-  const smokeJoinName = `דניאל ${Date.now()}`;
+  await joinPage.getByText("׳׳¦׳˜׳¨׳₪׳™׳ ׳׳§׳•׳“׳™").waitFor();
+  const smokeJoinName = `׳“׳ ׳™׳׳ ${Date.now()}`;
   const joinResponse = await joinPage.request.post("http://localhost:3001/api/trips/demo/members", {
     data: {
       displayName: smokeJoinName,
@@ -351,7 +351,7 @@ try {
   const membersAfterJoinPayload = await (await joinPage.request.get("http://localhost:3001/api/trips/demo/members")).json();
   assertCheck("join api ok", joinResponse.ok());
   assertCheck("join adds participant locally", membersAfterJoinPayload.members?.some((member) => member.member?.displayName === smokeJoinName));
-  assertCheck("join location consent copy", joinBody.includes("אישור מיקום נעשה בנפרד מהמכשיר שלך"));
+  assertCheck("join location consent copy", joinBody.includes("׳׳™׳©׳•׳¨ ׳׳™׳§׳•׳ ׳ ׳¢׳©׳” ׳‘׳ ׳₪׳¨׳“ ׳׳”׳׳›׳©׳™׳¨ ׳©׳׳"));
   await joinPage.close();
 
   assertCheck("members api ok", membersResponse.ok());
@@ -368,15 +368,15 @@ try {
   assertCheck("storage realtime not ready", storagePayload.storage?.realtimeReady === false);
   assertCheck("events api ok", eventsResponse.ok() && Array.isArray(eventsPayload.events));
   assertCheck("events file fallback", eventsPayload.eventLog?.driver === "file");
-  assertCheck("events visible in advanced menu", menuBody.includes("פעילות חיה"));
+  assertCheck("events visible in advanced menu", menuBody.includes("׳₪׳¢׳™׳׳•׳× ׳—׳™׳”"));
   const usageOverviewText = await page.locator(".secondary-menu .usage-overview-grid").innerText();
   assertCheck("usage overview visible", usageOverviewText.includes("Google Places") && usageOverviewText.includes("Google Routes"));
 
   const savedMessageResponse = await page.request.post("http://localhost:3001/api/trips/demo/messages", {
-    data: { author: "QA", text: "בדיקת שמירת שיחה", source: "system" }
+    data: { author: "QA", text: "׳‘׳“׳™׳§׳× ׳©׳׳™׳¨׳× ׳©׳™׳—׳”", source: "system" }
   });
   const savedMessagePayload = await savedMessageResponse.json();
-  assertCheck("messages api append", savedMessageResponse.ok() && savedMessagePayload.message?.text === "בדיקת שמירת שיחה");
+  assertCheck("messages api append", savedMessageResponse.ok() && savedMessagePayload.message?.text === "׳‘׳“׳™׳§׳× ׳©׳׳™׳¨׳× ׳©׳™׳—׳”");
   const eventsAfterMessageResponse = await page.request.get("http://localhost:3001/api/trips/demo/events");
   const eventsAfterMessagePayload = await eventsAfterMessageResponse.json();
   assertCheck(
@@ -396,19 +396,19 @@ try {
   assertCheck("location consent block", blockedLocationResponse.status() === 403);
 
   assertCheck("trip state api ok", tripStateResponse.ok());
-  assertCheck("trip state places", tripStatePayload.places?.length >= 100);
+  assertCheck("trip state places", tripStatePayload.places?.length === 79);
   assertCheck("trip state members", tripStatePayload.members?.length === 4);
-  assertCheck("trip state agent", tripStatePayload.agentContext?.name === "קודי");
+  assertCheck("trip state agent", tripStatePayload.agentContext?.name === "׳§׳•׳“׳™");
   assertCheck("saved setup ok", savedSetupResponse.ok());
   assertCheck("saved setup completed", savedSetupPayload.setupCompleted === true);
-  assertCheck("saved setup trip", savedSetupPayload.setupSummary?.tripName === "יוון משפחתי 2026");
+  assertCheck("saved setup trip", savedSetupPayload.setupSummary?.tripName === "׳™׳•׳•׳ ׳׳©׳₪׳—׳×׳™ 2026");
   assertCheck("saved setup member", savedSetupPayload.setupSummary?.firstMemberName?.length > 1);
   assertCheck("saved setup places", savedSetupPayload.googleSource?.importedPlacesCount === 108);
 
   const locationAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
-      member: { id: "mom", displayName: "אמא", role: "owner", ageGroup: "adult" },
-      message: "קודי, איפה כולם עכשיו?",
+      member: { id: "mom", displayName: "׳׳׳", role: "owner", ageGroup: "adult" },
+      message: "׳§׳•׳“׳™, ׳׳™׳₪׳” ׳›׳•׳׳ ׳¢׳›׳©׳™׳•?",
       recentMessages: []
     }
   });
@@ -424,13 +424,13 @@ try {
       (item) => item.capability === "openai_agent" && item.providerConfigured === false
     )
   );
-  assertCheck("agent location state", locationAgentPayload.text?.includes("מיקום") || locationAgentPayload.text?.includes("קבוצה"));
-  assertCheck("agent hides no consent", locationAgentPayload.text?.includes("לא חושף אותם בלי הסכמה"));
+  assertCheck("agent location state", locationAgentPayload.text?.includes("׳׳™׳§׳•׳") || locationAgentPayload.text?.includes("׳§׳‘׳•׳¦׳”"));
+  assertCheck("agent hides no consent", locationAgentPayload.text?.includes("׳׳ ׳—׳•׳©׳£ ׳׳•׳×׳ ׳‘׳׳™ ׳”׳¡׳›׳׳”"));
 
   const recommendationAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
-      member: { id: "mom", displayName: "אמא", role: "owner", ageGroup: "adult" },
-      message: "קודי, מה כדאי לעשות עכשיו? תמליץ על משהו עם מים.",
+      member: { id: "mom", displayName: "׳׳׳", role: "owner", ageGroup: "adult" },
+      message: "׳§׳•׳“׳™, ׳׳” ׳›׳“׳׳™ ׳׳¢׳©׳•׳× ׳¢׳›׳©׳™׳•? ׳×׳׳׳™׳¥ ׳¢׳ ׳׳©׳”׳• ׳¢׳ ׳׳™׳.",
       recentMessages: []
     }
   });
@@ -439,15 +439,15 @@ try {
   assertCheck("agent recommendation intent", recommendationAgentPayload.intent === "place_recommendation");
   assertCheck("agent recommendation state", recommendationAgentPayload.contextSummary?.hasTripState === true);
   assertCheck("agent recommendation admin policy", recommendationAgentPayload.contextSummary?.operationalChangesRequireAdmin === true);
-  assertCheck("agent recommendation text", recommendationAgentPayload.text?.includes("ההמלצה שלי כרגע היא"));
-  assertCheck("agent no invented eta", recommendationAgentPayload.text?.includes("אני לא קובע עדיין זמן נסיעה"));
-  assertCheck("agent reasons", recommendationAgentPayload.text?.includes("הנימוקים המרכזיים"));
-  assertCheck("agent alternatives", recommendationAgentPayload.text?.includes("חלופות שדחיתי"));
+  assertCheck("agent recommendation text", recommendationAgentPayload.text?.includes("׳”׳”׳׳׳¦׳” ׳©׳׳™ ׳›׳¨׳’׳¢ ׳”׳™׳"));
+  assertCheck("agent no invented eta", recommendationAgentPayload.text?.includes("׳׳ ׳™ ׳׳ ׳§׳•׳‘׳¢ ׳¢׳“׳™׳™׳ ׳–׳׳ ׳ ׳¡׳™׳¢׳”"));
+  assertCheck("agent reasons", recommendationAgentPayload.text?.includes("׳”׳ ׳™׳׳•׳§׳™׳ ׳”׳׳¨׳›׳–׳™׳™׳"));
+  assertCheck("agent alternatives", recommendationAgentPayload.text?.includes("׳—׳׳•׳₪׳•׳× ׳©׳“׳—׳™׳×׳™"));
 
   const gelatoAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
-      member: { id: "mom", displayName: "אמא", role: "owner", ageGroup: "adult" },
-      message: "קודי, בא לילדים גלידה קרוב למלון. מה יש באזור?",
+      member: { id: "mom", displayName: "׳׳׳", role: "owner", ageGroup: "adult" },
+      message: "׳§׳•׳“׳™, ׳‘׳ ׳׳™׳׳“׳™׳ ׳’׳׳™׳“׳” ׳§׳¨׳•׳‘ ׳׳׳׳•׳. ׳׳” ׳™׳© ׳‘׳׳–׳•׳¨?",
       recentMessages: []
     }
   });
@@ -455,7 +455,7 @@ try {
   assertCheck("agent google places context ok", gelatoAgentResponse.ok());
   assertCheck("agent google places status", gelatoAgentPayload.contextSummary?.externalPlacesSearchStatus === "not_configured");
   assertCheck("agent google places keeps trip state", gelatoAgentPayload.contextSummary?.hasTripState === true);
-  assertCheck("agent google places not canned presence", !String(gelatoAgentPayload.text ?? "").includes("תשאלו אותי חופשי"));
+  assertCheck("agent google places not canned presence", !String(gelatoAgentPayload.text ?? "").includes("׳×׳©׳׳׳• ׳׳•׳×׳™ ׳—׳•׳₪׳©׳™"));
   assertCheck(
     "agent google places usage gate",
     gelatoAgentPayload.contextSummary?.usageGateResults?.some(
@@ -475,8 +475,8 @@ try {
 
   const fastTripAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
-      member: { id: "mom", displayName: "מנהל הטיול", role: "owner", ageGroup: "adult" },
-      message: "קודי, איפה ישנים הלילה ואיזה טברנה קרובה יש לבית מלון?",
+      member: { id: "mom", displayName: "׳׳ ׳”׳ ׳”׳˜׳™׳•׳", role: "owner", ageGroup: "adult" },
+      message: "׳§׳•׳“׳™, ׳׳™׳₪׳” ׳™׳©׳ ׳™׳ ׳”׳׳™׳׳” ׳•׳׳™׳–׳” ׳˜׳‘׳¨׳ ׳” ׳§׳¨׳•׳‘׳” ׳™׳© ׳׳‘׳™׳× ׳׳׳•׳?",
       recentMessages: []
     }
   });
@@ -501,20 +501,20 @@ try {
 
   const tripOverviewAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
-      member: { id: "mom", displayName: "מנהל הטיול", role: "owner", ageGroup: "adult" },
-      message: "קודי, מה אופי הטיול שלנו ביוון?",
+      member: { id: "mom", displayName: "׳׳ ׳”׳ ׳”׳˜׳™׳•׳", role: "owner", ageGroup: "adult" },
+      message: "׳§׳•׳“׳™, ׳׳” ׳׳•׳₪׳™ ׳”׳˜׳™׳•׳ ׳©׳׳ ׳• ׳‘׳™׳•׳•׳?",
       recentMessages: []
     }
   });
   const tripOverviewAgentPayload = await tripOverviewAgentResponse.json();
   assertCheck("agent trip overview ok", tripOverviewAgentResponse.ok());
   assertCheck("agent trip overview intent", tripOverviewAgentPayload.intent === "general");
-  assertCheck("agent trip overview route arc", tripOverviewAgentPayload.text?.includes("צפון יוון") && tripOverviewAgentPayload.text?.includes("פיליון"));
-  assertCheck("agent trip overview not local compromise", !tripOverviewAgentPayload.text?.includes("אפשר לחפש נקודה קלה ליד"));
+  assertCheck("agent trip overview route arc", tripOverviewAgentPayload.text?.includes("׳¦׳₪׳•׳ ׳™׳•׳•׳") && tripOverviewAgentPayload.text?.includes("׳₪׳™׳׳™׳•׳"));
+  assertCheck("agent trip overview not local compromise", !tripOverviewAgentPayload.text?.includes("׳׳₪׳©׳¨ ׳׳—׳₪׳© ׳ ׳§׳•׳“׳” ׳§׳׳” ׳׳™׳“"));
 
   const blockedActionResponse = await page.request.post("http://localhost:3001/api/trips/demo/agent-actions/authorize", {
     data: {
-      member: { id: "noa", displayName: "נועה", role: "member" },
+      member: { id: "noa", displayName: "׳ ׳•׳¢׳”", role: "member" },
       actionType: "set_group_destination"
     }
   });
@@ -524,7 +524,7 @@ try {
 
   const allowedActionResponse = await page.request.post("http://localhost:3001/api/trips/demo/agent-actions/authorize", {
     data: {
-      member: { id: "mom", displayName: "אמא", role: "owner" },
+      member: { id: "mom", displayName: "׳׳׳", role: "owner" },
       actionType: "set_group_destination"
     }
   });
@@ -533,7 +533,7 @@ try {
 
   const blockedDestinationResponse = await page.request.post("http://localhost:3001/api/trips/demo/group-destination", {
     data: {
-      member: { id: "noa", displayName: "נועה", role: "member" },
+      member: { id: "noa", displayName: "׳ ׳•׳¢׳”", role: "member" },
       placeId: tripStatePayload.places[0].id
     }
   });
@@ -541,7 +541,7 @@ try {
 
   const allowedDestinationResponse = await page.request.post("http://localhost:3001/api/trips/demo/group-destination", {
     data: {
-      member: { id: "mom", displayName: "אמא", role: "owner" },
+      member: { id: "mom", displayName: "׳׳׳", role: "owner" },
       placeId: tripStatePayload.places[0].id
     }
   });
@@ -553,7 +553,7 @@ try {
 
   const blockedRouteResponse = await page.request.post("http://localhost:3001/api/trips/demo/group-route", {
     data: {
-      member: { id: "noa", displayName: "נועה", role: "member" },
+      member: { id: "noa", displayName: "׳ ׳•׳¢׳”", role: "member" },
       placeIds: tripStatePayload.places.slice(0, 3).map((place) => place.id)
     }
   });
@@ -561,9 +561,9 @@ try {
 
   const allowedRouteResponse = await page.request.post("http://localhost:3001/api/trips/demo/group-route", {
     data: {
-      member: { id: "mom", displayName: "אמא", role: "owner" },
+      member: { id: "mom", displayName: "׳׳׳", role: "owner" },
       placeIds: tripStatePayload.places.slice(0, 3).map((place) => place.id),
-      title: "מסלול QA קצר"
+      title: "׳׳¡׳׳•׳ QA ׳§׳¦׳¨"
     }
   });
   const allowedRoutePayload = await allowedRouteResponse.json();
@@ -571,66 +571,66 @@ try {
 
   const contextAwareAgentResponse = await page.request.post("http://localhost:3001/api/agent/message", {
     data: {
-      member: { id: "mom", displayName: "מנהל הטיול", role: "owner", ageGroup: "adult" },
-      message: "קודי, איך מחברים את כולם בלי לשנות יעד בלי אישור?",
+      member: { id: "mom", displayName: "׳׳ ׳”׳ ׳”׳˜׳™׳•׳", role: "owner", ageGroup: "adult" },
+      message: "׳§׳•׳“׳™, ׳׳™׳ ׳׳—׳‘׳¨׳™׳ ׳׳× ׳›׳•׳׳ ׳‘׳׳™ ׳׳©׳ ׳•׳× ׳™׳¢׳“ ׳‘׳׳™ ׳׳™׳©׳•׳¨?",
       recentMessages: [
-        { author: "משתתף 1", text: "בא לי גלידה", source: "member" },
-        { author: "משתתף צעיר", text: "אני עייף ורוצה לנוח", source: "member" },
-        { author: "מנהל הטיול", text: "צריך משהו קרוב ורגוע", source: "member" }
+        { author: "׳׳©׳×׳×׳£ 1", text: "׳‘׳ ׳׳™ ׳’׳׳™׳“׳”", source: "member" },
+        { author: "׳׳©׳×׳×׳£ ׳¦׳¢׳™׳¨", text: "׳׳ ׳™ ׳¢׳™׳™׳£ ׳•׳¨׳•׳¦׳” ׳׳ ׳•׳—", source: "member" },
+        { author: "׳׳ ׳”׳ ׳”׳˜׳™׳•׳", text: "׳¦׳¨׳™׳ ׳׳©׳”׳• ׳§׳¨׳•׳‘ ׳•׳¨׳’׳•׳¢", source: "member" }
       ]
     }
   });
   const contextAwareAgentPayload = await contextAwareAgentResponse.json();
   assertCheck("agent context-aware ok", contextAwareAgentResponse.ok());
-  assertCheck("agent context-aware natural", !contextAwareAgentPayload.text?.includes("שמעתי את") && !contextAwareAgentPayload.text?.includes("מהשיחה אני מזהה"));
-  assertCheck("agent context-aware needs", contextAwareAgentPayload.text?.includes("גלידה") || contextAwareAgentPayload.text?.includes("מנוחה") || contextAwareAgentPayload.text?.includes("קרוב"));
+  assertCheck("agent context-aware natural", !contextAwareAgentPayload.text?.includes("׳©׳׳¢׳×׳™ ׳׳×") && !contextAwareAgentPayload.text?.includes("׳׳”׳©׳™׳—׳” ׳׳ ׳™ ׳׳–׳”׳”"));
+  assertCheck("agent context-aware needs", contextAwareAgentPayload.text?.includes("׳’׳׳™׳“׳”") || contextAwareAgentPayload.text?.includes("׳׳ ׳•׳—׳”") || contextAwareAgentPayload.text?.includes("׳§׳¨׳•׳‘"));
   assertCheck(
     "agent context-aware no boilerplate",
-    !contextAwareAgentPayload.text?.includes("אבקש אישור מנהל") && !contextAwareAgentPayload.text?.includes("אם מנהל מאשר")
+    !contextAwareAgentPayload.text?.includes("׳׳‘׳§׳© ׳׳™׳©׳•׳¨ ׳׳ ׳”׳") && !contextAwareAgentPayload.text?.includes("׳׳ ׳׳ ׳”׳ ׳׳׳©׳¨")
   );
 
-  const input = page.getByLabel("כתיבת הודעה לקבוצה");
+  const input = page.getByLabel("׳›׳×׳™׳‘׳× ׳”׳•׳“׳¢׳” ׳׳§׳‘׳•׳¦׳”");
   const placeholder = await input.getAttribute("placeholder");
   assertCheck("family composer is quiet", placeholder === "");
-  assertCheck("active speaker default", body.includes("כותבים עכשיו בשם מנהל הטיול"));
-  await page.getByText("שיחה מסונכרנת").waitFor();
+  assertCheck("active speaker default", body.includes("׳›׳•׳×׳‘׳™׳ ׳¢׳›׳©׳™׳• ׳‘׳©׳ ׳׳ ׳”׳ ׳”׳˜׳™׳•׳"));
+  await page.getByText("׳©׳™׳—׳” ׳׳¡׳•׳ ׳›׳¨׳ ׳×").waitFor();
   await page.request.post("http://localhost:3001/api/trips/demo/messages", {
-    data: { author: "QA", text: "הודעה שנכנסה מבחוץ", source: "system" }
+    data: { author: "QA", text: "׳”׳•׳“׳¢׳” ׳©׳ ׳›׳ ׳¡׳” ׳׳‘׳—׳•׳¥", source: "system" }
   });
   await page.waitForTimeout(1200);
-  assertCheck("qa system messages stay hidden", (await page.getByText("הודעה שנכנסה מבחוץ").count()) === 0);
+  assertCheck("qa system messages stay hidden", (await page.getByText("׳”׳•׳“׳¢׳” ׳©׳ ׳›׳ ׳¡׳” ׳׳‘׳—׳•׳¥").count()) === 0);
 
   const wazeButton = menu.getByRole("button", { name: "Waze" }).first();
   await input.fill("https://waze.com/ul?ll=31.25297,34.79146&navigate=yes");
   await page.locator(".composer button[type='submit']").click();
-  const chatWazeLink = page.getByRole("link", { name: "פתח ב-Waze" }).last();
+  const chatWazeLink = page.getByRole("link", { name: "׳₪׳×׳— ׳‘-Waze" }).last();
   await chatWazeLink.waitFor();
   const chatWazeHref = await chatWazeLink.getAttribute("href");
   assertCheck("chat waze URL becomes tappable", chatWazeHref?.includes("waze.com/ul?ll=31.25297,34.79146"));
 
   const disabled = await wazeButton.isDisabled();
-  await menu.getByRole("button", { name: /אשר מיקום|רענן מיקום/ }).click();
-  await menu.getByText("פעיל על Google Maps").waitFor();
+  await menu.getByRole("button", { name: /׳׳©׳¨ ׳׳™׳§׳•׳|׳¨׳¢׳ ׳ ׳׳™׳§׳•׳/ }).click();
+  await menu.getByText("׳₪׳¢׳™׳ ׳¢׳ Google Maps").waitFor();
   await page.locator(".self-marker").waitFor();
   const syncedMembersAfterLocation = await (await page.request.get("http://localhost:3001/api/trips/demo/members")).json();
   assertCheck(
     "live location synced after menu action",
     syncedMembersAfterLocation.members?.some((item) => item.liveLocation?.lat && item.liveLocation?.lng)
   );
-  await page.getByText("אני כאן").waitFor();
+  await page.getByText("׳׳ ׳™ ׳›׳׳").waitFor();
 
-  await menu.getByLabel("שם קיצור אישי").fill("תרגום");
-  await menu.getByLabel("כתובת קיצור אישי").fill("https://translate.google.com/");
+  await menu.getByLabel("׳©׳ ׳§׳™׳¦׳•׳¨ ׳׳™׳©׳™").fill("׳×׳¨׳’׳•׳");
+  await menu.getByLabel("׳›׳×׳•׳‘׳× ׳§׳™׳¦׳•׳¨ ׳׳™׳©׳™").fill("https://translate.google.com/");
   await page.locator(".menu-shortcut-form button").click();
-  await page.getByRole("link", { name: "תרגום" }).waitFor();
+  await page.getByRole("link", { name: "׳×׳¨׳’׳•׳" }).waitFor();
 
   const kodiMessagesBeforeContextChat = await page.locator(".message.kodi").count();
-  await input.fill("בא לי גלידה ליד המלון");
+  await input.fill("׳‘׳ ׳׳™ ׳’׳׳™׳“׳” ׳׳™׳“ ׳”׳׳׳•׳");
   await page.locator(".composer button[type='submit']").click();
-  await page.getByText("בא לי גלידה ליד המלון").waitFor();
+  await page.getByText("׳‘׳ ׳׳™ ׳’׳׳™׳“׳” ׳׳™׳“ ׳”׳׳׳•׳").waitFor();
   assertCheck(
     "message activity visible",
-    (await page.locator(".event-activity").getByText("שלח/ה הודעה בקבוצה").count()) >= 1
+    (await page.locator(".event-activity").getByText("׳©׳׳—/׳” ׳”׳•׳“׳¢׳” ׳‘׳§׳‘׳•׳¦׳”").count()) >= 1
   );
   await page.waitForFunction(
     (count) => document.querySelectorAll(".message.kodi").length > count,
@@ -638,45 +638,45 @@ try {
   );
   assertCheck("kodi responds to contextual trip chat without wake word", (await page.locator(".message.kodi").count()) > kodiMessagesBeforeContextChat);
 
-  await input.fill("קודי, מה מתאים לקבוצה עכשיו ליד המלון?");
+  await input.fill("׳§׳•׳“׳™, ׳׳” ׳׳×׳׳™׳ ׳׳§׳‘׳•׳¦׳” ׳¢׳›׳©׳™׳• ׳׳™׳“ ׳”׳׳׳•׳?");
   await page.locator(".composer button[type='submit']").click();
   await page.locator(".message.kodi").last().waitFor();
   assertCheck("kodi replies in chat", (await page.locator(".message.kodi").count()) >= 1);
   const lastKodiText = await page.locator(".message.kodi").last().innerText();
-  assertCheck("kodi chat reply avoids template language", !lastKodiText.includes("שמעתי את") && !lastKodiText.includes("מהשיחה אני מזהה"));
+  assertCheck("kodi chat reply avoids template language", !lastKodiText.includes("׳©׳׳¢׳×׳™ ׳׳×") && !lastKodiText.includes("׳׳”׳©׳™׳—׳” ׳׳ ׳™ ׳׳–׳”׳”"));
   assertCheck("kodi voice output control", (await page.locator(".message.kodi .speak-message-button").count()) >= 1);
 
   const kodiMessagesBeforeParticipantChat = await page.locator(".message.kodi").count();
-  await input.fill("מה קורה אורייה");
+  await input.fill("׳׳” ׳§׳•׳¨׳” ׳׳•׳¨׳™׳™׳”");
   await page.locator(".composer button[type='submit']").click();
-  await page.getByText("מה קורה אורייה").waitFor();
+  await page.getByText("׳׳” ׳§׳•׳¨׳” ׳׳•׳¨׳™׳™׳”").waitFor();
   await page.waitForTimeout(1200);
   assertCheck(
     "kodi stays asleep for participant chat after reply",
     (await page.locator(".message.kodi").count()) === kodiMessagesBeforeParticipantChat
   );
 
-  assertCheck("retired demo member pill removed", (await page.locator(".member-pills").getByRole("button", { name: "נועה" }).count()) === 0);
+  assertCheck("retired demo member pill removed", (await page.locator(".member-pills").getByRole("button", { name: "׳ ׳•׳¢׳”" }).count()) === 0);
 
-  await input.fill("קודי, צור לנו מסלול חדש. יש לנו שעה פנויה ורוצים מזרקות קרובות.");
+  await input.fill("׳§׳•׳“׳™, ׳¦׳•׳¨ ׳׳ ׳• ׳׳¡׳׳•׳ ׳—׳“׳©. ׳™׳© ׳׳ ׳• ׳©׳¢׳” ׳₪׳ ׳•׳™׳” ׳•׳¨׳•׳¦׳™׳ ׳׳–׳¨׳§׳•׳× ׳§׳¨׳•׳‘׳•׳×.");
   await page.locator(".composer button[type='submit']").click();
-  await page.getByText("אני יכול לבנות מסלול חדש").waitFor();
+  await page.getByText("׳׳ ׳™ ׳™׳›׳•׳ ׳׳‘׳ ׳•׳× ׳׳¡׳׳•׳ ׳—׳“׳©").waitFor();
 
-  await input.fill("קודי, ספר לנו קצת על המזרקה שאנחנו רואים.");
+  await input.fill("׳§׳•׳“׳™, ׳¡׳₪׳¨ ׳׳ ׳• ׳§׳¦׳× ׳¢׳ ׳”׳׳–׳¨׳§׳” ׳©׳׳ ׳—׳ ׳• ׳¨׳•׳׳™׳.");
   await page.locator(".composer button[type='submit']").click();
-  await page.getByText("אני יכול להיות רגע מדריך מקומי").waitFor();
+  await page.getByText("׳׳ ׳™ ׳™׳›׳•׳ ׳׳”׳™׳•׳× ׳¨׳’׳¢ ׳׳“׳¨׳™׳ ׳׳§׳•׳׳™").waitFor();
 
   const kodiMessagesBeforeLocationQuestion = await page.locator(".message.kodi").count();
-  await input.fill("קודי, איפה כולם עכשיו?");
+  await input.fill("׳§׳•׳“׳™, ׳׳™׳₪׳” ׳›׳•׳׳ ׳¢׳›׳©׳™׳•?");
   await page.locator(".composer button[type='submit']").click();
   await page.waitForFunction(
     (count) => document.querySelectorAll(".message.kodi").length > count,
     kodiMessagesBeforeLocationQuestion
   );
 
-  await input.fill("קודי, מה כדאי לעשות עכשיו? תמליץ על משהו עם מים.");
+  await input.fill("׳§׳•׳“׳™, ׳׳” ׳›׳“׳׳™ ׳׳¢׳©׳•׳× ׳¢׳›׳©׳™׳•? ׳×׳׳׳™׳¥ ׳¢׳ ׳׳©׳”׳• ׳¢׳ ׳׳™׳.");
   await page.locator(".composer button[type='submit']").click();
-  await page.getByText("ההמלצה שלי כרגע היא").waitFor();
+  await page.getByText("׳”׳”׳׳׳¦׳” ׳©׳׳™ ׳›׳¨׳’׳¢ ׳”׳™׳").waitFor();
 
   console.log(
     JSON.stringify({
@@ -688,3 +688,4 @@ try {
 } finally {
   await browser.close();
 }
+

@@ -1,0 +1,37 @@
+ID,Area,Signal,Scenario,Setup,Expected Raw,Expected Stats,Expected Gate,Expected Webhook,Priority
+OPS-001,Operational,ALL,Webhook master disabled,enableWebhookAlerts=false,Signals may plot,No selected operational entry increment,None required,No alert sent,P0
+OPS-002,Operational,ALL,Unconfirmed bar,barstate.isconfirmed=false,Raw conditions may be true,No closed stats mutation,No operational gate action,No alert sent,P0
+OPS-003,Operational,ALL,Entry cooldown,lastAlertTime within minAlertInterval,Raw signal true,Stats simulation may count raw signal,Final gate may pass,No duplicate entry alert,P0
+OPS-004,Operational,ALL,Duplicate fingerprint,Same signal and entryId,Raw signal true,No selected duplicate,Gate unchanged,Only one alert for fingerprint,P0
+OPS-005,Operational,ALL,Exit after selected entry,Open operational entry then ATR stop,Raw exit true,selectedClosed +1 and pnl recorded,Exit allowed in executable session,EXIT payload includes original entryId,P0
+OPS-006,Operational,MULTI,Multiple entries same bar,Two or more pendingEntrySignals,All raw signals may count,Only selectedEntry +1 after alert,Highest quality then net/trade wins,Only one BUY alert,P0
+SYNC-001,Statistics,ALL,Total sum check,Closed trades across tactics,TOTAL visible,TOTAL.closed equals sum tactic closed,No effect,No effect,P0
+SYNC-002,Statistics,ALL,Team protected sum,Some tactics fail final gate,TEAM excludes failed tactics,TEAM.closed equals sum final closed,Failed tactics excluded,Payload teamStats matches table,P0
+SYNC-003,Statistics,ALL,Raw vs selected split,Two raw signals but one operational alert,RAW count may be 2,selectedEntryStatsAuto increments 1,Selected gate only,One entry payload,P0
+SYNC-004,Statistics,ALL,Window consistency,statsWindowDays=180,Only closed trades in 180d count,Entries use documented window,Gate uses documented window,Payload labels match source,P0
+STAT-001,Statistics,BUY_PLUS,Manual three-trade sample,Net results 3.85 -2.15 0.85,BUY_PLUS raw entries 3,Closed=3 Wins=2 Net=2.55 Avg=0.85 Best=3.85,Fail if min net/trade is 2,No entry if final gate fails,P0
+STAT-002,Statistics,PB_PLUS,Best trade dominance,One large winner and small losses,PB_PLUS raw entries count,BestTradeShare above threshold,Stats gate fails consistency,No PB_PLUS alert,P0
+STAT-003,Statistics,FAST,All losses,Closed sample all negative,FAST raw entries count,Wins=0 Net negative PF=0,Stats gate fails,No FAST alert,P0
+STAT-004,Statistics,RALLY,Small sample,Closed below statsGateMinSample,RALLY raw entries count,Metrics displayed but sample too low,Stats gate fails,No RALLY alert,P0
+STAT-005,Statistics,VWAP_RECLAIM,Open positions exist,Entries greater than closed,Entries includes open trades,Closed metrics exclude open trades,Stop rate interpretation documented,No mismatch in payload,P1
+STAT-006,Statistics,OPENING_RANGE_RECLAIM,Timeout exit,openingStatsTimeoutBars reached,Opening raw entry counted,Closed +1 pnl minus cost,Early stop false unless early stop triggered,Exit payload mode CHECK_POINT_TIMEOUT or documented equivalent,P1
+GUARD-001,Protection,BUY,Red-market losing trade,isMarketRiskOff during hold and pnl negative,BUY raw counted,GuardRemoved +1 GuardProfit improves,UseGuard only if guardGateOk improves,Payload signalStatsGuardUsed true if selected,P0
+GUARD-002,Protection,PB_PLUS,Guard no benefit,Removed losses exist but gate not improved,PB_PLUS raw counted,Guard candidate shown,UseGuard false,Payload uses base stats,P1
+GUARD-003,Protection,FAST_EARLY,Guard stop subtraction,Removed red loss was early stop,FAST_EARLY raw counted,Guard stops subtract correctly,Guard stop rate recomputed,Payload stop count matches table,P1
+FALSE-001,Protection,TEAM,Clean sweep pressure,4 recent closed trades all losses,Raw signals may continue,falsePressureCleanSweep=true,falsePressureLatched=true,No entry alert,P0
+FALSE-002,Protection,TEAM,Pressure release,Score falls below 30,Raw signals may continue,falsePressureLatched=false,Final gates decide normally,Entry alert allowed if gate passes,P0
+FALSE-003,Protection,TEAM,Weak tactic exclusion,Two weakest quality-fail tactics exist,Pressure ignores excluded tactics,falsePressure counts exclude weakest keys,Latched only from remaining sample,Payload includes excluded tactic keys,P1
+CHOP-001,Protection,ALL,Chop sample insufficient,chopFlaggedClosed below min,Signals may exist,Chop metrics display standby,chopBlockActive=false,No chop-only block,P1
+CHOP-002,Protection,ALL,Chop auto armed,choppy metrics worse and confidence >= min,Signals may exist,Chop guard armed,chopBlockActive true only when threshold crossed,No entry alert while active,P0
+CHOP-003,Protection,ALL,Chop hurts performance,choppy net/trade better than normal,Signals may exist,Verdict FILTER LIKELY HURTS,useChopFilterAuto=false,No chop block,P1
+RISK-001,Protection,PB_PLUS,QQQ risk off,qqqTrendUp=false,PB+ before filter true,pbPlusBlockedByFilter=true,PB+ hidden/blocked,No PB+ alert,P0
+RISK-002,Protection,PB_PLUS,Earnings veto,daysToEarnings<=2,PB+ before filter true,isEarningsVeto=true and filter triggered,PB+ blocked,No PB+ alert,P0
+RISK-003,Protection,FAST,Gap or ATR risk,isHighExecutionRisk=true,FAST base may be true,FAST not shown,Gate not reached for operational signal,No FAST alert,P1
+JSON-001,Webhook,BUY,Entry payload consistency,BUY selected and sent,Signal BUY,signalStatsKey=BUY stats match table,autoExecutable=true,Valid JSON object,P0
+JSON-002,Webhook,EXIT,Runner exit payload,Runner active and trail stop hit,Exit signal type ends ATR_EXIT,selected closed stats updated,Exit allowed,Payload has atrExitMode RUNNER_ATR,P0
+JSON-003,Webhook,EXIT,Early ATR stop payload,Not runner and close below earlyStop,Exit signal type ends EARLY_ATR_STOP,EarlyStop +1,Exit allowed,Payload has atrExitMode EARLY_PROTECTION,P0
+TABLE-001,Display,ALL,Data coverage truncated,Loaded history less than 90 percent target,All signals normal,Data coverage row TRUNCATED,No execution effect,Payload should not imply full sample,P1
+TABLE-002,Display,ALL,Tactic row matches payload,Selected signal sent,Row values visible,Payload signalStats equals display values,Gate status same,Payload/table parity,P0
+PERF-001,Performance,ALL,180 days 5m,Large liquid symbol,Signals render,Arrays pruned to windows,No timeout,Alerts still single per event,P1
+PERF-002,Performance,ALL,730 days 10m,Max statsWindowDays,Signals render,Arrays do not grow beyond retained windows,No timeout,Alerts still valid,P1
+PERF-003,Performance,ALL,High signal density day,Many raw signals,Pending arrays same length,No remove mismatch,Only selected alert per bar,Alerts valid,P0
