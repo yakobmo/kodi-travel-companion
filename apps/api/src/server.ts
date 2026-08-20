@@ -1426,7 +1426,7 @@ function findTripPlaceById(tripState: ReturnType<typeof buildDemoTripState>, pla
 }
 
 function findFirstExternalPlaceWithCoordinates(search: GooglePlacesTextSearchResult | undefined) {
-  if (search?.status !== "ready" || search.places.length !== 1) {
+  if (search?.status !== "ready" || search.places.length === 0) {
     return undefined;
   }
 
