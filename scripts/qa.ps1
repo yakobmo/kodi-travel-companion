@@ -31,11 +31,13 @@ $requiredFiles = @(
   "scripts/kodi-agent-regression.mjs",
   "scripts/test-kodi-trip-agnostic.mjs",
   "scripts/test-conversation-focus.mjs",
+  "scripts/test-agent-tools.mjs",
   "scripts/smoke-local.mjs",
   "apps/api/package.json",
   "apps/api/tsconfig.json",
   "apps/api/src/server.ts",
   "apps/api/src/agent/kodi.ts",
+  "apps/api/src/agent/agentTools.ts",
   "apps/api/src/agent/kodiOrchestrator.ts",
   "apps/api/src/agent/conversationFocus.ts",
   "apps/api/src/agent/openaiSpeech.ts",
@@ -390,6 +392,7 @@ if (
 }
 
 $openAiAgentSource = Get-Content (Join-Path $root "apps\api\src\agent\kodiOrchestrator.ts") -Raw
+$agentToolsSource = Get-Content (Join-Path $root "apps\api\src\agent\agentTools.ts") -Raw
 if (
   -not $openAiAgentSource.Contains("OpenAI") -or
   -not $openAiAgentSource.Contains("OPENAI_API_KEY") -or
@@ -406,8 +409,11 @@ if (
   -not $openAiAgentSource.Contains("full, chronological conversation") -or
   -not $openAiAgentSource.Contains("intelligent, warm Hebrew travel agent") -or
   -not $openAiAgentSource.Contains("Use your travel knowledge and reasoning freely") -or
-  -not $openAiAgentSource.Contains('type: "places_search"') -or
-  -not $openAiAgentSource.Contains('type: "trip_memory"') -or
+  -not $agentToolsSource.Contains('type: "places_search"') -or
+  -not $agentToolsSource.Contains('type: "trip_memory"') -or
+  -not $agentToolsSource.Contains('type: "route"') -or
+  -not $agentToolsSource.Contains('type: "member_locations"') -or
+  -not $openAiAgentSource.Contains("KODI_TOOL_CONTRACT") -or
   -not $openAiAgentSource.Contains("buildKodiContext") -or
   -not $openAiAgentSource.Contains("ai_reply_geographic_evidence_rejected") -or
   -not $openAiAgentSource.Contains("ai_reply_unverified_route_measurement") -or
@@ -478,7 +484,7 @@ if (
   -not $serverSource.Contains("accuracyMeters") -or
   -not $serverSource.Contains("updatedAt") -or
   -not $serverSource.Contains("reverseGeocodedLocation") -or
-  -not $serverSource.Contains("getAgentPlacesToolRequest") -or
+  -not $serverSource.Contains('toolRequest?.type === "places_search"') -or
   -not $serverSource.Contains("agentPlacesToolRequest.anchorPlaceId") -or
   -not $serverSource.Contains('regionCode: "GR"') -or
   $serverSource.Contains("shouldUsePreciseLocationIdentity(currentMessage) ? 120") -or
@@ -570,12 +576,12 @@ if (
 }
 
 if (
-  -not $webAppSource.Contains("buildAgentTripStateForKodi") -or
-  -not $webAppSource.Contains("tripState: agentTripState") -or
-  -not $webAppSource.Contains("googleMapsContext") -or
-  -not $webAppSource.Contains("liveGoogleAccountSync")
+  $webAppSource.Contains("buildAgentTripStateForKodi") -or
+  $webAppSource.Contains("tripState: agentTripState") -or
+  -not $webAppSource.Contains("currentLocation: agentCurrentLocation") -or
+  -not $serverSource.Contains("await buildAgentTripStateSnapshot()")
 ) {
-  throw "Kodi web chat must send the current app Google Maps trip state with every agent request."
+  throw "Kodi web chat must send only fresh requester location; persisted trip state belongs to the server."
 }
 
 if (
@@ -612,11 +618,12 @@ if (
 
 $kodiSourceEarly = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -Encoding utf8
 if (
-  -not $kodiSourceEarly.Contains("isTripRouteDiagramRequest") -or
-  -not $kodiSourceEarly.Contains("buildTripRouteDiagramAnswer") -or
-  -not $kodiSourceEarly.Contains("https://www.google.com/maps/dir/")
+  $kodiSourceEarly.Contains("buildKodiReplyFromContext") -or
+  $kodiSourceEarly.Contains("selectRecommendedPlace") -or
+  $kodiSourceEarly.Contains("includesAny") -or
+  -not $kodiSourceEarly.Contains("contains no conversational rules or canned replies")
 ) {
-  throw "Kodi fallback must build a useful route-map/diagram answer from trip points instead of dodging map-diagram requests."
+  throw "Kodi transport types must not grow a second deterministic conversational brain."
 }
 
 if (
@@ -631,36 +638,9 @@ if (
   -not $reverseGeocodeSource.Contains("maps.googleapis.com/maps/api/geocode/json") -or
   -not $reverseGeocodeSource.Contains("latlng") -or
   -not $reverseGeocodeSource.Contains("formattedAddress") -or
-  -not $kodiSourceEarly.Contains("buildCurrentLocationAnswer") -or
-  -not $kodiSourceEarly.Contains("item.member.id === memberId") -or
-  -not $kodiSourceEarly.Contains('externalPlacesSearch?.status !== "ready"') -or
-  -not $kodiSourceEarly.Contains("getReverseGeocodedReadableAddress") -or
-  -not $kodiSourceEarly.Contains("getNearbyReadablePlace") -or
-  -not $kodiSourceEarly.Contains("getDistanceKm(liveLocation, { lat: Number(place.lat), lng: Number(place.lng) })") -or
-  -not $kodiSourceEarly.Contains("<= 2") -or
-  -not $kodiSourceEarly.Contains("reverseGeocodedLocation")
+  -not $openAiAgentSource.Contains("reverseGeocodedLocation")
 ) {
-  throw "Kodi must answer current-location questions from Google reverse geocoding before falling back to raw coordinates."
-}
-
-if ($kodiSourceEarly.Contains('["איפה", "כולם", "מיקום", "נפגשים", "קרוב למי"]')) {
-  throw "Kodi rules must not classify any sentence containing 'איפה' as group-location; this breaks natural travel questions like snorkeling in Pelion."
-}
-
-if (
-  -not $kodiSourceEarly.Contains('"שנורקל"') -or
-  -not $serverSource.Contains('"שנורקל"') -or
-  -not $kodiSourceEarly.Contains('"סמן לי על המפה"') -or
-  -not $serverSource.Contains('"סמן לי על המפה"')
-) {
-  throw "Kodi must route snorkeling/activity questions and map-marking requests to the correct agent paths."
-}
-
-if (
-  $kodiSourceEarly.Contains("בקואורדינטות `${visibleMember.liveLocation.lat}") -or
-  $kodiSourceEarly.Contains("לא הצלחתי לתרגם אותן לשם מקום")
-) {
-  throw "Kodi current-location fallback must not expose raw coordinates as the user-facing answer."
+  throw "Kodi must receive current-location identity evidence from Google reverse geocoding."
 }
 
 if ($openAiAgentSource.Contains("dangerouslyAllowBrowser")) {
@@ -1006,7 +986,7 @@ if (
   -not $serverSourceForContext.Contains("tripContextClarification") -or
   -not $serverSourceForContext.Contains("tripContextConfidence") -or
   -not $serverSourceForContext.Contains("timelineReferenceConfidence") -or
-  -not $serverSourceForContext.Contains("getAgentRouteToolRequest") -or
+  -not $serverSourceForContext.Contains("getKodiToolRequest") -or
   -not $serverSourceForContext.Contains("agentRouteToolRequest.originPlaceId") -or
   -not $serverSourceForContext.Contains("routeEstimate = await estimateGoogleRoute") -or
   -not $serverSourceForContext.Contains("tryBuildKodiReply") -or
@@ -1015,7 +995,7 @@ if (
   -not $serverSourceForContext.Contains("fallbackUsed") -or
   -not $serverSourceForContext.Contains("message: currentMessage") -or
   -not $serverSourceForContext.Contains("resolveConversationFocus(currentMessage") -or
-  -not $serverSourceForContext.Contains("getAgentPlacesToolRequest") -or
+  -not $agentToolsSource.Contains("parseKodiToolRequest") -or
   -not $serverSourceForContext.Contains("agentPlacesToolRequest.query") -or
   $serverSourceForContext.Contains("shouldUseExternalPlacesSearch(toolQueryMessage)") -or
   -not $serverSourceForContext.Contains("shouldRequireFreshCurrentLocation(currentMessage") -or
@@ -1354,7 +1334,7 @@ if (-not $appSource.Contains("buildKodiConnectionErrorMessage")) {
   throw "Web app must show an explicit Kodi connection error when the agent call fails."
 }
 
-if (-not $serverSource.Contains("getAgentPlacesToolRequest") -or $serverSource.Contains("buildExternalPlacesQuery(toolQueryMessage, { hereAndNow: hereAndNowContext })")) {
+if (-not $serverSource.Contains('toolRequest?.type === "places_search"') -or $serverSource.Contains("buildExternalPlacesQuery(toolQueryMessage, { hereAndNow: hereAndNowContext })")) {
   throw "Kodi Google Places search must be requested by the agent instead of inferred by the server from keywords."
 }
 
@@ -1974,7 +1954,7 @@ $kodiSource = Get-Content (Join-Path $root "apps\api\src\agent\kodi.ts") -Raw -E
 $kodiContextSource = Get-Content (Join-Path $root "apps\api\src\agent\kodiContext.ts") -Raw -Encoding utf8
 $kodiOrchestratorSource = Get-Content (Join-Path $root "apps\api\src\agent\kodiOrchestrator.ts") -Raw -Encoding utf8
 if (
-  -not $kodiOrchestratorSource.Contains("member_locations") -or
+  -not $agentToolsSource.Contains("member_locations") -or
   -not $kodiContextSource.Contains("memberLocationResult") -or
   -not $serverSource.Contains("executeMemberLocationsTool")
 ) {
@@ -1982,60 +1962,22 @@ if (
 }
 
 if (
-  -not $kodiSource.Contains("buildCurrentLocationAnswer") -or
-  -not $kodiSource.Contains("reverseGeocodedLocation") -or
-  -not $kodiSource.Contains("getNearbyReadablePlace") -or
-  -not $kodiSource.Contains("באיזה יישוב") -or
-  -not $kodiSource.Contains("מה הכתובת") -or
-  -not $kodiSource.Contains("איזה רחוב")
+  -not $kodiContextSource.Contains("placeDirectory") -or
+  -not $kodiContextSource.Contains("currentGroupState") -or
+  -not $kodiContextSource.Contains("relevantPlaceDetails") -or
+  -not $openAiAgentSource.Contains("externalPlacesSearch") -or
+  -not $openAiAgentSource.Contains("reverseGeocodedLocation") -or
+  -not $openAiAgentSource.Contains("routeEstimate")
 ) {
-  throw "Kodi must answer current-location identity questions with Google reverse geocode / nearby place context, not raw coordinates only."
+  throw "Kodi's single model context must include trip, group, Places, geocoding, and Routes evidence."
 }
 
 if (
-  -not $kodiSource.Contains("כאן ועכשיו") -or
-  -not $kodiSource.Contains("לא לפי מסלול יוון") -or
-  -not $kodiSource.Contains("מיקום החי שלכם כנקודת העוגן")
+  -not $serverSource.Contains("The backend is the sole authority for persisted trip state") -or
+  $serverSource.Contains("req.body?.tripState ??") -or
+  $webAppSource.Contains("tripState: agentTripState")
 ) {
-  throw "Kodi fallback must answer here-and-now requests from live location instead of the planned itinerary."
-}
-
-if (-not $kodiSource.Contains("selectRecommendedPlace")) {
-  throw "Kodi agent is missing TripState-based place recommendation logic."
-}
-
-if (-not $kodiSource.Contains("scorePlace")) {
-  throw "Kodi agent is missing detailed recommendation scoring."
-}
-
-if (-not $kodiSource.Contains("describeRejectedAlternative")) {
-  throw "Kodi agent must explain why alternatives were rejected."
-}
-
-if (-not $kodiSource.Contains("summarizePlaceNote")) {
-  throw "Kodi agent must clean noisy place notes before presenting them."
-}
-
-if (-not $kodiSource.Contains("summarizeRecentConversation") -or -not $kodiSource.Contains("mentionedNeeds")) {
-  throw "Kodi agent must summarize recent family conversation needs before replying."
-}
-
-if (-not $kodiSource.Contains("currentDestinationName") -or -not $kodiSource.Contains("groupDestination")) {
-  throw "Kodi agent must include the active group destination in conversation context."
-}
-
-if (-not $kodiSource.Contains("place_recommendation")) {
-  throw "Kodi agent is missing the place_recommendation intent."
-}
-
-if (
-  -not $kodiSource.Contains("externalPlacesSearch") -or
-  -not $kodiSource.Contains("buildExternalPlacesContext") -or
-  -not $kodiSource.Contains("אין לי כרגע תוצאות Google Places חיות") -or
-  $kodiSource.Contains("חסר GOOGLE_MAPS_API_KEY") -or
-  -not $kodiSource.Contains("Google Places")
-) {
-  throw "Kodi agent must explain guarded Google Places search context without pretending live results exist."
+  throw "Kodi must use one server-side trip source of truth; the browser may send only fresh requester location."
 }
 
 $storageSource = Get-Content (Join-Path $root "apps\api\src\data\demoStorage.ts") -Raw

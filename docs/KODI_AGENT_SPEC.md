@@ -1,5 +1,10 @@
 # Kodi Agent Specification
 
+Status: supporting product reference. The sole product contract is
+`KODI_AGENT_MASTER_SPEC_HE.md`; the sole runtime mapping is
+`KODI_AGENT_ENGINEERING_README.md`. This document must not introduce a separate
+prompt, tool list, or fallback policy.
+
 ## Purpose
 
 Kodi is the main product value of the travel companion app.

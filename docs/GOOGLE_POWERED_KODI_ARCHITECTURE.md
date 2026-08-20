@@ -1,5 +1,9 @@
 # Google-Powered Kodi Architecture Decision
 
+Status: supporting Google integration decision. It inherits Kodi's identity,
+tool contract, and fallback policy from `KODI_AGENT_MASTER_SPEC_HE.md` and
+`KODI_AGENT_ENGINEERING_README.md` rather than defining parallel behavior.
+
 Status: accepted for implementation planning  
 Date: 2026-07-08
 

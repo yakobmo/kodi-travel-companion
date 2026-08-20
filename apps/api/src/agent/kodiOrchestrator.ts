@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { AgentMessageRequest, AgentMessageResponse } from "./kodi.js";
 import { buildKodiContext } from "./kodiContext.js";
 import { hasFreeFleetProvider, tryFreeProviderFleet } from "./providerFleet.js";
+import { KODI_TOOL_CONTRACT, parseKodiToolRequest } from "./agentTools.js";
 import { buildAgentToolEvidence, validateAgentEvidenceClaims } from "./toolEvidence.js";
 
 const allowedIntents: AgentMessageResponse["intent"][] = [
@@ -205,55 +206,7 @@ function toValidReply(parsed: {
     throw new Error("openai_response_empty_text");
   }
 
-  const toolRequest = (() => {
-    if (!parsed.toolRequest || typeof parsed.toolRequest !== "object") {
-      return undefined;
-    }
-    const candidate = parsed.toolRequest as Record<string, unknown>;
-    if (candidate.type === "route") {
-      if (
-        typeof candidate.originPlaceId !== "string" ||
-        typeof candidate.destinationPlaceId !== "string" ||
-        candidate.originPlaceId === candidate.destinationPlaceId
-      ) {
-        return undefined;
-      }
-      return {
-        type: "route",
-        originPlaceId: candidate.originPlaceId,
-        destinationPlaceId: candidate.destinationPlaceId,
-        travelMode: candidate.travelMode === "WALK" ? "WALK" : "DRIVE"
-      };
-    }
-    if (candidate.type === "places_search" && typeof candidate.query === "string" && candidate.query.trim().length >= 3) {
-      return {
-        type: "places_search",
-        query: candidate.query.trim().slice(0, 300),
-        anchorPlaceId: typeof candidate.anchorPlaceId === "string" ? candidate.anchorPlaceId : undefined,
-        radiusMeters:
-          typeof candidate.radiusMeters === "number"
-            ? Math.min(Math.max(Math.round(candidate.radiusMeters), 500), 50_000)
-            : 20_000
-      };
-    }
-    if (candidate.type === "trip_memory" && Array.isArray(candidate.placeIds)) {
-      const placeIds = candidate.placeIds
-        .filter((id): id is string => typeof id === "string" && id.length > 0)
-        .slice(0, 12);
-      if (placeIds.length > 0) return { type: "trip_memory", placeIds };
-    }
-    if (candidate.type === "member_locations") {
-      return {
-        type: "member_locations",
-        scope: candidate.scope === "member" ? "member" : "all",
-        memberName:
-          typeof candidate.memberName === "string" && candidate.memberName.trim()
-            ? candidate.memberName.trim().slice(0, 100)
-            : undefined
-      };
-    }
-    return undefined;
-  })();
+  const toolRequest = parseKodiToolRequest(parsed.toolRequest);
 
   return {
     author: "קודי",
@@ -363,7 +316,8 @@ function buildInstructions() {
     "You are Kodi, an intelligent, warm Hebrew travel agent in an ongoing group conversation.",
     "Understand the latest message in the full, chronological conversation provided. Respect corrections and follow-ups, and decide naturally what the user means.",
     "kodiContext is the single authoritative trip context. placeDirectory is the primary saved Google Maps trip-point record, including its names, notes, tags, addresses, types, and map order. itinerary and stayCalendar are derived indexes for convenience; they may help discovery but never override a more specific saved trip point.",
-    "Use your travel knowledge and reasoning freely. When current or private evidence is needed, choose a suitable tool yourself: {type:'trip_memory',placeIds:[...]}, {type:'route',originPlaceId,destinationPlaceId,travelMode}, {type:'places_search',query,anchorPlaceId?,radiusMeters?}, or {type:'member_locations',scope:'all'|'member',memberName?}. Use exact IDs from placeDirectory when a place tool needs them.",
+    "Use your travel knowledge and reasoning freely. When current or private evidence is needed, choose a suitable tool yourself.",
+    KODI_TOOL_CONTRACT,
     "The member_locations tool is the only authority for another member's current location. Use it whenever the conversation naturally asks where a person or the group is; do not infer a location from itinerary or memory.",
     "A tool call is an immediate JSON action, not a promise. After a result arrives, synthesize it with the conversation and your own reasoning. Never invent measurements, live facts, saved details, or verified places.",
     "No tool in this runtime can edit, move, add, delete, or reclassify trip data. Never claim such a change was performed; explain the limitation briefly while still helping with what you can verify.",

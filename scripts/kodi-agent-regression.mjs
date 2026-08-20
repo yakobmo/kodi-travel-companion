@@ -25,6 +25,8 @@ function countOccurrences(source, pattern) {
 function assertAgentFirstSourceGuards() {
   const serverSource = readRepoFile("apps/api/src/server.ts");
   const openAiSource = readRepoFile("apps/api/src/agent/kodiOrchestrator.ts");
+  const toolSource = readRepoFile("apps/api/src/agent/agentTools.ts");
+  const kodiTypesSource = readRepoFile("apps/api/src/agent/kodi.ts");
   const webSource = readRepoFile("apps/web/src/App.tsx");
   const localMessagesSource = readRepoFile("apps/api/src/data/localMessages.ts");
 
@@ -62,8 +64,8 @@ function assertAgentFirstSourceGuards() {
   );
   assertCheck(
     "route endpoints must be grounded in retrieved trip points",
-    serverSource.includes("retrievedPlaceIds") &&
-      serverSource.includes("were not both grounded in the places retrieved")
+    serverSource.includes("getRouteGroundedPlaceIds") &&
+      serverSource.includes("were not both grounded in the user's wording and active conversational context")
   );
   assertCheck(
     "agent-first avoids the incompatible web-search JSON path",
@@ -71,8 +73,11 @@ function assertAgentFirstSourceGuards() {
   );
   assertCheck(
     "agent-first bounded recent message context",
-    openAiSource.includes(".slice(-10)") && openAiSource.includes("text.trim().slice(0, 600)")
+    openAiSource.includes(".slice(-24)") && openAiSource.includes("text.trim().slice(0, 600)")
   );
+  assertCheck("agent tools have one parser", toolSource.includes("parseKodiToolRequest") && openAiSource.includes("KODI_TOOL_CONTRACT"));
+  assertCheck("server owns persisted trip state", serverSource.includes("await buildAgentTripStateSnapshot()") && !webSource.includes("tripState: agentTripState"));
+  assertCheck("no deterministic conversational brain", !kodiTypesSource.includes("buildKodiReplyFromContext") && !kodiTypesSource.includes("selectRecommendedPlace"));
   assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));
   assertCheck("agent-first no synthetic session Kodi message", !webSource.includes("sessionKodiReminderMessage"));
   assertCheck("agent-first no seeded Kodi presence message", !localMessagesSource.includes("msg_kodi_start_hint"));

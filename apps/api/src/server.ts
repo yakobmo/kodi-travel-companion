@@ -92,13 +92,9 @@ import {
 } from "./data/localGroupRoute.js";
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
-import {
-  buildKodiReplyFromContext,
-  type AgentMessageRequest,
-  type AgentMessageResponse,
-  type ConversationMessage
-} from "./agent/kodi.js";
+import type { AgentMessageRequest, AgentMessageResponse, ConversationMessage } from "./agent/kodi.js";
 import { resolveConversationFocus } from "./agent/conversationFocus.js";
+import { getKodiToolRequest } from "./agent/agentTools.js";
 import {
   areRouteEndpointsGrounded,
   getExplicitlyMentionedPlaceIds,
@@ -959,6 +955,10 @@ function buildKodiRuntimeGuidance(input: {
   return guidance;
 }
 
+function appendRuntimeGuidance(current: string[], ...next: string[]) {
+  return Array.from(new Set([...current, ...next]));
+}
+
 function respectsFreshLocationBoundary(reply: AgentMessageResponse, tripState: ReturnType<typeof buildDemoTripState>) {
   const normalized = reply.text.toLocaleLowerCase("he");
   const acknowledgesMissingLocation =
@@ -1751,58 +1751,6 @@ function resolveExplicitSavedRouteEndpoints(
   return { origin: matches[0].place, destination: matches[1].place };
 }
 
-function getAgentRouteToolRequest(reply: AgentMessageResponse | undefined) {
-  const value = reply?.metadata?.toolRequest;
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-  const candidate = value as Record<string, unknown>;
-  if (
-    candidate.type !== "route" ||
-    typeof candidate.originPlaceId !== "string" ||
-    typeof candidate.destinationPlaceId !== "string"
-  ) {
-    return undefined;
-  }
-  return {
-    originPlaceId: candidate.originPlaceId,
-    destinationPlaceId: candidate.destinationPlaceId,
-    travelMode: candidate.travelMode === "WALK" ? ("WALK" as const) : ("DRIVE" as const)
-  };
-}
-
-function getAgentPlacesToolRequest(reply: AgentMessageResponse | undefined) {
-  const value = reply?.metadata?.toolRequest;
-  if (!value || typeof value !== "object") return undefined;
-  const candidate = value as Record<string, unknown>;
-  if (candidate.type !== "places_search" || typeof candidate.query !== "string") return undefined;
-  return {
-    query: candidate.query,
-    anchorPlaceId: typeof candidate.anchorPlaceId === "string" ? candidate.anchorPlaceId : undefined,
-    radiusMeters: typeof candidate.radiusMeters === "number" ? candidate.radiusMeters : 20_000
-  };
-}
-
-function getAgentTripMemoryRequest(reply: AgentMessageResponse | undefined) {
-  const value = reply?.metadata?.toolRequest;
-  if (!value || typeof value !== "object") return undefined;
-  const candidate = value as Record<string, unknown>;
-  if (candidate.type !== "trip_memory" || !Array.isArray(candidate.placeIds)) return undefined;
-  const placeIds = candidate.placeIds.filter((id): id is string => typeof id === "string").slice(0, 12);
-  return placeIds.length > 0 ? { placeIds } : undefined;
-}
-
-function getAgentMemberLocationsRequest(reply: AgentMessageResponse | undefined) {
-  const value = reply?.metadata?.toolRequest;
-  if (!value || typeof value !== "object") return undefined;
-  const candidate = value as Record<string, unknown>;
-  if (candidate.type !== "member_locations") return undefined;
-  return {
-    scope: candidate.scope === "member" ? ("member" as const) : ("all" as const),
-    memberName: typeof candidate.memberName === "string" ? candidate.memberName.trim() : undefined
-  };
-}
-
 function executeMemberLocationsTool(input: {
   scope: "all" | "member";
   memberName?: string;
@@ -1880,6 +1828,16 @@ function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessa
     intent: "group_location",
     requiresAdminApproval: false,
     source: "rules"
+  };
+}
+
+function buildKodiFallbackEnvelope(): AgentMessageResponse {
+  return {
+    author: "קודי",
+    text: "אני לא מצליח להפעיל כרגע את מודל הסוכן, ולכן לא אמציא תשובת טיול. נסו שוב בעוד רגע.",
+    intent: "general",
+    requiresAdminApproval: false,
+    source: "agent_unavailable"
   };
 }
 
@@ -4134,8 +4092,11 @@ app.post("/api/agent/message", async (req, res) => {
     ? `${referenceMessage} ליד ${conversationFocus.locationAnchor}`
     : referenceMessage;
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);
+  // The backend is the sole authority for persisted trip state. The browser may
+  // contribute a fresh location for the active requester, but it cannot replace
+  // places, members, permissions, destinations, or routes with a stale snapshot.
   const tripState = withRequestCurrentLocation(
-    req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
+    await buildAgentTripStateSnapshot(),
     normalizedMember,
     requestCurrentLocation
   );
@@ -4202,18 +4163,11 @@ app.post("/api/agent/message", async (req, res) => {
       });
     }
   }
+  // This is an error envelope, not a second conversational brain. Normal travel
+  // answers are always authored by the configured model after using tools.
   const rulesReply = freshCurrentLocationRequired
     ? buildFreshCurrentLocationRequiredReply(String(normalizedMember.displayName))
-    : buildKodiReplyFromContext({
-        ...req.body,
-        message: currentMessage,
-        tripState,
-        conversationFocus,
-        externalPlacesSearch,
-        reverseGeocodedLocation,
-        routeEstimate,
-        tripContextClarification: shouldUseRouteEstimate(referenceMessage) ? tripReference.clarificationQuestion : undefined
-      });
+    : buildKodiFallbackEnvelope();
   let runtimeGuidance = buildKodiRuntimeGuidance({
     hereAndNowContext,
     hasFreshCurrentLocation: Boolean(requestCurrentLocation),
@@ -4234,7 +4188,7 @@ app.post("/api/agent/message", async (req, res) => {
   let openAiReply: Awaited<ReturnType<typeof tryBuildKodiReply>> | undefined;
   let tripLookupResult = lookupTripContext(tripState, referenceMessage);
   let memberLocationResult: AgentMessageRequest["memberLocationResult"];
-  let activeRulesReply = rulesReply;
+  const activeRulesReply = rulesReply;
   const completedToolCalls = new Set<string>();
 
   // One bounded agent loop: the model chooses when it needs private trip data or
@@ -4257,10 +4211,11 @@ app.post("/api/agent/message", async (req, res) => {
       rulesReply: activeRulesReply
     });
 
-    const agentTripMemoryRequest = getAgentTripMemoryRequest(openAiReply.reply);
-    const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
-    const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
-    const agentMemberLocationsRequest = getAgentMemberLocationsRequest(openAiReply.reply);
+    const toolRequest = getKodiToolRequest(openAiReply.reply);
+    const agentTripMemoryRequest = toolRequest?.type === "trip_memory" ? toolRequest : undefined;
+    const agentPlacesToolRequest = toolRequest?.type === "places_search" ? toolRequest : undefined;
+    const agentRouteToolRequest = !routeEstimate && toolRequest?.type === "route" ? toolRequest : undefined;
+    const agentMemberLocationsRequest = toolRequest?.type === "member_locations" ? toolRequest : undefined;
     const groundedRoutePlaceIds = getRouteGroundedPlaceIds(referenceMessage, tripState.places);
     const explicitlyMentionedRoutePlaceIds = getExplicitlyMentionedPlaceIds(
       referenceMessage,
@@ -4283,10 +4238,10 @@ app.post("/api/agent/message", async (req, res) => {
         .filter((place) => explicitlyMentionedRoutePlaceIds.has(place.id))
         .map((place) => `${place.name} (${place.id})`)
         .join(", ");
-      runtimeGuidance = [
-        ...runtimeGuidance,
+      runtimeGuidance = appendRuntimeGuidance(
+        runtimeGuidance,
         `The proposed route endpoints were not both grounded in the user's wording and active conversational context. The grounded route candidates are: ${groundedRouteCandidates || "none"}. Places explicitly named or addressed in the conversation and therefore mandatory in the route are: ${requiredExplicitCandidates || "none"}. Choose origin and destination only from the grounded candidates, include every mandatory explicit place, and infer direction from the user's natural-language request. If two endpoints are not available, do not substitute an unrelated place.`
-      ];
+      );
       openAiReply = undefined;
       continue;
     }
@@ -4297,10 +4252,10 @@ app.post("/api/agent/message", async (req, res) => {
       !agentMemberLocationsRequest
     ) {
       if (shouldUseRouteEstimate(referenceMessage) && !routeEstimate?.route) {
-        runtimeGuidance = [
-          ...runtimeGuidance,
+        runtimeGuidance = appendRuntimeGuidance(
+          runtimeGuidance,
           "This request asks for route, travel-time, distance, or arrival evidence and is not complete as a text explanation. Select the correct saved origin and destination from placeDirectory, then call the route tool now. If the saved points do not identify them reliably, request trip_memory first. Do not offer to check later."
-        ];
+        );
         openAiReply = undefined;
         continue;
       }
@@ -4327,10 +4282,10 @@ app.post("/api/agent/message", async (req, res) => {
         requester: { id: normalizedMember.id, role: verifiedRequester?.role ?? "viewer" },
         tripState
       });
-      runtimeGuidance = [
-        ...runtimeGuidance,
+      runtimeGuidance = appendRuntimeGuidance(
+        runtimeGuidance,
         "The authorized member-locations lookup completed. Answer directly from memberLocationResult. A not_shared result means unavailable or not consented; do not reveal or infer coordinates."
-      ];
+      );
       continue;
     }
 
@@ -4362,10 +4317,10 @@ app.post("/api/agent/message", async (req, res) => {
         actorName: String(normalizedMember.displayName),
         source: "kodi_agent"
       });
-      runtimeGuidance = [
-        ...runtimeGuidance,
+      runtimeGuidance = appendRuntimeGuidance(
+        runtimeGuidance,
         `The places tool ran the agent's query${anchorPlace ? ` around ${anchorPlace.name}` : requestCurrentLocation ? " around the member's fresh location" : " without a geographic anchor"}. Check every result against the requested geography; ignore mismatches.`
-      ];
+      );
       continue;
     }
 
@@ -4414,28 +4369,22 @@ app.post("/api/agent/message", async (req, res) => {
         source: "kodi_agent"
       });
 
-      runtimeGuidance = [
-        ...runtimeGuidance,
+      runtimeGuidance = appendRuntimeGuidance(
+        runtimeGuidance,
         `The route tool was executed from ${originPlace.name} to ${destinationPlace.name}. Answer now from routeEstimate; do not promise future work.`
-      ];
-      activeRulesReply = buildKodiReplyFromContext({
-        ...req.body,
-        message: currentMessage,
-        tripState,
-        conversationFocus,
-        externalPlacesSearch,
-        reverseGeocodedLocation,
-        routeEstimate
-      });
+      );
       continue;
     }
     break;
   }
 
   if (openAiReply?.reply && openAiReply.reply.metadata?.toolRequest) {
-    openAiReply = routeEstimate?.route
-      ? { ...openAiReply, reply: activeRulesReply, error: openAiReply.error ?? "agent_tool_loop_deadline" }
-      : { ...openAiReply, reply: undefined, status: "error", error: openAiReply.error ?? "agent_tool_loop_incomplete" };
+    openAiReply = {
+      ...openAiReply,
+      reply: undefined,
+      status: "error",
+      error: openAiReply.error ?? (routeEstimate?.route ? "agent_tool_result_not_synthesized" : "agent_tool_loop_incomplete")
+    };
   }
   if (shouldUseRouteEstimate(referenceMessage) && !routeEstimate?.route) {
     openAiReply = {

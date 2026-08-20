@@ -1,5 +1,9 @@
 # Kodi Agent Engineering README
 
+This is the sole runtime mapping of the product contract in
+`KODI_AGENT_MASTER_SPEC_HE.md`. Other Kodi documents are supporting references;
+they do not define additional prompts, skills, or fallback behavior.
+
 This document defines how Kodi should be specified, built, tested, and improved as an AI agent.
 
 It complements the product specs:
@@ -223,8 +227,9 @@ Canonical runtime contract:
 - Provider adapters receive the same prompt, structured trip reference, retrieved conversation memory, tool contract, and validation.
 - The model decides whether to call a tool. The backend validates tool arguments, executes tools, and enforces permissions; it does not write conversational answers by keyword routing.
 - Kodi receives the complete saved-place directory and ordered lodging itinerary as private trip memory on every turn, so it does not ask the user to repeat stored information.
-- Runtime tools currently exposed to the model are Google Routes and Google Places. Web search and shared trip mutations are not advertised as active skills until they have real executable tool contracts.
-- The rules module is a failure/result formatter only. It is not Kodi's conversational brain.
+- Runtime tools exposed through the single `agentTools.ts` registry are trip memory, Google Routes, Google Places, and authorized member locations. Web search and shared trip mutations are not advertised until they have executable contracts.
+- `kodi.ts` contains shared request/response types only. Failure formatting stays at the server boundary and never writes a substitute travel answer.
+- The backend is the sole authority for persisted trip state. The browser contributes only the current message, verified participant identity, and fresh requester location.
 
 Short term:
 
