@@ -12,7 +12,9 @@ import {
 import {
   buildTripPlacesSummary,
   DEMO_GOOGLE_SOURCE_URL,
+  hydrateRuntimeTripPlacesFromPersistentStorage,
   loadDemoTripPlaces,
+  persistRuntimeTripPlacesSnapshot,
   setRuntimeSyncedTripPlacesSource
 } from "./data/localPlaces.js";
 import { searchGooglePlacesText, type GooglePlacesTextSearchResult } from "./google/placesSearch.js";
@@ -3877,6 +3879,7 @@ app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
   const syncedAt = new Date().toISOString();
   let importStatus: "imported_google_public_list" | "fallback_fixture" = "fallback_fixture";
   let importError: string | undefined;
+  let persistenceStatus: "ready" | "not_configured" | "failed" = "not_configured";
 
   try {
     const imported = await importGooglePublicList(sourceUrl);
@@ -3888,6 +3891,18 @@ app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
       places: imported.places
     });
     importStatus = "imported_google_public_list";
+    try {
+      const persisted = await persistRuntimeTripPlacesSnapshot({
+        label: imported.listName,
+        sourceUrl,
+        importedAt: imported.importedAt,
+        places: imported.places
+      });
+      persistenceStatus = persisted.status;
+    } catch (error) {
+      persistenceStatus = "failed";
+      importError = error instanceof Error ? error.message : "Google points persistence failed.";
+    }
   } catch (error) {
     importError = error instanceof Error ? error.message : "Unknown Google public list import error.";
   }
@@ -3933,6 +3948,7 @@ app.post("/api/trips/demo/google-source/sync", async (_req, res) => {
       liveGoogleAccess: googleSource.adapter.liveGoogleAccess,
       importStatus,
       importError,
+      persistenceStatus,
       canOpenGoogleMapsUrl: googleSource.sync.canOpenGoogleMapsUrl,
       canWriteBackToGoogle: googleSource.sync.canWriteBackToGoogle,
       syncedAt
@@ -4659,6 +4675,13 @@ async function startServer() {
   const identityMigration = await applySupabaseIdentityAndWhatsAppMigration();
   if (identityMigration.configured && !identityMigration.verified) {
     throw new Error(`Identity storage migration failed: ${identityMigration.error ?? "verification_failed"}`);
+  }
+
+  try {
+    const placesHydration = await hydrateRuntimeTripPlacesFromPersistentStorage();
+    console.log(`Trip places persistent hydration: ${placesHydration.status} (${placesHydration.count})`);
+  } catch (error) {
+    console.error("Trip places persistent hydration failed; using packaged fallback", error);
   }
 
   app.listen(port, () => {
