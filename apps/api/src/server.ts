@@ -4245,10 +4245,10 @@ app.post("/api/agent/message", async (req, res) => {
     const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
     const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
     const agentMemberLocationsRequest = getAgentMemberLocationsRequest(openAiReply.reply);
-    const groundedRoutePlaceIds = getRouteGroundedPlaceIds(referenceMessage, tripLookupResult.matches);
+    const groundedRoutePlaceIds = getRouteGroundedPlaceIds(referenceMessage, tripState.places);
     const explicitlyMentionedRoutePlaceIds = getExplicitlyMentionedPlaceIds(
       referenceMessage,
-      tripLookupResult.matches
+      tripState.places
     );
     if (
       agentRouteToolRequest &&
@@ -4259,11 +4259,11 @@ app.post("/api/agent/message", async (req, res) => {
         explicitlyMentionedRoutePlaceIds
       )
     ) {
-      const groundedRouteCandidates = tripLookupResult.matches
+      const groundedRouteCandidates = tripState.places
         .filter((place) => groundedRoutePlaceIds.has(place.id))
         .map((place) => `${place.name} (${place.id})`)
         .join(", ");
-      const requiredExplicitCandidates = tripLookupResult.matches
+      const requiredExplicitCandidates = tripState.places
         .filter((place) => explicitlyMentionedRoutePlaceIds.has(place.id))
         .map((place) => `${place.name} (${place.id})`)
         .join(", ");
