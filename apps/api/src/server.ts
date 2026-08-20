@@ -4207,7 +4207,7 @@ app.post("/api/agent/message", async (req, res) => {
       tripContextClarification: undefined,
       runtimeGuidance,
       requiredTool:
-        !externalPlacesSearch && hereAndNowContext && includesConcreteGooglePlacesCue(currentMessage)
+        !externalPlacesSearch && Boolean(requestCurrentLocation) && hereAndNowContext && includesConcreteGooglePlacesCue(currentMessage)
           ? "places_search"
           : undefined,
       permissionPolicy,
@@ -4294,6 +4294,9 @@ app.post("/api/agent/message", async (req, res) => {
     }
 
     if (agentPlacesToolRequest) {
+      if (hereAndNowContext && !requestCurrentLocation) {
+        break;
+      }
       const anchorPlace = agentPlacesToolRequest.anchorPlaceId
         ? tripState.places.find(
             (place) =>
