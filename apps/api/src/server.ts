@@ -878,6 +878,9 @@ function describeProviderAttempt(attempt: string) {
 }
 
 function buildAgentUnavailableText(openAiReply: KodiReplyResult | undefined) {
+  if (openAiReply?.error === "required_route_evidence_not_completed") {
+    return "לא הצלחתי לזהות בביטחון את שתי נקודות המסלול מתוך נקודות הטיול, ולכן לא הפעלתי Google Routes ולא אתן זמן או מרחק משוער. אפשר לציין את שמות שתי הנקודות כפי שהן מופיעות במפה, או לנסות שוב לאחר בדיקת סנכרון נקודות הטיול.";
+  }
   const details = Array.from(
     new Set((openAiReply?.providerAttempts ?? []).map(describeProviderAttempt).filter((item): item is string => Boolean(item)))
   );
@@ -4181,12 +4184,36 @@ app.post("/api/agent/message", async (req, res) => {
     const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
     const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
     const agentMemberLocationsRequest = getAgentMemberLocationsRequest(openAiReply.reply);
+    const retrievedPlaceIds = new Set(tripLookupResult.matches.map((place) => place.id));
+    if (
+      agentRouteToolRequest &&
+      retrievedPlaceIds.size > 0 &&
+      (!retrievedPlaceIds.has(agentRouteToolRequest.originPlaceId) ||
+        !retrievedPlaceIds.has(agentRouteToolRequest.destinationPlaceId))
+    ) {
+      runtimeGuidance = [
+        ...runtimeGuidance,
+        "The proposed route endpoints were not both grounded in the places retrieved for the user's wording. Re-read the saved point names, notes, dates, and tags in placeDirectory. Request trip_memory for the exact candidate IDs if needed, then submit a corrected route tool call."
+      ];
+      openAiReply = undefined;
+      continue;
+    }
     if (
       !agentTripMemoryRequest &&
       !agentPlacesToolRequest &&
       !agentRouteToolRequest &&
       !agentMemberLocationsRequest
-    ) break;
+    ) {
+      if (shouldUseRouteEstimate(referenceMessage) && !routeEstimate?.route) {
+        runtimeGuidance = [
+          ...runtimeGuidance,
+          "This request asks for route, travel-time, distance, or arrival evidence and is not complete as a text explanation. Select the correct saved origin and destination from placeDirectory, then call the route tool now. If the saved points do not identify them reliably, request trip_memory first. Do not offer to check later."
+        ];
+        openAiReply = undefined;
+        continue;
+      }
+      break;
+    }
 
     const toolSignature = JSON.stringify(
       agentTripMemoryRequest ?? agentPlacesToolRequest ?? agentRouteToolRequest ?? agentMemberLocationsRequest
@@ -4317,6 +4344,14 @@ app.post("/api/agent/message", async (req, res) => {
     openAiReply = routeEstimate?.route
       ? { ...openAiReply, reply: activeRulesReply, error: openAiReply.error ?? "agent_tool_loop_deadline" }
       : { ...openAiReply, reply: undefined, status: "error", error: openAiReply.error ?? "agent_tool_loop_incomplete" };
+  }
+  if (shouldUseRouteEstimate(referenceMessage) && !routeEstimate?.route) {
+    openAiReply = {
+      status: "error",
+      model: openAiReply?.model,
+      error: "required_route_evidence_not_completed",
+      providerAttempts: openAiReply?.providerAttempts
+    };
   }
   if (memberLocationResult && (!openAiReply?.reply || openAiReply.status !== "ready")) {
     openAiReply = {

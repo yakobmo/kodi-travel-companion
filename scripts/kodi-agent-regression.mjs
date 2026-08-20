@@ -51,17 +51,19 @@ function assertAgentFirstSourceGuards() {
     "agent-first no fast places pre-router call site",
     countOccurrences(openAiSource, "shouldPreferFastPlacesAnswer") <= 1
   );
-  assertCheck("agent-first answer target in provider payload", openAiSource.includes("answerThisMessageOnly"));
+  assertCheck("agent-first current message in provider payload", openAiSource.includes("message: input.message"));
+  assertCheck("agent-first saved trip points are primary", openAiSource.includes("placeDirectory is the primary saved Google Maps trip-point record"));
+  assertCheck("agent-first includes execution receipts", openAiSource.includes("toolEvidence: buildAgentToolEvidence(input)"));
+  assertCheck("agent-first blocks fictional tool claims", openAiSource.includes("validateAgentEvidenceClaims"));
   assertCheck(
-    "agent-first recent chat is weak background only",
-    openAiSource.includes("recentMessagesAreBackgroundOnly") &&
-      openAiSource.includes("doNotReviveUnansweredOlderQuestions")
+    "route questions require completed evidence",
+    serverSource.includes("required_route_evidence_not_completed") &&
+      serverSource.includes("not complete as a text explanation")
   );
   assertCheck(
-    "agent-first geographically bounded place context",
-    openAiSource.includes("options.reasoningMode ? 16 : 12") &&
-      openAiSource.includes("distanceKm(") &&
-      openAiSource.includes(") <= 80")
+    "route endpoints must be grounded in retrieved trip points",
+    serverSource.includes("retrievedPlaceIds") &&
+      serverSource.includes("were not both grounded in the places retrieved")
   );
   assertCheck(
     "agent-first avoids the incompatible web-search JSON path",
@@ -69,7 +71,7 @@ function assertAgentFirstSourceGuards() {
   );
   assertCheck(
     "agent-first bounded recent message context",
-    openAiSource.includes(".slice(0, 12)") && openAiSource.includes("message.text.slice(0, 500)")
+    openAiSource.includes(".slice(-10)") && openAiSource.includes("text.trim().slice(0, 600)")
   );
   assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));
   assertCheck("agent-first no synthetic session Kodi message", !webSource.includes("sessionKodiReminderMessage"));
