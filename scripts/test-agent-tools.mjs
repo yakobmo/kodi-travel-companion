@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseKodiToolRequest } from "../apps/api/dist/agent/agentTools.js";
+import { parseKodiToolRequest, parseOpenAiKodiToolCall } from "../apps/api/dist/agent/agentTools.js";
 
 assert.deepEqual(parseKodiToolRequest({
   type: "route",
@@ -29,5 +29,13 @@ assert.deepEqual(parseKodiToolRequest({ type: "member_locations", scope: "member
   memberName: "אורייה"
 });
 assert.equal(parseKodiToolRequest({ type: "unknown" }), undefined);
+assert.deepEqual(parseOpenAiKodiToolCall({
+  function: { name: "places_search", arguments: JSON.stringify({ query: "cafe", radiusMeters: 1500 }) }
+}), {
+  type: "places_search",
+  query: "cafe",
+  anchorPlaceId: undefined,
+  radiusMeters: 1500
+});
 
 console.log("agent tool registry regression: ok");

@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import type { AgentMessageRequest, AgentMessageResponse } from "./kodi.js";
 import { buildKodiContext } from "./kodiContext.js";
 import { hasFreeFleetProvider, tryFreeProviderFleet } from "./providerFleet.js";
-import { KODI_TOOL_CONTRACT, parseKodiToolRequest } from "./agentTools.js";
+import { KODI_OPENAI_TOOLS, KODI_TOOL_CONTRACT, parseKodiToolRequest, parseOpenAiKodiToolCall } from "./agentTools.js";
 import { buildAgentToolEvidence, validateAgentEvidenceClaims } from "./toolEvidence.js";
 
 const allowedIntents: AgentMessageResponse["intent"][] = [
@@ -658,7 +658,9 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
             { role: "user", content: inputPayload }
           ],
           max_completion_tokens: reasoningMode ? 1100 : 900,
-          response_format: { type: "json_object" }
+          response_format: { type: "json_object" },
+          tools: KODI_OPENAI_TOOLS as never,
+          tool_choice: "auto"
         }),
         paidPrimaryTimeoutMs()
       );
@@ -684,15 +686,17 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
   for (const modelCandidate of modelCandidates) {
     try {
       const response = await createKodiResponse(modelCandidate, enableWebSearch);
-      const outputText =
-        "choices" in response
-          ? response.choices[0]?.message?.content ?? ""
-          : response.output_text ?? "";
+      const openAiToolRequest = "choices" in response
+        ? parseOpenAiKodiToolCall(response.choices[0]?.message?.tool_calls?.[0])
+        : undefined;
+      const outputText = "choices" in response ? response.choices[0]?.message?.content ?? "" : response.output_text ?? "";
 
       return {
         status: "ready",
         model: modelCandidate,
-        reply: validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input)
+        reply: openAiToolRequest
+          ? toValidReply({ text: "tool request", intent: input.rulesReply.intent, toolRequest: openAiToolRequest })
+          : validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input)
       };
     } catch (error) {
       lastError = error;
@@ -713,15 +717,17 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
 
       try {
         const response = await createKodiResponse(modelCandidate, false);
-        const outputText =
-          "choices" in response
-            ? response.choices[0]?.message?.content ?? ""
-            : response.output_text ?? "";
+        const openAiToolRequest = "choices" in response
+          ? parseOpenAiKodiToolCall(response.choices[0]?.message?.tool_calls?.[0])
+          : undefined;
+        const outputText = "choices" in response ? response.choices[0]?.message?.content ?? "" : response.output_text ?? "";
 
         return {
           status: "ready",
           model: modelCandidate,
-          reply: validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input),
+          reply: openAiToolRequest
+            ? toValidReply({ text: "tool request", intent: input.rulesReply.intent, toolRequest: openAiToolRequest })
+            : validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input),
           error: "web_search_retry_without_tool"
         };
       } catch (retryError) {

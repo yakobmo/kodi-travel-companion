@@ -13,6 +13,84 @@ export const KODI_TOOL_CONTRACT =
   "Before writing a final answer, compare the needed evidence with toolEvidence. If required evidence is not ready, return the toolRequest now instead of explaining or promising that you will search. " +
   "Use places_search whenever the answer depends on a real nearby venue, current opening status, rating, or live place availability; general knowledge is not evidence for those facts.";
 
+export const KODI_OPENAI_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "trip_memory",
+      description: "Retrieve full saved details for selected trip places.",
+      parameters: {
+        type: "object",
+        properties: { placeIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 12 } },
+        required: ["placeIds"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "route",
+      description: "Calculate a verified Google route between two saved trip places.",
+      parameters: {
+        type: "object",
+        properties: {
+          originPlaceId: { type: "string" },
+          destinationPlaceId: { type: "string" },
+          travelMode: { type: "string", enum: ["DRIVE", "WALK"] }
+        },
+        required: ["originPlaceId", "destinationPlaceId", "travelMode"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "places_search",
+      description: "Search live Google Places results, including nearby venues and current place facts.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string" },
+          anchorPlaceId: { type: "string" },
+          radiusMeters: { type: "number", minimum: 500, maximum: 50000 }
+        },
+        required: ["query"],
+        additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "member_locations",
+      description: "Read consent-authorized current locations for trip members.",
+      parameters: {
+        type: "object",
+        properties: {
+          scope: { type: "string", enum: ["all", "member"] },
+          memberName: { type: "string" }
+        },
+        required: ["scope"],
+        additionalProperties: false
+      }
+    }
+  }
+] as const;
+
+export function parseOpenAiKodiToolCall(value: unknown): KodiToolRequest | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const call = value as { function?: { name?: unknown; arguments?: unknown } };
+  if (typeof call.function?.name !== "string" || typeof call.function.arguments !== "string") return undefined;
+  try {
+    const args = JSON.parse(call.function.arguments) as Record<string, unknown>;
+    return parseKodiToolRequest({ type: call.function.name, ...args });
+  } catch {
+    return undefined;
+  }
+}
+
 export function parseKodiToolRequest(value: unknown): KodiToolRequest | undefined {
   if (!value || typeof value !== "object") return undefined;
   const candidate = value as Record<string, unknown>;
