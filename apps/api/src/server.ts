@@ -4177,6 +4177,10 @@ app.post("/api/agent/message", async (req, res) => {
   let openAiReply: Awaited<ReturnType<typeof tryBuildKodiReply>> | undefined;
   let tripLookupResult = lookupTripContext(tripState, referenceMessage);
   let memberLocationResult: AgentMessageRequest["memberLocationResult"];
+  let mapActionResult:
+    | { status: "completed"; kind: "destination" | "route"; placeNames: string[]; googleMapsUrl: string }
+    | { status: "denied" | "invalid"; reason: string }
+    | undefined;
   const activeRulesReply = rulesReply;
   const completedToolCalls = new Set<string>();
 
@@ -4209,6 +4213,7 @@ app.post("/api/agent/message", async (req, res) => {
     const agentPlacesToolRequest = toolRequest?.type === "places_search" ? toolRequest : undefined;
     const agentRouteToolRequest = !routeEstimate && toolRequest?.type === "route" ? toolRequest : undefined;
     const agentMemberLocationsRequest = toolRequest?.type === "member_locations" ? toolRequest : undefined;
+    const agentMapActionRequest = toolRequest?.type === "map_action" ? toolRequest : undefined;
     const groundedRoutePlaceIds = getRouteGroundedPlaceIds(referenceMessage, tripState.places);
     const explicitlyMentionedRoutePlaceIds = getExplicitlyMentionedPlaceIds(
       referenceMessage,
@@ -4242,9 +4247,14 @@ app.post("/api/agent/message", async (req, res) => {
       !agentTripMemoryRequest &&
       !agentPlacesToolRequest &&
       !agentRouteToolRequest &&
-      !agentMemberLocationsRequest
+      !agentMemberLocationsRequest &&
+      !agentMapActionRequest
     ) {
-      if (shouldUseRouteEstimate(referenceMessage) && !routeEstimate?.route) {
+      if (
+        shouldUseRouteEstimate(referenceMessage) &&
+        !routeEstimate?.route &&
+        mapActionResult?.status !== "completed"
+      ) {
         runtimeGuidance = appendRuntimeGuidance(
           runtimeGuidance,
           "This request asks for route, travel-time, distance, or arrival evidence and is not complete as a text explanation. Select the correct saved origin and destination from placeDirectory, then call the route tool now. If the saved points do not identify them reliably, request trip_memory first. Do not offer to check later."
@@ -4256,13 +4266,125 @@ app.post("/api/agent/message", async (req, res) => {
     }
 
     const toolSignature = JSON.stringify(
-      agentTripMemoryRequest ?? agentPlacesToolRequest ?? agentRouteToolRequest ?? agentMemberLocationsRequest
+      agentTripMemoryRequest ??
+        agentPlacesToolRequest ??
+        agentRouteToolRequest ??
+        agentMemberLocationsRequest ??
+        agentMapActionRequest
     );
     if (completedToolCalls.has(toolSignature)) {
       openAiReply = { ...openAiReply, reply: undefined, status: "error", error: "agent_repeated_tool_call" };
       break;
     }
     completedToolCalls.add(toolSignature);
+
+    if (agentMapActionRequest) {
+      const selectedPlaces = agentMapActionRequest.placeIds
+        .map((placeId) => tripState.places.find((place) => place.id === placeId))
+        .filter(
+          (place): place is TripPlace =>
+            Boolean(place) && typeof place?.lat === "number" && typeof place?.lng === "number"
+        );
+      const decision = canMemberRunAgentAction({
+        role: verifiedRequester?.role ?? "viewer",
+        actionType: selectedPlaces.length > 1 ? "create_route" : "set_group_destination"
+      });
+
+      if (!decision.allowed) {
+        mapActionResult = { status: "denied", reason: decision.reason };
+        runtimeGuidance = appendRuntimeGuidance(
+          runtimeGuidance,
+          "The requested shared map change was denied by the server because only an owner or admin may change the group map. Explain that clearly and do not claim the map changed."
+        );
+        continue;
+      }
+
+      if (selectedPlaces.length !== agentMapActionRequest.placeIds.length || selectedPlaces.length === 0) {
+        mapActionResult = { status: "invalid", reason: "place_not_found_or_missing_coordinates" };
+        runtimeGuidance = appendRuntimeGuidance(
+          runtimeGuidance,
+          "The map action was not executed because one or more selected saved places were invalid or lacked coordinates. Ask only for the missing clarification; do not claim the map changed."
+        );
+        continue;
+      }
+
+      if (selectedPlaces.length === 1) {
+        const place = selectedPlaces[0];
+        await saveDemoGroupDestinationAsync({
+          tripGroupId: "group_family_greece_demo",
+          placeId: place.id,
+          placeName: place.name,
+          address: place.address,
+          lat: place.lat,
+          lng: place.lng,
+          setByMemberId: String(normalizedMember.id),
+          setByName: String(normalizedMember.displayName),
+          setAt: new Date().toISOString()
+        });
+        await safeRecordTripEvent({
+          eventType: "destination_set",
+          actorMemberId: String(normalizedMember.id),
+          actorName: String(normalizedMember.displayName),
+          relatedEntityId: place.id,
+          summary: `${normalizedMember.displayName} asked Kodi to mark ${place.name} on the group map.`
+        });
+        mapActionResult = {
+          status: "completed",
+          kind: "destination",
+          placeNames: [place.name],
+          googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`
+        };
+      } else {
+        const route = await saveDemoGroupRouteAsync({
+          tripGroupId: "group_family_greece_demo",
+          routeId: `route_${Date.now()}`,
+          title: agentMapActionRequest.title ?? "מסלול שסומן על ידי קודי",
+          stops: selectedPlaces.map((place, index) => ({
+            placeId: place.id,
+            placeName: place.name,
+            address: place.address,
+            lat: place.lat,
+            lng: place.lng,
+            order: index + 1
+          })),
+          activeStopIndex: 0,
+          completedStopIds: [],
+          createdByMemberId: String(normalizedMember.id),
+          createdByName: String(normalizedMember.displayName),
+          createdAt: new Date().toISOString(),
+          status: "approved"
+        });
+        await safeRecordTripEvent({
+          eventType: "route_created",
+          actorMemberId: String(normalizedMember.id),
+          actorName: String(normalizedMember.displayName),
+          relatedEntityId: route.routeId,
+          summary: `${normalizedMember.displayName} asked Kodi to mark group route: ${route.title}.`
+        });
+        const origin = selectedPlaces[0];
+        const destination = selectedPlaces[selectedPlaces.length - 1];
+        const waypoints = selectedPlaces
+          .slice(1, -1)
+          .map((place) => `${place.lat},${place.lng}`)
+          .join("|");
+        mapActionResult = {
+          status: "completed",
+          kind: "route",
+          placeNames: selectedPlaces.map((place) => place.name),
+          googleMapsUrl:
+            `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}` +
+            `&destination=${destination.lat},${destination.lng}` +
+            (waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : "")
+        };
+      }
+
+      agentTripStateCache = undefined;
+      runtimeGuidance = appendRuntimeGuidance(
+        runtimeGuidance,
+        `The authorized map action completed successfully and is already persisted on the shared in-app Google map. Marked places: ${mapActionResult.placeNames.join(", ")}. External Google Maps link: ${mapActionResult.googleMapsUrl}. Confirm the completed action naturally and briefly; do not say you merely prepared or plan to do it.`
+      );
+      continue;
+    }
 
     if (agentTripMemoryRequest) {
       tripLookupResult = lookupTripContext(tripState, referenceMessage, agentTripMemoryRequest.placeIds);
@@ -4382,7 +4504,11 @@ app.post("/api/agent/message", async (req, res) => {
       error: openAiReply.error ?? (routeEstimate?.route ? "agent_tool_result_not_synthesized" : "agent_tool_loop_incomplete")
     };
   }
-  if (shouldUseRouteEstimate(referenceMessage) && !routeEstimate?.route) {
+  if (
+    shouldUseRouteEstimate(referenceMessage) &&
+    !routeEstimate?.route &&
+    mapActionResult?.status !== "completed"
+  ) {
     openAiReply = {
       status: "error",
       model: openAiReply?.model,
@@ -4435,6 +4561,10 @@ app.post("/api/agent/message", async (req, res) => {
     travelMode: navigationTravelMode,
     preferTripDestination: routeEstimate?.status === "ready"
   });
+  const replyWithMapReceipt =
+    mapActionResult?.status === "completed" && !hasNavigationUrl(reply.text)
+      ? { ...reply, text: `${reply.text.trim()}\nGoogle Maps: ${mapActionResult.googleMapsUrl}` }
+      : reply;
   const selectedProviderModel = openAiReply?.model;
   const selectedProvider =
     selectedProviderModel?.startsWith("gemini:")
@@ -4462,7 +4592,7 @@ app.post("/api/agent/message", async (req, res) => {
   if (req.body?.publishToGroup === true && verifiedRequester) {
     publishedMessage = await appendDemoTripMessageAsync({
       author: "קודי",
-      text: reply.text,
+      text: replyWithMapReceipt.text,
       source: "agent"
     });
     await safeRecordTripEvent({
@@ -4482,7 +4612,8 @@ app.post("/api/agent/message", async (req, res) => {
   }
 
   res.json({
-    ...reply,
+    ...replyWithMapReceipt,
+    mapAction: mapActionResult,
     publishedMessage,
     agentRuntime: {
       aiStatus: openAiReply?.status ?? (openAiUsageGate.providerConfigured ? "skipped" : "not_configured"),
@@ -4496,9 +4627,10 @@ app.post("/api/agent/message", async (req, res) => {
       paidFallbackUsed: selectedProvider === "openai",
       openAiError: sanitizeProviderErrorForRuntime(openAiReply?.error),
       providerAttempts: openAiReply?.providerAttempts?.map((attempt) => sanitizeProviderErrorForRuntime(attempt)),
-      fallbackUsed: reply.source !== "ai_provider",
-      providerFailureVisible: reply.source === "agent_unavailable",
-      providerFailureKind: reply.source === "agent_unavailable" ? reply.metadata?.providerFailureKind : undefined,
+      fallbackUsed: replyWithMapReceipt.source !== "ai_provider",
+      providerFailureVisible: replyWithMapReceipt.source === "agent_unavailable",
+      providerFailureKind:
+        replyWithMapReceipt.source === "agent_unavailable" ? replyWithMapReceipt.metadata?.providerFailureKind : undefined,
       fastLane: false,
       latencyMs: Date.now() - agentStartedAt
     },

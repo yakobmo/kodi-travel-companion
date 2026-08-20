@@ -227,7 +227,7 @@ Canonical runtime contract:
 - Provider adapters receive the same prompt, structured trip reference, retrieved conversation memory, tool contract, and validation.
 - The model decides whether to call a tool. The backend validates tool arguments, executes tools, and enforces permissions; it does not write conversational answers by keyword routing.
 - Kodi receives the complete saved-place directory and ordered lodging itinerary as private trip memory on every turn, so it does not ask the user to repeat stored information.
-- Runtime tools exposed through the single `agentTools.ts` registry are trip memory, Google Routes, Google Places, and authorized member locations. Web search and shared trip mutations are not advertised until they have executable contracts.
+- Runtime tools exposed through the single `agentTools.ts` registry are trip memory, Google Routes, Google Places, authorized member locations, and an authorized shared-map action. `map_action` reuses the existing group destination/route persistence and owner/admin policy; it does not introduce a second mutation path. Private Google-account Saved-list write-back remains outside this contract because it requires separate Google OAuth authorization.
 - `kodi.ts` contains shared request/response types only. Failure formatting stays at the server boundary and never writes a substitute travel answer.
 - The backend is the sole authority for persisted trip state. The browser contributes only the current message, verified participant identity, and fresh requester location.
 

@@ -28,6 +28,12 @@ assert.deepEqual(parseKodiToolRequest({ type: "member_locations", scope: "member
   scope: "member",
   memberName: "אורייה"
 });
+assert.deepEqual(parseKodiToolRequest({ type: "map_action", placeIds: ["a", "a", 4, "b"], title: "  מסלול חוף  " }), {
+  type: "map_action",
+  placeIds: ["a", "b"],
+  title: "מסלול חוף"
+});
+assert.equal(parseKodiToolRequest({ type: "map_action", placeIds: [] }), undefined);
 assert.equal(parseKodiToolRequest({ type: "unknown" }), undefined);
 assert.deepEqual(parseOpenAiKodiToolCall({
   function: { name: "places_search", arguments: JSON.stringify({ query: "cafe", radiusMeters: 1500 }) }

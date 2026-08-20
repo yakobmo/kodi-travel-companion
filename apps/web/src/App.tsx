@@ -1396,6 +1396,8 @@ export function App() {
   const googleMapInstanceRef = useRef<any | null>(null);
   const googleMapPlaceMarkersRef = useRef<any[]>([]);
   const googleMapDynamicMarkersRef = useRef<any[]>([]);
+  const googleMapRouteMarkersRef = useRef<any[]>([]);
+  const googleMapRoutePolylineRef = useRef<any | null>(null);
   const googleMapFitSignatureRef = useRef("");
   const googleMapPlaceMarkerSignatureRef = useRef("");
   const googleMapDynamicMarkerSignatureRef = useRef("");
@@ -2606,9 +2608,12 @@ export function App() {
         mapAnchorLocation
           ? `${mapAnchorLocation.lat.toFixed(3)}:${mapAnchorLocation.lng.toFixed(3)}:${DEFAULT_NEARBY_MAP_RADIUS_KM}`
           : "no-anchor",
-        mapPlaces.map((place) => `${place.id}:${place.lat}:${place.lng}`).join("|")
+        mapPlaces.map((place) => `${place.id}:${place.lat}:${place.lng}`).join("|"),
+        groupRoute
+          ? `${groupRoute.routeId}:${groupRoute.stops.map((stop) => `${stop.placeId}:${stop.lat}:${stop.lng}`).join("|")}`
+          : "no-route"
       ].join("::"),
-    [currentLocation, mapAnchorLocation, mapPlaces]
+    [currentLocation, groupRoute, mapAnchorLocation, mapPlaces]
   );
   const recentTripEvents = tripEvents.slice(0, 3);
   const usageAuditOverview = useMemo(() => buildUsageAuditOverview(tripEvents), [tripEvents]);
@@ -2759,6 +2764,39 @@ export function App() {
           dynamicMarkerIndex += 1;
         });
 
+        googleMapRouteMarkersRef.current.forEach((marker) => marker.setMap?.(null));
+        googleMapRouteMarkersRef.current = [];
+        googleMapRoutePolylineRef.current?.setMap?.(null);
+        googleMapRoutePolylineRef.current = null;
+        const routePath = (groupRoute?.stops ?? [])
+          .filter(
+            (stop): stop is typeof stop & { lat: number; lng: number } =>
+              typeof stop.lat === "number" && typeof stop.lng === "number"
+          )
+          .map((stop) => ({ lat: stop.lat, lng: stop.lng }));
+        if (routePath.length > 0) {
+          googleMapRouteMarkersRef.current = routePath.map(
+            (position, index) =>
+              new google.maps.Marker({
+                map,
+                position,
+                title: groupRoute?.stops[index]?.placeName ?? `תחנה ${index + 1}`,
+                label: { text: String(index + 1), color: "#ffffff", fontWeight: "700" },
+                zIndex: 50 + index
+              })
+          );
+        }
+        if (routePath.length > 1) {
+          googleMapRoutePolylineRef.current = new google.maps.Polyline({
+            map,
+            path: routePath,
+            geodesic: true,
+            strokeColor: "#0b7285",
+            strokeOpacity: 0.9,
+            strokeWeight: 5
+          });
+        }
+
         const latitudeRadius = DEFAULT_NEARBY_MAP_RADIUS_KM / 111;
         const longitudeRadius =
           DEFAULT_NEARBY_MAP_RADIUS_KM /
@@ -2787,7 +2825,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [currentLocation, googleMapsApiKey, mapAnchorLocation, mapFitSignature, mapPlaces, selectedPlace, visibleMembers]);
+  }, [currentLocation, googleMapsApiKey, groupRoute, mapAnchorLocation, mapFitSignature, mapPlaces, selectedPlace, visibleMembers]);
 
   useEffect(
     () => () => {
@@ -2796,8 +2834,12 @@ export function App() {
       }
       googleMapPlaceMarkersRef.current.forEach((marker) => marker.setMap?.(null));
       googleMapDynamicMarkersRef.current.forEach((marker) => marker.setMap?.(null));
+      googleMapRouteMarkersRef.current.forEach((marker) => marker.setMap?.(null));
+      googleMapRoutePolylineRef.current?.setMap?.(null);
       googleMapPlaceMarkersRef.current = [];
       googleMapDynamicMarkersRef.current = [];
+      googleMapRouteMarkersRef.current = [];
+      googleMapRoutePolylineRef.current = null;
       speechRecognitionRef.current?.abort();
     },
     []

@@ -4,11 +4,12 @@ export type KodiToolRequest =
   | { type: "trip_memory"; placeIds: string[] }
   | { type: "route"; originPlaceId: string; destinationPlaceId: string; travelMode: "DRIVE" | "WALK" }
   | { type: "places_search"; query: string; anchorPlaceId?: string; radiusMeters: number }
-  | { type: "member_locations"; scope: "all" | "member"; memberName?: string };
+  | { type: "member_locations"; scope: "all" | "member"; memberName?: string }
+  | { type: "map_action"; placeIds: string[]; title?: string };
 
 export const KODI_TOOL_CONTRACT =
   "Available tools: trip_memory(placeIds), route(originPlaceId,destinationPlaceId,travelMode), " +
-  "places_search(query,anchorPlaceId?,radiusMeters?), and member_locations(scope,memberName?). " +
+  "places_search(query,anchorPlaceId?,radiusMeters?), member_locations(scope,memberName?), and map_action(placeIds,title?). " +
   "Request at most one tool at a time through toolRequest, using exact place IDs from placeDirectory. " +
   "Before writing a final answer, compare the needed evidence with toolEvidence. If required evidence is not ready, return the toolRequest now instead of explaining or promising that you will search. " +
   "Use places_search whenever the answer depends on a real nearby venue, current opening status, rating, or live place availability; general knowledge is not evidence for those facts.";
@@ -76,6 +77,23 @@ export const KODI_OPENAI_TOOLS = [
         additionalProperties: false
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "map_action",
+      description:
+        "Mark one or more saved trip places on the shared in-app Google map. Use only when the user asks to mark, show, or create a map/route; this is an operational action enforced by server permissions.",
+      parameters: {
+        type: "object",
+        properties: {
+          placeIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 6 },
+          title: { type: "string", maxLength: 120 }
+        },
+        required: ["placeIds"],
+        additionalProperties: false
+      }
+    }
   }
 ] as const;
 
@@ -137,6 +155,22 @@ export function parseKodiToolRequest(value: unknown): KodiToolRequest | undefine
           ? candidate.memberName.trim().slice(0, 100)
           : undefined
     };
+  }
+
+  if (candidate.type === "map_action" && Array.isArray(candidate.placeIds)) {
+    const placeIds = Array.from(
+      new Set(candidate.placeIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0))
+    ).slice(0, 6);
+    return placeIds.length > 0
+      ? {
+          type: "map_action",
+          placeIds,
+          title:
+            typeof candidate.title === "string" && candidate.title.trim()
+              ? candidate.title.trim().slice(0, 120)
+              : undefined
+        }
+      : undefined;
   }
 
   return undefined;

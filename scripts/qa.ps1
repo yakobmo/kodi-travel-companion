@@ -413,6 +413,7 @@ if (
   -not $agentToolsSource.Contains('type: "trip_memory"') -or
   -not $agentToolsSource.Contains('type: "route"') -or
   -not $agentToolsSource.Contains('type: "member_locations"') -or
+  -not $agentToolsSource.Contains('type: "map_action"') -or
   -not $openAiAgentSource.Contains("KODI_TOOL_CONTRACT") -or
   -not $openAiAgentSource.Contains("buildKodiContext") -or
   -not $openAiAgentSource.Contains("ai_reply_geographic_evidence_rejected") -or
