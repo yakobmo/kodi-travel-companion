@@ -4206,6 +4206,10 @@ app.post("/api/agent/message", async (req, res) => {
       routeEstimate,
       tripContextClarification: undefined,
       runtimeGuidance,
+      requiredTool:
+        !externalPlacesSearch && hereAndNowContext && includesConcreteGooglePlacesCue(currentMessage)
+          ? "places_search"
+          : undefined,
       permissionPolicy,
       deadlineAt: agentDeadlineAt,
       rulesReply: activeRulesReply

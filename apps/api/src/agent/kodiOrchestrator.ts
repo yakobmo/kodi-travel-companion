@@ -3,6 +3,7 @@ import type { AgentMessageRequest, AgentMessageResponse } from "./kodi.js";
 import { buildKodiContext } from "./kodiContext.js";
 import { hasFreeFleetProvider, tryFreeProviderFleet } from "./providerFleet.js";
 import { KODI_OPENAI_TOOLS, KODI_TOOL_CONTRACT, parseKodiToolRequest, parseOpenAiKodiToolCall } from "./agentTools.js";
+import type { KodiToolRequest } from "./agentTools.js";
 import { buildAgentToolEvidence, validateAgentEvidenceClaims } from "./toolEvidence.js";
 
 const allowedIntents: AgentMessageResponse["intent"][] = [
@@ -18,6 +19,7 @@ export interface KodiReplyInput extends AgentMessageRequest {
   rulesReply: AgentMessageResponse;
   deadlineAt?: number;
   runtimeGuidance?: string[];
+  requiredTool?: KodiToolRequest["type"];
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
     canShareLiveLocation?: boolean;
@@ -659,7 +661,9 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
           ],
           max_completion_tokens: reasoningMode ? 1100 : 900,
           tools: KODI_OPENAI_TOOLS as never,
-          tool_choice: "auto"
+          tool_choice: input.requiredTool
+            ? ({ type: "function", function: { name: input.requiredTool } } as never)
+            : "auto"
         }),
         paidPrimaryTimeoutMs()
       );
