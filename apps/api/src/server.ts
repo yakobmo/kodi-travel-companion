@@ -97,7 +97,7 @@ import {
   type ConversationMessage
 } from "./agent/kodi.js";
 import { resolveConversationFocus } from "./agent/conversationFocus.js";
-import { areRouteEndpointsGrounded } from "./agent/routeGrounding.js";
+import { areRouteEndpointsGrounded, getRouteGroundedPlaceIds } from "./agent/routeGrounding.js";
 import { lookupTripContext } from "./agent/tripLookup.js";
 import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
 import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
@@ -4241,11 +4241,11 @@ app.post("/api/agent/message", async (req, res) => {
     const agentPlacesToolRequest = getAgentPlacesToolRequest(openAiReply.reply);
     const agentRouteToolRequest = !routeEstimate ? getAgentRouteToolRequest(openAiReply.reply) : undefined;
     const agentMemberLocationsRequest = getAgentMemberLocationsRequest(openAiReply.reply);
-    const retrievedPlaceIds = new Set(tripLookupResult.matches.map((place) => place.id));
+    const groundedRoutePlaceIds = getRouteGroundedPlaceIds(referenceMessage, tripLookupResult.matches);
     if (
       agentRouteToolRequest &&
       !areRouteEndpointsGrounded(
-        retrievedPlaceIds,
+        groundedRoutePlaceIds,
         agentRouteToolRequest.originPlaceId,
         agentRouteToolRequest.destinationPlaceId
       )
