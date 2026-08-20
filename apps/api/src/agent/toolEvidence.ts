@@ -18,6 +18,9 @@ export interface AgentToolEvidence {
   persistentMemory: {
     status: "unavailable" | "ready";
   };
+  stateMutation: {
+    status: "unavailable" | "ready";
+  };
 }
 
 export function buildAgentToolEvidence(input: AgentMessageRequest): AgentToolEvidence {
@@ -46,6 +49,9 @@ export function buildAgentToolEvidence(input: AgentMessageRequest): AgentToolEvi
     },
     persistentMemory: {
       status: "unavailable"
+    },
+    stateMutation: {
+      status: "unavailable"
     }
   };
 }
@@ -66,5 +72,12 @@ export function validateAgentEvidenceClaims(reply: AgentMessageResponse, evidenc
     /(?:מעכשיו|בעתיד).{0,35}(?:תמיד|כלל קבוע|אזכור)/iu.test(text);
   if (claimsPersistentMemory && evidence.persistentMemory.status !== "ready") {
     throw new Error("ai_reply_claims_unavailable_persistent_memory");
+  }
+
+  const claimsStateWasChanged =
+    /(?:הזזתי|אני\s+מזיז|שיניתי|עדכנתי|הוספתי|מחקתי|העברתי)/iu.test(text) ||
+    /(?:בוצע|סודר|עודכן|נשמר|נמחק|הועבר).{0,45}(?:במפה|בנקודות|במקומות|במערכת|בטיול)/iu.test(text);
+  if (claimsStateWasChanged && evidence.stateMutation.status !== "ready") {
+    throw new Error("ai_reply_claims_unexecuted_state_mutation");
   }
 }

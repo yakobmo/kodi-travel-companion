@@ -45,6 +45,8 @@ export interface AgentMessageRequest {
   conversationFocus?: {
     effectiveMessage: string;
     locationAnchor?: string;
+    continuationContext?: string;
+    ellipticalContinuation: boolean;
     correctionDetected: boolean;
     invalidatedAgentClaims: boolean;
   };

@@ -1676,7 +1676,7 @@ if (
 }
 
 if (
-  -not $openAiAgentSource.Contains(".slice(-10)") -or
+  -not $openAiAgentSource.Contains(".slice(-24)") -or
   -not $openAiAgentSource.Contains("message.text.trim().slice(0, 600)")
 ) {
   throw "Kodi agent context must preserve a bounded chronological conversation."

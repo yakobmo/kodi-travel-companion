@@ -3,8 +3,39 @@ import type { ConversationMessage } from "./kodi.js";
 export interface ConversationFocus {
   effectiveMessage: string;
   locationAnchor?: string;
+  continuationContext?: string;
+  ellipticalContinuation: boolean;
   correctionDetected: boolean;
   invalidatedAgentClaims: boolean;
+}
+
+function isEllipticalContinuation(text: string) {
+  const normalized = text.trim().replace(/[.!?…]+$/u, "").trim();
+  return /^(?:כן|בדיוק|נכון|מעולה|זהו|כך|קדימה|אוקיי|בסדר|תעשה|בצע|המשך|בדוק(?:\s+עכשיו)?|כן\s+בדיוק)$/iu.test(normalized);
+}
+
+function priorConversationContext(currentMessage: string, recentMessages: ConversationMessage[]) {
+  if (!isEllipticalContinuation(currentMessage)) return undefined;
+
+  const prior = [...recentMessages];
+  const last = prior.at(-1);
+  if (last?.source !== "agent" && last?.text.trim() === currentMessage.trim()) prior.pop();
+
+  let lastAgentIndex = -1;
+  for (let index = prior.length - 1; index >= 0; index -= 1) {
+    if (prior[index]?.source === "agent") {
+      lastAgentIndex = index;
+      break;
+    }
+  }
+  if (lastAgentIndex < 0) return undefined;
+  const lastMember = [...prior.slice(0, lastAgentIndex)]
+    .reverse()
+    .find((item) => item.source !== "agent" && item.source !== "system");
+  const lastAgent = prior[lastAgentIndex];
+  if (!lastMember || !lastAgent) return undefined;
+
+  return `בקשת המשתמש שעדיין בדיון: ${lastMember.text}\nהתשובה או ההצעה האחרונה שקיבלה כעת המשך: ${lastAgent.text}`;
 }
 
 function cleanAnchor(value: string) {
@@ -40,13 +71,19 @@ export function resolveConversationFocus(
   const currentContainsAnchor = locationAnchor
     ? currentMessage.toLocaleLowerCase("he").includes(locationAnchor.toLocaleLowerCase("he"))
     : false;
+  const continuationContext = priorConversationContext(currentMessage, recentMessages);
+  const contextualMessage = continuationContext
+    ? `${continuationContext}\nהמשך המשתמש הנוכחי: ${currentMessage}`
+    : currentMessage;
 
   return {
     effectiveMessage:
       locationAnchor && !currentContainsAnchor
-        ? `הקשר גאוגרפי מתוקן ומחייב: ${locationAnchor}. בקשת המשתמש הנוכחית: ${currentMessage}`
-        : currentMessage,
+        ? `הקשר גאוגרפי מתוקן ומחייב: ${locationAnchor}. ${contextualMessage}`
+        : contextualMessage,
     locationAnchor,
+    continuationContext,
+    ellipticalContinuation: Boolean(continuationContext),
     correctionDetected,
     invalidatedAgentClaims: correctionDetected
   };

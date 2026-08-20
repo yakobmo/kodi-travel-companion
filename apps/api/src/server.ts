@@ -97,6 +97,7 @@ import {
   type ConversationMessage
 } from "./agent/kodi.js";
 import { resolveConversationFocus } from "./agent/conversationFocus.js";
+import { areRouteEndpointsGrounded } from "./agent/routeGrounding.js";
 import { lookupTripContext } from "./agent/tripLookup.js";
 import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
 import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
@@ -4110,8 +4111,8 @@ app.post("/api/agent/message", async (req, res) => {
   const conversationFocus = resolveConversationFocus(currentMessage, recentMessages as ConversationMessage[]);
   const referenceMessage = conversationFocus.effectiveMessage;
   const toolQueryMessage = conversationFocus.locationAnchor
-    ? `${currentMessage} ליד ${conversationFocus.locationAnchor}`
-    : currentMessage;
+    ? `${referenceMessage} ליד ${conversationFocus.locationAnchor}`
+    : referenceMessage;
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);
   const tripState = withRequestCurrentLocation(
     req.body?.tripState ?? (await buildAgentTripStateSnapshot()),
@@ -4211,7 +4212,7 @@ app.post("/api/agent/message", async (req, res) => {
   });
   const shouldCallAgentProvider = openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
   let openAiReply: Awaited<ReturnType<typeof tryBuildKodiReply>> | undefined;
-  let tripLookupResult = lookupTripContext(tripState, currentMessage);
+  let tripLookupResult = lookupTripContext(tripState, referenceMessage);
   let memberLocationResult: AgentMessageRequest["memberLocationResult"];
   let activeRulesReply = rulesReply;
   const completedToolCalls = new Set<string>();
@@ -4243,9 +4244,11 @@ app.post("/api/agent/message", async (req, res) => {
     const retrievedPlaceIds = new Set(tripLookupResult.matches.map((place) => place.id));
     if (
       agentRouteToolRequest &&
-      retrievedPlaceIds.size > 0 &&
-      (!retrievedPlaceIds.has(agentRouteToolRequest.originPlaceId) ||
-        !retrievedPlaceIds.has(agentRouteToolRequest.destinationPlaceId))
+      !areRouteEndpointsGrounded(
+        retrievedPlaceIds,
+        agentRouteToolRequest.originPlaceId,
+        agentRouteToolRequest.destinationPlaceId
+      )
     ) {
       runtimeGuidance = [
         ...runtimeGuidance,
@@ -4281,7 +4284,7 @@ app.post("/api/agent/message", async (req, res) => {
     completedToolCalls.add(toolSignature);
 
     if (agentTripMemoryRequest) {
-      tripLookupResult = lookupTripContext(tripState, currentMessage, agentTripMemoryRequest.placeIds);
+      tripLookupResult = lookupTripContext(tripState, referenceMessage, agentTripMemoryRequest.placeIds);
       continue;
     }
 

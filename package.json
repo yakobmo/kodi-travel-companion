@@ -22,6 +22,7 @@
     "test:kodi-trip-agnostic": "node scripts/test-kodi-trip-agnostic.mjs",
     "test:kodi-conversation-focus": "node scripts/test-conversation-focus.mjs",
     "test:kodi-tool-evidence": "node scripts/test-agent-tool-evidence.mjs",
+    "test:kodi-route-grounding": "node scripts/test-route-grounding.mjs",
     "smoke:google-places-live": "node scripts/smoke-google-places-live.mjs",
     "smoke:google-routes-live": "node scripts/smoke-google-routes-live.mjs",
     "agent:regression": "node scripts/kodi-agent-regression.mjs",

@@ -39,6 +39,14 @@ assert.throws(
   () => validateAgentEvidenceClaims({ author: "קודי", text: "אימצתי את זה ככלל קבוע בזיכרון", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, noTools),
   /ai_reply_claims_unavailable_persistent_memory/
 );
+assert.throws(
+  () => validateAgentEvidenceClaims({ author: "קודי", text: "אני מזיז את הנקודה לקטגוריית מקומות הלינה", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, noTools),
+  /ai_reply_claims_unexecuted_state_mutation/
+);
+assert.throws(
+  () => validateAgentEvidenceClaims({ author: "קודי", text: "הבנתי. אני מזיז את זה לשם.", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, noTools),
+  /ai_reply_claims_unexecuted_state_mutation/
+);
 
 const withRoute = buildAgentToolEvidence({
   message: "כמה זמן נסיעה?",
@@ -53,4 +61,3 @@ assert.doesNotThrow(() =>
 );
 
 console.log("agent tool evidence regression: ok");
-
