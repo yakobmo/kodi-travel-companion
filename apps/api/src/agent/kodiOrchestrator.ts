@@ -658,7 +658,6 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
             { role: "user", content: inputPayload }
           ],
           max_completion_tokens: reasoningMode ? 1100 : 900,
-          response_format: { type: "json_object" },
           tools: KODI_OPENAI_TOOLS as never,
           tool_choice: "auto"
         }),
