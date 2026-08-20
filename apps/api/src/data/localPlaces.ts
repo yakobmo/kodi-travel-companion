@@ -161,9 +161,7 @@ export async function persistRuntimeTripPlacesSnapshot(source: RuntimeTripPlaces
       updated_at: source.importedAt
     };
   });
-  const { error } = await supabase.from("trip_places").upsert(normalized, {
-    onConflict: "trip_group_id,source_place_id"
-  });
+  const { error } = await supabase.from("trip_places").upsert(normalized, { onConflict: "id" });
   if (error) throw new Error(`Supabase trip places snapshot save failed: ${error.message}`);
 
   const currentSourcePlaceIds = normalized.map((place) => place.source_place_id);
