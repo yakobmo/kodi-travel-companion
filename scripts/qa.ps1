@@ -541,7 +541,7 @@ if (
   -not $openAiAgentSource.Contains("kodiContext is the single authoritative trip context") -or
   -not $openAiAgentSource.Contains("Never invent measurements, live facts, saved details, or verified places") -or
   -not $serverSource.Contains("normalizeKodiProviderReply") -or
-  -not $serverSource.Contains("respectsFreshLocationBoundary") -or
+  -not $serverSource.Contains("freshCurrentLocationRequired ? rulesReply : selectedReply") -or
   -not $serverSource.Contains("textWithoutUnverifiedNavigation")
 ) {
   throw "Kodi orchestration must ground live-location answers and attach verified navigation outside the model."

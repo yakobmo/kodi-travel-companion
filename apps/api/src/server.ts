@@ -959,17 +959,6 @@ function appendRuntimeGuidance(current: string[], ...next: string[]) {
   return Array.from(new Set([...current, ...next]));
 }
 
-function respectsFreshLocationBoundary(reply: AgentMessageResponse, tripState: ReturnType<typeof buildDemoTripState>) {
-  const normalized = reply.text.toLocaleLowerCase("he");
-  const acknowledgesMissingLocation =
-    normalized.includes("מיקום") || normalized.includes("location") || normalized.includes("איפה אתם");
-  const mentionsPlannedTripPlace = tripState.places.some(
-    (place) => place.name.length >= 4 && normalized.includes(place.name.toLocaleLowerCase("he"))
-  );
-
-  return acknowledgesMissingLocation && !mentionsPlannedTripPlace;
-}
-
 function includesAnyTerm(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
@@ -4432,10 +4421,7 @@ app.post("/api/agent/message", async (req, res) => {
     : providerUnavailable
       ? buildAgentUnavailableReply(rulesReply, openAiReply)
       : rulesReply;
-  const locationBoundReply =
-    freshCurrentLocationRequired && !respectsFreshLocationBoundary(selectedReply, tripState)
-      ? rulesReply
-      : selectedReply;
+  const locationBoundReply = freshCurrentLocationRequired ? rulesReply : selectedReply;
   const shouldAppendExternalPlaceNavigation =
     externalPlacesSearch?.status === "ready" && includesConcreteGooglePlacesCue(currentMessage);
   const reply = enhanceKodiReplyWithNavigationLinks({
