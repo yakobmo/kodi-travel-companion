@@ -10,6 +10,7 @@ export type KodiToolRequest =
 export const KODI_TOOL_CONTRACT =
   "Use the available tools whenever an answer depends on saved trip details, geographic facts, live place data, route comparison, member location, or a map action. " +
   "Choose tools from their descriptions, request one at a time with exact place IDs from placeDirectory, and synthesize the result before answering. " +
+  "The request payload's currentLocation is already the active requester's verified location; use it as the anchor for a nearby places_search and never try to rediscover it through member_locations. " +
   "General knowledge is not evidence for measurements, current facts, private state, or completed actions.";
 
 export const KODI_OPENAI_TOOLS = [
@@ -47,7 +48,8 @@ export const KODI_OPENAI_TOOLS = [
     type: "function",
     function: {
       name: "places_search",
-      description: "Search live Google Places results, including nearby venues and current place facts.",
+      description:
+        "Search live Google Places results, including nearby venues, ratings, reviews, and current place facts. For a nearby search, the server anchors this tool to the request payload's verified currentLocation or to anchorPlaceId.",
       parameters: {
         type: "object",
         properties: {
@@ -64,7 +66,8 @@ export const KODI_OPENAI_TOOLS = [
     type: "function",
     function: {
       name: "member_locations",
-      description: "Read consent-authorized current locations for trip members.",
+      description:
+        "Read consent-authorized locations of trip-group members when the user asks where another member or the group is. Do not use this to discover the active requester's currentLocation or to search for nearby venues.",
       parameters: {
         type: "object",
         properties: {

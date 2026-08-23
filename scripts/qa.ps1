@@ -1671,6 +1671,13 @@ if (
 }
 
 if (
+  -not $agentToolsSource.Contains("currentLocation is already the active requester's verified location") -or
+  -not $agentToolsSource.Contains("Do not use this to discover the active requester's currentLocation")
+) {
+  throw "Kodi tool descriptions must distinguish requester GPS from group-member location lookup."
+}
+
+if (
   -not $serverSource.Contains("persistedConversation") -or
   -not $serverSource.Contains("agentRecentMessages") -or
   $serverSource.Contains("resolveConversationFocus")
