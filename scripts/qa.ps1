@@ -1350,6 +1350,7 @@ if (
 if (
   -not $placesSearchSource.Contains("hasLocationRestriction") -or
   -not $placesSearchSource.Contains("buildViewportFromRadius") -or
+  -not $placesSearchSource.Contains("distanceMetersBetween") -or
   -not $placesSearchSource.Contains("rectangle") -or
   -not $serverSource.Contains("externalPlacesSearchRequest") -or
   -not $serverSource.Contains('req.query.restrictToLocation === "true"') -or
@@ -1659,6 +1660,14 @@ if (
   -not $openAiAgentSource.Contains("message.text.trim().slice(0, 600)")
 ) {
   throw "Kodi agent context must preserve a bounded chronological conversation."
+}
+
+if (
+  -not $serverSource.Contains("let evidenceRetryIssued = false") -or
+  -not $serverSource.Contains("No live tool was used for this here-and-now request") -or
+  -not $serverSource.Contains("restrictToLocation: Boolean(searchLocation)")
+) {
+  throw "Kodi here-and-now requests must retry evidence selection and geographically restrict anchored Places searches."
 }
 
 if (

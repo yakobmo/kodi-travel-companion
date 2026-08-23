@@ -114,6 +114,17 @@ function buildViewportFromRadius(lat: number, lng: number, radiusMeters: number)
   };
 }
 
+function distanceMetersBetween(latA: number, lngA: number, latB: number, lngB: number) {
+  const earthRadiusMeters = 6_371_000;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const latDelta = toRadians(latB - latA);
+  const lngDelta = toRadians(lngB - lngA);
+  const a =
+    Math.sin(latDelta / 2) ** 2 +
+    Math.cos(toRadians(latA)) * Math.cos(toRadians(latB)) * Math.sin(lngDelta / 2) ** 2;
+  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function buildTextSearchBody(input: GooglePlacesTextSearchInput, radiusMeters: number) {
   const body: Record<string, unknown> = {
     textQuery: input.query.trim(),
@@ -237,10 +248,20 @@ export async function searchGooglePlacesText(
     };
   }
 
+  const places = (payload.places ?? []).slice(0, 10).map(mapGooglePlace).filter((place) => {
+    if (!hasLocationRestriction || typeof input.lat !== "number" || typeof input.lng !== "number") {
+      return true;
+    }
+    if (typeof place.lat !== "number" || typeof place.lng !== "number") {
+      return false;
+    }
+    return distanceMetersBetween(input.lat, input.lng, place.lat, place.lng) <= radiusMeters;
+  });
+
   return {
     ...base,
     status: "ready",
     configured: true,
-    places: (payload.places ?? []).slice(0, 10).map(mapGooglePlace)
+    places
   };
 }

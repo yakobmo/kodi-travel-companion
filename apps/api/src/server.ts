@@ -4120,6 +4120,7 @@ app.post("/api/agent/message", async (req, res) => {
     | undefined;
   const activeRulesReply = rulesReply;
   const completedToolCalls = new Set<string>();
+  let evidenceRetryIssued = false;
 
   // One bounded agent loop: the model chooses when it needs private trip data or
   // Google evidence. The server only authorizes and executes those tools.
@@ -4184,6 +4185,15 @@ app.post("/api/agent/message", async (req, res) => {
       !agentMemberLocationsRequest &&
       !agentMapActionRequest
     ) {
+      if (hereAndNowContext && requestCurrentLocation && !evidenceRetryIssued) {
+        evidenceRetryIssued = true;
+        runtimeGuidance = appendRuntimeGuidance(
+          runtimeGuidance,
+          "No live tool was used for this here-and-now request. Re-evaluate whether the final answer depends on nearby or current facts. If it does, call the appropriate tool now instead of offering to do it later or substituting planned-trip memory. If reverseGeocodedLocation alone fully answers the request, answer from that evidence."
+        );
+        openAiReply = undefined;
+        continue;
+      }
       break;
     }
 
@@ -4349,6 +4359,7 @@ app.post("/api/agent/message", async (req, res) => {
         query: agentPlacesToolRequest.query,
         ...(searchLocation ? { lat: searchLocation.lat, lng: searchLocation.lng } : {}),
         radiusMeters: agentPlacesToolRequest.radiusMeters,
+        restrictToLocation: Boolean(searchLocation),
         languageCode: "he",
         ...(searchLocation ? {} : { regionCode: "GR" })
       });

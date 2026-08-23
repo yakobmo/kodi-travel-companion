@@ -931,3 +931,10 @@ Decision:
 - Keep permission, argument, privacy, and evidence validation on the server.
 - Represent completed map mutations in tool evidence so Kodi may truthfully confirm them.
 - Keep incident-specific wordings in regression tests, not in the permanent prompt.
+
+## 39. Nearby means geographically bounded evidence
+
+- A Google Places location bias is not a distance guarantee; popular results may come from another city.
+- Agent searches anchored to a live or saved location now use a location restriction and a server-side circular distance filter.
+- A here-and-now request that produces no tool call gets one evidence-selection retry. This is a general execution invariant, not a phrase-to-answer rule: Kodi still decides which tool is appropriate and writes the answer.
+- Planned-trip memory must never substitute for missing live evidence.
