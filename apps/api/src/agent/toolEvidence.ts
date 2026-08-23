@@ -51,7 +51,7 @@ export function buildAgentToolEvidence(input: AgentMessageRequest): AgentToolEvi
       status: "unavailable"
     },
     stateMutation: {
-      status: "unavailable"
+      status: input.stateMutationResult?.status === "completed" ? "ready" : "unavailable"
     }
   };
 }
@@ -75,7 +75,7 @@ export function validateAgentEvidenceClaims(reply: AgentMessageResponse, evidenc
   }
 
   const claimsStateWasChanged =
-    /(?:הזזתי|אני\s+מזיז|שיניתי|עדכנתי|הוספתי|מחקתי|העברתי)/iu.test(text) ||
+    /(?:הזזתי|אני\s+מזיז|שיניתי|עדכנתי|הוספתי|הכנסתי|סימנתי|קבעתי|יצרתי|מחקתי|העברתי)/iu.test(text) ||
     /(?:בוצע|סודר|עודכן|נשמר|נמחק|הועבר).{0,45}(?:במפה|בנקודות|במקומות|במערכת|בטיול)/iu.test(text);
   if (claimsStateWasChanged && evidence.stateMutation.status !== "ready") {
     throw new Error("ai_reply_claims_unexecuted_state_mutation");

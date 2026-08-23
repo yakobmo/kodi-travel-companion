@@ -93,7 +93,6 @@ import {
 import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripState.js";
 import { createNavigationLinks } from "./navigation/links.js";
 import type { AgentMessageRequest, AgentMessageResponse, ConversationMessage } from "./agent/kodi.js";
-import { resolveConversationFocus } from "./agent/conversationFocus.js";
 import { getKodiToolRequest } from "./agent/agentTools.js";
 import {
   areRouteEndpointsGrounded,
@@ -1514,23 +1513,7 @@ function normalizeKodiProviderReply(input: {
 
   const hasConcretePlaceEvidence =
     input.externalPlacesSearch?.status === "ready" &&
-    input.externalPlacesSearch.places.length > 0 &&
-    includesConcreteGooglePlacesCue(input.message);
-  const explicitSharedWrite = includesAnyTerm(input.message.toLowerCase(), [
-    "תוסיף",
-    "תסיר",
-    "תמחק",
-    "תשנה",
-    "תקבע יעד",
-    "צור מסלול",
-    "עדכן מפה",
-    "add ",
-    "remove ",
-    "delete ",
-    "change ",
-    "set destination",
-    "create route"
-  ]);
+    input.externalPlacesSearch.places.length > 0;
   const textWithoutUnverifiedNavigation = hasConcretePlaceEvidence
     ? input.reply.text
         .replace(/https?:\/\/(?:www\.)?(?:google\.[^\s/]+\/maps|maps\.google\.[^\s/]+|waze\.com)\/\S*/gi, "")
@@ -1543,7 +1526,7 @@ function normalizeKodiProviderReply(input: {
     ...input.reply,
     text: textWithoutUnverifiedNavigation,
     intent: hasConcretePlaceEvidence ? ("place_recommendation" as const) : input.reply.intent,
-    requiresAdminApproval: explicitSharedWrite && input.reply.requiresAdminApproval
+    requiresAdminApproval: input.reply.requiresAdminApproval
   };
 }
 
@@ -1711,33 +1694,6 @@ function shouldRequireFreshCurrentLocation(
   }
 
   return options.hereAndNowContext && !hasExplicitPlannedTripAreaCue(message);
-}
-
-function resolveExplicitSavedRouteEndpoints(
-  message: string,
-  places: ReturnType<typeof buildDemoTripState>["places"]
-) {
-  const normalizedMessage = message.toLocaleLowerCase("he");
-  const matches = places
-    .filter(
-      (place) =>
-        place.name.trim().length >= 4 &&
-        typeof place.lat === "number" &&
-        typeof place.lng === "number"
-    )
-    .map((place) => ({
-      place,
-      position: normalizedMessage.indexOf(place.name.toLocaleLowerCase("he"))
-    }))
-    .filter((match) => match.position >= 0)
-    .sort((first, second) => first.position - second.position || second.place.name.length - first.place.name.length)
-    .filter(
-      (match, index, all) =>
-        all.findIndex((candidate) => candidate.place.id === match.place.id) === index
-    );
-
-  if (matches.length < 2) return undefined;
-  return { origin: matches[0].place, destination: matches[1].place };
 }
 
 function executeMemberLocationsTool(input: {
@@ -4075,11 +4031,23 @@ app.post("/api/agent/message", async (req, res) => {
 
   const requestCurrentLocation = getRequestCurrentLocation(req.body);
   const currentMessage = message.trim();
-  const conversationFocus = resolveConversationFocus(currentMessage, recentMessages as ConversationMessage[]);
-  const referenceMessage = conversationFocus.effectiveMessage;
-  const toolQueryMessage = conversationFocus.locationAnchor
-    ? `${referenceMessage} ליד ${conversationFocus.locationAnchor}`
-    : referenceMessage;
+  const persistedConversation = (await loadDemoTripMessagesAsync())
+    .filter((item) => item.source !== "system")
+    .slice(-32);
+  const latestPersistedMemberMessage = [...persistedConversation]
+    .reverse()
+    .find((item) => item.source === "member");
+  const currentMessageWasPersisted =
+    latestPersistedMemberMessage?.text.trim() === currentMessage &&
+    latestPersistedMemberMessage.memberId === normalizedMember.id;
+  const agentRecentMessages: ConversationMessage[] = currentMessageWasPersisted
+    ? persistedConversation
+    : (recentMessages as ConversationMessage[]).filter((item) => item.source !== "system").slice(-32);
+  const referenceMessage = currentMessage;
+  const routeEvidenceConversation = agentRecentMessages
+    .slice(-10)
+    .map((item) => `${item.author}: ${item.text}`)
+    .join("\n");
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);
   // The backend is the sole authority for persisted trip state. The browser may
   // contribute a fresh location for the active requester, but it cannot replace
@@ -4119,39 +4087,8 @@ app.post("/api/agent/message", async (req, res) => {
   const tripReference = resolveTripReferenceForMessage(referenceMessage, tripState);
   let routeEstimate: GoogleRouteEstimateResult | undefined;
   let routeToolUsageGate: TripUsageGateDecision | undefined;
-  let navigationDestination = tripReference.destination;
-  let navigationTravelMode: "DRIVE" | "WALK" = includesAnyTerm(referenceMessage, ["הליכה", "ברגל"])
-    ? "WALK"
-    : "DRIVE";
-  const explicitRouteEndpoints = shouldUseRouteEstimate(referenceMessage)
-    ? resolveExplicitSavedRouteEndpoints(referenceMessage, tripState.places)
-    : undefined;
-  if (explicitRouteEndpoints) {
-    routeToolUsageGate = authorizeTripUsageCapability({
-      usagePool,
-      capability: "google_routes",
-      triggeringMember: { id: normalizedMember.id, role: normalizedMember.role }
-    });
-    if (routeToolUsageGate.allowed) {
-      routeEstimate = await estimateGoogleRoute({
-        origin: { lat: Number(explicitRouteEndpoints.origin.lat), lng: Number(explicitRouteEndpoints.origin.lng) },
-        destination: { lat: Number(explicitRouteEndpoints.destination.lat), lng: Number(explicitRouteEndpoints.destination.lng) },
-        travelMode: navigationTravelMode,
-        languageCode: "he"
-      });
-      navigationDestination = {
-        lat: Number(explicitRouteEndpoints.destination.lat),
-        lng: Number(explicitRouteEndpoints.destination.lng),
-        label: explicitRouteEndpoints.destination.name,
-        source: "named_place"
-      };
-      void safeRecordUsageGateEvent({
-        usageGate: routeToolUsageGate,
-        actorName: String(normalizedMember.displayName),
-        source: "kodi_agent"
-      });
-    }
-  }
+  let navigationDestination: { lat: number; lng: number; label?: string; source?: string } | undefined;
+  let navigationTravelMode: "DRIVE" | "WALK" = "DRIVE";
   // This is an error envelope, not a second conversational brain. Normal travel
   // answers are always authored by the configured model after using tools.
   const rulesReply = freshCurrentLocationRequired
@@ -4190,19 +4127,16 @@ app.post("/api/agent/message", async (req, res) => {
     openAiReply = await tryBuildKodiReply({
       ...req.body,
       message: currentMessage,
+      recentMessages: agentRecentMessages,
       tripState,
-      conversationFocus,
       externalPlacesSearch,
       tripLookupResult,
       memberLocationResult,
+      stateMutationResult: mapActionResult,
       reverseGeocodedLocation,
       routeEstimate,
       tripContextClarification: undefined,
       runtimeGuidance,
-      requiredTool:
-        !externalPlacesSearch && Boolean(requestCurrentLocation) && hereAndNowContext && includesConcreteGooglePlacesCue(currentMessage)
-          ? "places_search"
-          : undefined,
       permissionPolicy,
       deadlineAt: agentDeadlineAt,
       rulesReply: activeRulesReply
@@ -4214,7 +4148,7 @@ app.post("/api/agent/message", async (req, res) => {
     const agentRouteToolRequest = !routeEstimate && toolRequest?.type === "route" ? toolRequest : undefined;
     const agentMemberLocationsRequest = toolRequest?.type === "member_locations" ? toolRequest : undefined;
     const agentMapActionRequest = toolRequest?.type === "map_action" ? toolRequest : undefined;
-    const groundedRoutePlaceIds = getRouteGroundedPlaceIds(referenceMessage, tripState.places);
+    const groundedRoutePlaceIds = getRouteGroundedPlaceIds(routeEvidenceConversation, tripState.places);
     const explicitlyMentionedRoutePlaceIds = getExplicitlyMentionedPlaceIds(
       referenceMessage,
       tripState.places
@@ -4250,18 +4184,6 @@ app.post("/api/agent/message", async (req, res) => {
       !agentMemberLocationsRequest &&
       !agentMapActionRequest
     ) {
-      if (
-        shouldUseRouteEstimate(referenceMessage) &&
-        !routeEstimate?.route &&
-        mapActionResult?.status !== "completed"
-      ) {
-        runtimeGuidance = appendRuntimeGuidance(
-          runtimeGuidance,
-          "This request asks for route, travel-time, distance, or arrival evidence and is not complete as a text explanation. Select the correct saved origin and destination from placeDirectory, then call the route tool now. If the saved points do not identify them reliably, request trip_memory first. Do not offer to check later."
-        );
-        openAiReply = undefined;
-        continue;
-      }
       break;
     }
 
@@ -4504,18 +4426,6 @@ app.post("/api/agent/message", async (req, res) => {
       error: openAiReply.error ?? (routeEstimate?.route ? "agent_tool_result_not_synthesized" : "agent_tool_loop_incomplete")
     };
   }
-  if (
-    shouldUseRouteEstimate(referenceMessage) &&
-    !routeEstimate?.route &&
-    mapActionResult?.status !== "completed"
-  ) {
-    openAiReply = {
-      status: "error",
-      model: openAiReply?.model,
-      error: "required_route_evidence_not_completed",
-      providerAttempts: openAiReply?.providerAttempts
-    };
-  }
   if (memberLocationResult && (!openAiReply?.reply || openAiReply.status !== "ready")) {
     openAiReply = {
       status: "ready",
@@ -4549,7 +4459,7 @@ app.post("/api/agent/message", async (req, res) => {
       : rulesReply;
   const locationBoundReply = freshCurrentLocationRequired ? rulesReply : selectedReply;
   const shouldAppendExternalPlaceNavigation =
-    externalPlacesSearch?.status === "ready" && includesConcreteGooglePlacesCue(currentMessage);
+    externalPlacesSearch?.status === "ready" && externalPlacesSearch.places.length > 0;
   const reply = enhanceKodiReplyWithNavigationLinks({
     reply: locationBoundReply,
     tripState,
@@ -4641,7 +4551,7 @@ app.post("/api/agent/message", async (req, res) => {
         displayName: normalizedMember.displayName,
         role: normalizedMember.role
       },
-      recentMessages,
+      recentMessages: agentRecentMessages,
       tripState,
       freshCurrentLocationRequired,
       externalPlacesSearchStatus: externalPlacesSearch?.status,

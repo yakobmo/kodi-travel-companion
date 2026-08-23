@@ -54,13 +54,14 @@ function assertAgentFirstSourceGuards() {
     countOccurrences(openAiSource, "shouldPreferFastPlacesAnswer") <= 1
   );
   assertCheck("agent-first current message in provider payload", openAiSource.includes("message: input.message"));
-  assertCheck("agent-first saved trip points are primary", openAiSource.includes("placeDirectory is the primary saved Google Maps trip-point record"));
+  assertCheck("agent-first saved trip points are working memory", openAiSource.includes("Saved Google Maps points") && openAiSource.includes("working memory—not a script"));
   assertCheck("agent-first includes execution receipts", openAiSource.includes("toolEvidence: buildAgentToolEvidence(input)"));
   assertCheck("agent-first blocks fictional tool claims", openAiSource.includes("validateAgentEvidenceClaims"));
   assertCheck(
-    "route questions require completed evidence",
-    serverSource.includes("required_route_evidence_not_completed") &&
-      serverSource.includes("not complete as a text explanation")
+    "route evidence is model-selected and verified",
+    toolSource.includes("route comparison") &&
+      openAiSource.includes("ai_reply_unverified_route_measurement") &&
+      !serverSource.includes("requiredTool:")
   );
   assertCheck(
     "route endpoints must be grounded in retrieved trip points",
@@ -74,6 +75,12 @@ function assertAgentFirstSourceGuards() {
   assertCheck(
     "agent-first bounded recent message context",
     openAiSource.includes(".slice(-24)") && openAiSource.includes("text.trim().slice(0, 600)")
+  );
+  assertCheck(
+    "server owns chronological conversation",
+    serverSource.includes("persistedConversation") &&
+      serverSource.includes("recentMessages: agentRecentMessages") &&
+      !serverSource.includes("resolveConversationFocus")
   );
   assertCheck("agent tools have one parser", toolSource.includes("parseKodiToolRequest") && openAiSource.includes("KODI_TOOL_CONTRACT"));
   assertCheck("server owns persisted trip state", serverSource.includes("await buildAgentTripStateSnapshot()") && !webSource.includes("tripState: agentTripState"));

@@ -20,7 +20,6 @@
     "smoke:kodi-local": "node scripts/smoke-kodi-orchestrator-local.mjs",
     "test:provider-fleet": "node scripts/test-provider-fleet.mjs",
     "test:kodi-trip-agnostic": "node scripts/test-kodi-trip-agnostic.mjs",
-    "test:kodi-conversation-focus": "node scripts/test-conversation-focus.mjs",
     "test:kodi-tool-evidence": "node scripts/test-agent-tool-evidence.mjs",
     "test:kodi-agent-tools": "node scripts/test-agent-tools.mjs",
     "test:kodi-route-grounding": "node scripts/test-route-grounding.mjs",

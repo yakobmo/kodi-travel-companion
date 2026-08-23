@@ -8,11 +8,9 @@ export type KodiToolRequest =
   | { type: "map_action"; placeIds: string[]; title?: string };
 
 export const KODI_TOOL_CONTRACT =
-  "Available tools: trip_memory(placeIds), route(originPlaceId,destinationPlaceId,travelMode), " +
-  "places_search(query,anchorPlaceId?,radiusMeters?), member_locations(scope,memberName?), and map_action(placeIds,title?). " +
-  "Request at most one tool at a time through toolRequest, using exact place IDs from placeDirectory. " +
-  "Before writing a final answer, compare the needed evidence with toolEvidence. If required evidence is not ready, return the toolRequest now instead of explaining or promising that you will search. " +
-  "Use places_search whenever the answer depends on a real nearby venue, current opening status, rating, or live place availability; general knowledge is not evidence for those facts.";
+  "Use the available tools whenever an answer depends on saved trip details, geographic facts, live place data, route comparison, member location, or a map action. " +
+  "Choose tools from their descriptions, request one at a time with exact place IDs from placeDirectory, and synthesize the result before answering. " +
+  "General knowledge is not evidence for measurements, current facts, private state, or completed actions.";
 
 export const KODI_OPENAI_TOOLS = [
   {

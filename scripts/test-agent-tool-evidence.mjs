@@ -47,6 +47,10 @@ assert.throws(
   () => validateAgentEvidenceClaims({ author: "קודי", text: "הבנתי. אני מזיז את זה לשם.", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, noTools),
   /ai_reply_claims_unexecuted_state_mutation/
 );
+assert.throws(
+  () => validateAgentEvidenceClaims({ author: "קודי", text: "סימנתי את המסלול במפה", intent: "route_creation", requiresAdminApproval: false, source: "ai_provider" }, noTools),
+  /ai_reply_claims_unexecuted_state_mutation/
+);
 
 const withRoute = buildAgentToolEvidence({
   message: "כמה זמן נסיעה?",
@@ -54,6 +58,14 @@ const withRoute = buildAgentToolEvidence({
 });
 assert.doesNotThrow(() =>
   validateAgentEvidenceClaims({ author: "קודי", text: "בדקתי במסלול: עשר דקות", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, withRoute)
+);
+
+const withMutation = buildAgentToolEvidence({
+  message: "סמן במפה",
+  stateMutationResult: { status: "completed", kind: "route", placeNames: ["א", "ב"] }
+});
+assert.doesNotThrow(() =>
+  validateAgentEvidenceClaims({ author: "קודי", text: "סימנתי את המסלול והוא נשמר במפת הטיול", intent: "route_creation", requiresAdminApproval: false, source: "ai_provider" }, withMutation)
 );
 
 assert.doesNotThrow(() =>

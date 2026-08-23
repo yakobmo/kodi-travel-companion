@@ -916,3 +916,18 @@ QA/automation:
 - `test:kodi-trip-agnostic` verifies a non-Greece trip.
 - QA rejects fixed Greece itinerary tokens in the orchestrator and active trip resolver.
 - `smoke:kodi-local` verifies the total deadline contract and missing-location behavior.
+
+### 38. Conversation Meaning Must Stay With The Model
+
+What happened:
+
+Kodi received a chronological chat, but a phrase-list resolver rewrote only a small set of follow-ups such as confirmations. Natural continuations such as a comparison question could therefore lose the active topic and revive an older subject. The map action contract also contradicted a permanent prompt line that claimed no mutation tool existed.
+
+Decision:
+
+- Load bounded chronological conversation from server storage for every app turn.
+- Preserve the current user message verbatim; do not infer its meaning with phrase lists.
+- Let the model choose tools from general capability descriptions.
+- Keep permission, argument, privacy, and evidence validation on the server.
+- Represent completed map mutations in tool evidence so Kodi may truthfully confirm them.
+- Keep incident-specific wordings in regression tests, not in the permanent prompt.

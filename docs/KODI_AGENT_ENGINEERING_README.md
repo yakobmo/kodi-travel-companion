@@ -68,7 +68,6 @@ Kodi should be built as an explicit harness:
 User message
 -> conversation routing gate
 -> context builder
--> intent/context resolver
 -> tool planner
 -> tool execution
 -> answer synthesis
@@ -79,6 +78,11 @@ User message
 ```
 
 Each layer has one job.
+
+Conversation meaning is model-owned. The server passes the bounded, chronological
+conversation from relational storage and does not rewrite the current message
+through phrase lists, inferred corrections, or canned continuation templates.
+Concrete examples belong in regression tests, never in Kodi's permanent prompt.
 
 ### 1. Conversation Routing Gate
 
@@ -225,11 +229,11 @@ Canonical runtime contract:
 - Kodi has one product identity even when provider failover is used.
 - A configured OpenAI model is the primary reasoning provider by default; Gemini and the free fleet are availability fallbacks.
 - Provider adapters receive the same prompt, structured trip reference, retrieved conversation memory, tool contract, and validation.
-- The model decides whether to call a tool. The backend validates tool arguments, executes tools, and enforces permissions; it does not write conversational answers by keyword routing.
+- The model decides whether to call a tool from the conversation and tool descriptions. The backend validates tool arguments, executes tools, and enforces permissions; it does not rewrite intent or force tools by keyword routing.
 - Kodi receives the complete saved-place directory and ordered lodging itinerary as private trip memory on every turn, so it does not ask the user to repeat stored information.
 - Runtime tools exposed through the single `agentTools.ts` registry are trip memory, Google Routes, Google Places, authorized member locations, and an authorized shared-map action. `map_action` reuses the existing group destination/route persistence and owner/admin policy; it does not introduce a second mutation path. Private Google-account Saved-list write-back remains outside this contract because it requires separate Google OAuth authorization.
 - `kodi.ts` contains shared request/response types only. Failure formatting stays at the server boundary and never writes a substitute travel answer.
-- The backend is the sole authority for persisted trip state. The browser contributes only the current message, verified participant identity, and fresh requester location.
+- The backend is the sole authority for persisted trip state and conversation history. The browser contributes the current message, participant claim, and fresh requester location; the backend verifies identity and reloads the authoritative bounded conversation.
 
 Short term:
 

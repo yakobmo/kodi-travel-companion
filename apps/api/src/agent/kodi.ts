@@ -43,13 +43,12 @@ export interface AgentMessageRequest {
       mapsUrl?: string;
     }>;
   };
-  conversationFocus?: {
-    effectiveMessage: string;
-    locationAnchor?: string;
-    continuationContext?: string;
-    ellipticalContinuation: boolean;
-    correctionDetected: boolean;
-    invalidatedAgentClaims: boolean;
+  stateMutationResult?: {
+    status: "completed" | "denied" | "invalid";
+    kind?: "destination" | "route";
+    placeNames?: string[];
+    googleMapsUrl?: string;
+    reason?: string;
   };
 }
 
