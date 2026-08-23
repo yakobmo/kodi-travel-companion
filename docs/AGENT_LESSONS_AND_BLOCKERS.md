@@ -938,3 +938,11 @@ Decision:
 - Agent searches anchored to a live or saved location now use a location restriction and a server-side circular distance filter.
 - A here-and-now request that produces no tool call gets one evidence-selection retry. This is a general execution invariant, not a phrase-to-answer rule: Kodi still decides which tool is appropriate and writes the answer.
 - Planned-trip memory must never substitute for missing live evidence.
+
+## 40. The agent owns travel reasoning; tools must not shrink the task
+
+- A route tool limited to one saved origin and destination turns a capable model into a brittle bot. Kodi's route tool now accepts 2-6 ordered stops and can combine saved places with IDs returned by live Places search.
+- Google Routes executes all legs concurrently and returns both per-leg evidence and plan totals to the same model loop for synthesis.
+- The server validates permissions, IDs, evidence, and execution. It no longer rejects a semantically reasonable route merely because a keyword-grounding layer selected different endpoints.
+- Tool failures return to Kodi for recovery inside the bounded loop. User-facing exhaustion messages remain human and never expose internal error identifiers.
+- This is the canonical direction: expand truthful capabilities around the model instead of encoding incident-specific conversational behavior.

@@ -347,6 +347,7 @@ function buildAgentPayload(input: KodiReplyInput, options: { reasoningMode: bool
     externalPlacesSearch: input.externalPlacesSearch,
     reverseGeocodedLocation: input.reverseGeocodedLocation,
     routeEstimate: input.routeEstimate,
+    routePlan: input.routePlan,
     toolEvidence: buildAgentToolEvidence(input),
     stateMutationResult: input.stateMutationResult,
     runtimeGuidance: input.runtimeGuidance ?? [],

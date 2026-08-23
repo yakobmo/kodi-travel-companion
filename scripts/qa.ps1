@@ -985,8 +985,9 @@ if (
   -not $serverSourceForContext.Contains("tripContextConfidence") -or
   -not $serverSourceForContext.Contains("timelineReferenceConfidence") -or
   -not $serverSourceForContext.Contains("getKodiToolRequest") -or
-  -not $serverSourceForContext.Contains("agentRouteToolRequest.originPlaceId") -or
-  -not $serverSourceForContext.Contains("routeEstimate = await estimateGoogleRoute") -or
+  -not $serverSourceForContext.Contains("agentRouteToolRequest.stops") -or
+  -not $serverSourceForContext.Contains("const legResults = await Promise.all") -or
+  -not $serverSourceForContext.Contains("routePlan") -or
   -not $serverSourceForContext.Contains("tryBuildKodiReply") -or
   -not $serverSourceForContext.Contains('capability: "ai_agent"') -or
   -not $serverSourceForContext.Contains("agentRuntime") -or
@@ -2126,7 +2127,8 @@ if (
   -not $serverSource.Contains("/api/agent/providers/readiness") -or
   -not $serverSource.Contains("paid_primary_with_free_fallbacks") -or
   -not $serverSource.Contains("paid_primary") -or
-  -not $serverSource.Contains("תקלה טכנית מנעה את השלמת התשובה")
+  -not $serverSource.Contains("לא אנחש במקום תוצאה מאומתת") -or
+  $serverSource.Contains("מנוע הסוכן נכשל:")
 ) {
   throw "Kodi must expose safe provider diagnostics and explain total fleet exhaustion without inventing an answer."
 }

@@ -3,13 +3,11 @@ import { parseKodiToolRequest, parseOpenAiKodiToolCall } from "../apps/api/dist/
 
 assert.deepEqual(parseKodiToolRequest({
   type: "route",
-  originPlaceId: "origin",
-  destinationPlaceId: "destination",
+  stops: ["origin", "Prionia, Mount Olympus", "destination"],
   travelMode: "WALK"
 }), {
   type: "route",
-  originPlaceId: "origin",
-  destinationPlaceId: "destination",
+  stops: ["origin", "Prionia, Mount Olympus", "destination"],
   travelMode: "WALK"
 });
 assert.equal(parseKodiToolRequest({ type: "route", originPlaceId: "same", destinationPlaceId: "same" }), undefined);

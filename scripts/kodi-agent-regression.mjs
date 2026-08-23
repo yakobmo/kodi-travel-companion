@@ -64,9 +64,11 @@ function assertAgentFirstSourceGuards() {
       !serverSource.includes("requiredTool:")
   );
   assertCheck(
-    "route endpoints must be grounded in retrieved trip points",
-    serverSource.includes("getRouteGroundedPlaceIds") &&
-      serverSource.includes("were not both grounded in the user's wording and active conversational context")
+    "route tool supports a model-owned multi-stop plan",
+    toolSource.includes('stops: { type: "array"') &&
+      serverSource.includes("const legResults = await Promise.all") &&
+      serverSource.includes("externalPlacesSearch?.places.find") &&
+      !serverSource.includes("getRouteGroundedPlaceIds")
   );
   assertCheck(
     "agent-first avoids the incompatible web-search JSON path",

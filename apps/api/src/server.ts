@@ -94,11 +94,6 @@ import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripSta
 import { createNavigationLinks } from "./navigation/links.js";
 import type { AgentMessageRequest, AgentMessageResponse, ConversationMessage } from "./agent/kodi.js";
 import { getKodiToolRequest } from "./agent/agentTools.js";
-import {
-  areRouteEndpointsGrounded,
-  getExplicitlyMentionedPlaceIds,
-  getRouteGroundedPlaceIds
-} from "./agent/routeGrounding.js";
 import { lookupTripContext } from "./agent/tripLookup.js";
 import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
 import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
@@ -880,16 +875,12 @@ function describeProviderAttempt(attempt: string) {
 }
 
 function buildAgentUnavailableText(openAiReply: KodiReplyResult | undefined) {
-  if (openAiReply?.error === "required_route_evidence_not_completed") {
-    return "לא הצלחתי לזהות בביטחון את שתי נקודות המסלול מתוך נקודות הטיול, ולכן לא הפעלתי Google Routes ולא אתן זמן או מרחק משוער. אפשר לציין את שמות שתי הנקודות כפי שהן מופיעות במפה, או לנסות שוב לאחר בדיקת סנכרון נקודות הטיול.";
-  }
   const details = Array.from(
     new Set((openAiReply?.providerAttempts ?? []).map(describeProviderAttempt).filter((item): item is string => Boolean(item)))
   );
-  if (details.length === 0 && openAiReply?.error) {
-    details.push(`מנוע הסוכן נכשל: ${sanitizeProviderErrorForRuntime(openAiReply.error) ?? "שגיאה לא מזוהה"}`);
-  }
-  return `תקלה טכנית מנעה את השלמת התשובה${details.length > 0 ? `: ${details.join("; ")}` : ""}. לא הוצגה תשובה חלקית או לא מאומתת.`;
+  return details.length > 0
+    ? `לא הצלחתי להשלים את הבדיקה כרגע. ${details.join("; ")}. לא אנחש במקום תוצאה מאומתת.`
+    : "לא הצלחתי להשלים את הבדיקה בכלים הזמינים כרגע. לא אנחש במקום תוצאה מאומתת; אפשר לנסות שוב בעוד רגע.";
 }
 
 function buildAgentUnavailableReply(
@@ -4044,10 +4035,6 @@ app.post("/api/agent/message", async (req, res) => {
     ? persistedConversation
     : (recentMessages as ConversationMessage[]).filter((item) => item.source !== "system").slice(-32);
   const referenceMessage = currentMessage;
-  const routeEvidenceConversation = agentRecentMessages
-    .slice(-10)
-    .map((item) => `${item.author}: ${item.text}`)
-    .join("\n");
   const hereAndNowContext = shouldUseHereAndNowContext(currentMessage);
   // The backend is the sole authority for persisted trip state. The browser may
   // contribute a fresh location for the active requester, but it cannot replace
@@ -4086,6 +4073,7 @@ app.post("/api/agent/message", async (req, res) => {
       : undefined;
   const tripReference = resolveTripReferenceForMessage(referenceMessage, tripState);
   let routeEstimate: GoogleRouteEstimateResult | undefined;
+  let routePlan: AgentMessageRequest["routePlan"];
   let routeToolUsageGate: TripUsageGateDecision | undefined;
   let navigationDestination: { lat: number; lng: number; label?: string; source?: string } | undefined;
   let navigationTravelMode: "DRIVE" | "WALK" = "DRIVE";
@@ -4136,6 +4124,7 @@ app.post("/api/agent/message", async (req, res) => {
       stateMutationResult: mapActionResult,
       reverseGeocodedLocation,
       routeEstimate,
+      routePlan,
       tripContextClarification: undefined,
       runtimeGuidance,
       permissionPolicy,
@@ -4146,38 +4135,9 @@ app.post("/api/agent/message", async (req, res) => {
     const toolRequest = getKodiToolRequest(openAiReply.reply);
     const agentTripMemoryRequest = toolRequest?.type === "trip_memory" ? toolRequest : undefined;
     const agentPlacesToolRequest = toolRequest?.type === "places_search" ? toolRequest : undefined;
-    const agentRouteToolRequest = !routeEstimate && toolRequest?.type === "route" ? toolRequest : undefined;
+    const agentRouteToolRequest = toolRequest?.type === "route" ? toolRequest : undefined;
     const agentMemberLocationsRequest = toolRequest?.type === "member_locations" ? toolRequest : undefined;
     const agentMapActionRequest = toolRequest?.type === "map_action" ? toolRequest : undefined;
-    const groundedRoutePlaceIds = getRouteGroundedPlaceIds(routeEvidenceConversation, tripState.places);
-    const explicitlyMentionedRoutePlaceIds = getExplicitlyMentionedPlaceIds(
-      referenceMessage,
-      tripState.places
-    );
-    if (
-      agentRouteToolRequest &&
-      !areRouteEndpointsGrounded(
-        groundedRoutePlaceIds,
-        agentRouteToolRequest.originPlaceId,
-        agentRouteToolRequest.destinationPlaceId,
-        explicitlyMentionedRoutePlaceIds
-      )
-    ) {
-      const groundedRouteCandidates = tripState.places
-        .filter((place) => groundedRoutePlaceIds.has(place.id))
-        .map((place) => `${place.name} (${place.id})`)
-        .join(", ");
-      const requiredExplicitCandidates = tripState.places
-        .filter((place) => explicitlyMentionedRoutePlaceIds.has(place.id))
-        .map((place) => `${place.name} (${place.id})`)
-        .join(", ");
-      runtimeGuidance = appendRuntimeGuidance(
-        runtimeGuidance,
-        `The proposed route endpoints were not both grounded in the user's wording and active conversational context. The grounded route candidates are: ${groundedRouteCandidates || "none"}. Places explicitly named or addressed in the conversation and therefore mandatory in the route are: ${requiredExplicitCandidates || "none"}. Choose origin and destination only from the grounded candidates, include every mandatory explicit place, and infer direction from the user's natural-language request. If two endpoints are not available, do not substitute an unrelated place.`
-      );
-      openAiReply = undefined;
-      continue;
-    }
     if (
       !agentTripMemoryRequest &&
       !agentPlacesToolRequest &&
@@ -4378,20 +4338,63 @@ app.post("/api/agent/message", async (req, res) => {
     }
 
     if (!agentRouteToolRequest) break;
-    const originPlace = tripState.places.find(
-      (place) =>
-        place.id === agentRouteToolRequest.originPlaceId &&
-        typeof place.lat === "number" &&
-        typeof place.lng === "number"
-    );
-    const destinationPlace = tripState.places.find(
-      (place) =>
-        place.id === agentRouteToolRequest.destinationPlaceId &&
-        typeof place.lat === "number" &&
-        typeof place.lng === "number"
+    const unresolvedRouteStops: string[] = [];
+    const routePlaces = await Promise.all(agentRouteToolRequest.stops.map(async (placeId) => {
+      const normalizedStop = placeId.trim().toLocaleLowerCase();
+      const savedPlace = tripState.places.find(
+        (place) =>
+          (place.id === placeId || place.name.trim().toLocaleLowerCase() === normalizedStop) &&
+          typeof place.lat === "number" &&
+          typeof place.lng === "number"
+      );
+      if (savedPlace) {
+        return { id: savedPlace.id, name: savedPlace.name, lat: savedPlace.lat as number, lng: savedPlace.lng as number };
+      }
+      const searchedPlace = externalPlacesSearch?.places.find(
+        (place) => place.id === placeId && typeof place.lat === "number" && typeof place.lng === "number"
+      );
+      if (searchedPlace) {
+        return {
+          id: searchedPlace.id as string,
+          name: searchedPlace.displayName ?? searchedPlace.formattedAddress ?? placeId,
+          lat: searchedPlace.lat as number,
+          lng: searchedPlace.lng as number
+        };
+      }
+
+      placesUsageGate = authorizeTripUsageCapability({
+        usagePool,
+        capability: "google_places",
+        triggeringMember: { id: String(normalizedMember.id), role: verifiedRequester?.role ?? "viewer" }
+      });
+      if (!placesUsageGate.allowed) {
+        unresolvedRouteStops.push(placeId);
+        return undefined;
+      }
+      const resolved = await searchGooglePlacesText({
+        query: placeId,
+        languageCode: "he",
+        regionCode: "GR"
+      });
+      const match = resolved.status === "ready"
+        ? resolved.places.find((place) => typeof place.lat === "number" && typeof place.lng === "number")
+        : undefined;
+      if (!match) {
+        unresolvedRouteStops.push(placeId);
+        return undefined;
+      }
+      return {
+        id: match.id ?? placeId,
+        name: match.displayName ?? match.formattedAddress ?? placeId,
+        lat: match.lat as number,
+        lng: match.lng as number
+      };
+    }));
+    const validRoutePlaces = routePlaces.filter(
+      (place): place is { id: string; name: string; lat: number; lng: number } => Boolean(place)
     );
     routeToolUsageGate =
-      originPlace && destinationPlace
+      validRoutePlaces.length === agentRouteToolRequest.stops.length
         ? authorizeTripUsageCapability({
             usagePool,
             capability: "google_routes",
@@ -4402,16 +4405,39 @@ app.post("/api/agent/message", async (req, res) => {
           })
         : undefined;
 
-    if (originPlace && destinationPlace && routeToolUsageGate?.allowed) {
-      routeEstimate = await estimateGoogleRoute({
-        origin: { lat: originPlace.lat as number, lng: originPlace.lng as number },
-        destination: { lat: destinationPlace.lat as number, lng: destinationPlace.lng as number },
-        travelMode: agentRouteToolRequest.travelMode,
-        languageCode: "he"
-      });
+    if (validRoutePlaces.length >= 2 && routeToolUsageGate?.allowed) {
+      const legResults = await Promise.all(
+        validRoutePlaces.slice(0, -1).map((origin, index) =>
+          estimateGoogleRoute({
+            origin: { lat: origin.lat, lng: origin.lng },
+            destination: { lat: validRoutePlaces[index + 1].lat, lng: validRoutePlaces[index + 1].lng },
+            travelMode: agentRouteToolRequest.travelMode,
+            languageCode: "he"
+          })
+        )
+      );
+      const readyLegs = legResults.filter((result) => result.status === "ready" && result.route);
+      routeEstimate = legResults[legResults.length - 1];
+      routePlan = {
+        status: readyLegs.length === legResults.length ? "ready" : "failed",
+        stops: validRoutePlaces,
+        legs: legResults.flatMap((result, index) =>
+          result.route
+            ? [{
+                origin: validRoutePlaces[index].name,
+                destination: validRoutePlaces[index + 1].name,
+                ...result.route
+              }]
+            : []
+        ),
+        totalDurationSeconds: readyLegs.reduce((total, result) => total + (result.route?.durationSeconds ?? 0), 0),
+        totalDistanceMeters: readyLegs.reduce((total, result) => total + (result.route?.distanceMeters ?? 0), 0)
+      };
+      const originPlace = validRoutePlaces[0];
+      const destinationPlace = validRoutePlaces[validRoutePlaces.length - 1];
       navigationDestination = {
-        lat: destinationPlace.lat as number,
-        lng: destinationPlace.lng as number,
+        lat: destinationPlace.lat,
+        lng: destinationPlace.lng,
         label: destinationPlace.name,
         source: "named_place"
       };
@@ -4424,11 +4450,23 @@ app.post("/api/agent/message", async (req, res) => {
 
       runtimeGuidance = appendRuntimeGuidance(
         runtimeGuidance,
-        `The route tool was executed from ${originPlace.name} to ${destinationPlace.name}. Answer now from routeEstimate; do not promise future work.`
+        `Google Routes executed the full ordered plan ${validRoutePlaces.map((place) => place.name).join(" → ")}. Answer now from routePlan, include the useful per-leg and total implications, and do not promise future work.`
       );
       continue;
     }
-    break;
+    routePlan = {
+      status: "failed",
+      stops: validRoutePlaces,
+      legs: [],
+      totalDurationSeconds: 0,
+      totalDistanceMeters: 0
+    };
+    runtimeGuidance = appendRuntimeGuidance(
+      runtimeGuidance,
+      `The requested route could not run because Google could not resolve these stops or Routes was unavailable: ${unresolvedRouteStops.join(", ") || "unknown"}. Explain only the specific missing evidence naturally; never substitute a different trip place.`
+    );
+    openAiReply = undefined;
+    continue;
   }
 
   if (openAiReply?.reply && openAiReply.reply.metadata?.toolRequest) {
@@ -4436,7 +4474,7 @@ app.post("/api/agent/message", async (req, res) => {
       ...openAiReply,
       reply: undefined,
       status: "error",
-      error: openAiReply.error ?? (routeEstimate?.route ? "agent_tool_result_not_synthesized" : "agent_tool_loop_incomplete")
+      error: openAiReply.error ?? "agent_tool_result_not_synthesized"
     };
   }
   if (memberLocationResult && (!openAiReply?.reply || openAiReply.status !== "ready")) {

@@ -28,6 +28,20 @@ export interface AgentMessageRequest {
   externalPlacesSearch?: GooglePlacesTextSearchResult;
   reverseGeocodedLocation?: GoogleReverseGeocodeResult;
   routeEstimate?: GoogleRouteEstimateResult;
+  routePlan?: {
+    status: "ready" | "failed";
+    stops: Array<{ id: string; name: string; lat: number; lng: number }>;
+    legs: Array<{
+      origin: string;
+      destination: string;
+      durationSeconds: number;
+      durationText: string;
+      distanceMeters: number;
+      distanceText: string;
+    }>;
+    totalDurationSeconds: number;
+    totalDistanceMeters: number;
+  };
   tripLookupResult?: TripLookupResult;
   tripContextClarification?: string;
   memberLocationResult?: {

@@ -31,7 +31,7 @@ export function buildAgentToolEvidence(input: AgentMessageRequest): AgentToolEvi
       matchedPlaceIds: input.tripLookupResult?.matches.map((place) => place.id) ?? []
     },
     route: {
-      status: input.routeEstimate?.status === "ready" && Boolean(input.routeEstimate.route)
+      status: input.routePlan?.status === "ready" || (input.routeEstimate?.status === "ready" && Boolean(input.routeEstimate.route))
         ? "ready"
         : input.routeEstimate
           ? "failed"

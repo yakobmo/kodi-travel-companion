@@ -2,14 +2,14 @@ import type { AgentMessageResponse } from "./kodi.js";
 
 export type KodiToolRequest =
   | { type: "trip_memory"; placeIds: string[] }
-  | { type: "route"; originPlaceId: string; destinationPlaceId: string; travelMode: "DRIVE" | "WALK" }
+  | { type: "route"; stops: string[]; travelMode: "DRIVE" | "WALK" }
   | { type: "places_search"; query: string; anchorPlaceId?: string; radiusMeters: number }
   | { type: "member_locations"; scope: "all" | "member"; memberName?: string }
   | { type: "map_action"; placeIds: string[]; title?: string };
 
 export const KODI_TOOL_CONTRACT =
   "Use the available tools whenever an answer depends on saved trip details, geographic facts, live place data, route comparison, member location, or a map action. " +
-  "Choose tools from their descriptions, request one at a time with exact place IDs from placeDirectory, and synthesize the result before answering. " +
+  "Choose tools from their descriptions, use IDs exposed by placeDirectory or prior tool results, and continue through as many tool steps as the task genuinely needs before answering. " +
   "The request payload's currentLocation is already the active requester's verified location; use it as the anchor for a nearby places_search and never try to rediscover it through member_locations. " +
   "General knowledge is not evidence for measurements, current facts, private state, or completed actions.";
 
@@ -31,15 +31,15 @@ export const KODI_OPENAI_TOOLS = [
     type: "function",
     function: {
       name: "route",
-      description: "Calculate a verified Google route between two saved trip places.",
+      description:
+        "Calculate a verified Google route through 2-6 ordered stops. Each stop may be an exact ID from placeDirectory/externalPlacesSearch or a natural Google place query when the desired stop is not saved. Preserve every stop the user requested; never substitute an unrelated saved place.",
       parameters: {
         type: "object",
         properties: {
-          originPlaceId: { type: "string" },
-          destinationPlaceId: { type: "string" },
+          stops: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 6 },
           travelMode: { type: "string", enum: ["DRIVE", "WALK"] }
         },
-        required: ["originPlaceId", "destinationPlaceId", "travelMode"],
+        required: ["stops", "travelMode"],
         additionalProperties: false
       }
     }
@@ -115,15 +115,18 @@ export function parseKodiToolRequest(value: unknown): KodiToolRequest | undefine
   const candidate = value as Record<string, unknown>;
 
   if (candidate.type === "route") {
-    if (
-      typeof candidate.originPlaceId !== "string" ||
-      typeof candidate.destinationPlaceId !== "string" ||
-      candidate.originPlaceId === candidate.destinationPlaceId
-    ) return undefined;
+    const legacyPlaceIds =
+      typeof candidate.originPlaceId === "string" && typeof candidate.destinationPlaceId === "string"
+        ? [candidate.originPlaceId, candidate.destinationPlaceId]
+        : [];
+    const stops = (Array.isArray(candidate.stops) ? candidate.stops : Array.isArray(candidate.placeIds) ? candidate.placeIds : legacyPlaceIds)
+      .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+      .map((id) => id.trim())
+      .slice(0, 6);
+    if (stops.length < 2 || stops.some((id, index) => index > 0 && id === stops[index - 1])) return undefined;
     return {
       type: "route",
-      originPlaceId: candidate.originPlaceId,
-      destinationPlaceId: candidate.destinationPlaceId,
+      stops,
       travelMode: candidate.travelMode === "WALK" ? "WALK" : "DRIVE"
     };
   }
