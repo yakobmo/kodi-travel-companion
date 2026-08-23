@@ -4370,7 +4370,9 @@ app.post("/api/agent/message", async (req, res) => {
       });
       runtimeGuidance = appendRuntimeGuidance(
         runtimeGuidance,
-        `The places tool ran the agent's query${anchorPlace ? ` around ${anchorPlace.name}` : requestCurrentLocation ? " around the member's fresh location" : " without a geographic anchor"}. Check every result against the requested geography; ignore mismatches.`
+        searchLocation
+          ? `The places tool ran around ${anchorPlace ? anchorPlace.name : "the member's fresh current location"}. The server applied a hard ${agentPlacesToolRequest.radiusMeters}-meter geographic restriction and removed every result outside that radius. Treat every returned place as geographically verified, answer from it now, and do not substitute or compare it with planned-trip geography.`
+          : "The places tool ran without a geographic anchor. Check every result against geography explicitly named in the conversation and ignore mismatches."
       );
       continue;
     }

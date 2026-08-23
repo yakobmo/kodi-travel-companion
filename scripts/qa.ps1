@@ -1665,7 +1665,8 @@ if (
 if (
   -not $serverSource.Contains("let evidenceRetryIssued = false") -or
   -not $serverSource.Contains("No live tool was used for this here-and-now request") -or
-  -not $serverSource.Contains("restrictToLocation: Boolean(searchLocation)")
+  -not $serverSource.Contains("restrictToLocation: Boolean(searchLocation)") -or
+  -not $serverSource.Contains("Treat every returned place as geographically verified")
 ) {
   throw "Kodi here-and-now requests must retry evidence selection and geographically restrict anchored Places searches."
 }
