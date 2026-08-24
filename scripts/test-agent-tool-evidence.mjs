@@ -72,6 +72,10 @@ assert.throws(
   /ai_reply_claims_unexecuted_check/
 );
 assert.throws(
+  () => validateAgentEvidenceClaims({ author: "קודי", text: "זה במרחק 20 דקות הליכה", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, noTools),
+  /ai_reply_unverified_route_measurement/
+);
+assert.throws(
   () => validateAgentEvidenceClaims({ author: "קודי", text: "בדקתי עכשיו במסלול וזה לוקח שעה", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, noTools),
   /ai_reply_claims_unexecuted_route_tool/
 );

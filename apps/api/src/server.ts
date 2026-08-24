@@ -4337,7 +4337,12 @@ app.post("/api/agent/message", async (req, res) => {
       tripSearchExecuted = true;
       runtimeGuidance = appendRuntimeGuidance(
         runtimeGuidance,
-        `The private saved-trip search completed. It returned ${tripLookupResult.matches.length} of ${tripLookupResult.totalMatches ?? tripLookupResult.matches.length} matching saved points${tripLookupResult.referencePlace ? ` around ${tripLookupResult.referencePlace.name}` : ""}. Answer from relevantPlaceDetails and distinguish these saved points from public Google Places results.`
+        `The private saved-trip search completed. It returned ${tripLookupResult.matches.length} of ${tripLookupResult.totalMatches ?? tripLookupResult.matches.length} matching saved points${tripLookupResult.referencePlace ? ` around ${tripLookupResult.referencePlace.name}` : ""}. Answer from relevantPlaceDetails and distinguish these saved points from public Google Places results.`,
+        ...(tripLookupResult.matches.length === 0 && agentTripSearchRequest.query
+          ? [
+              "A zero-result text query proves only that no saved point matched those words. If the user is asking to inspect or compare the saved collection, or the unmatched wording may describe app context rather than a place, call search_trip_places again without query. Never redirect unmatched private-context wording into a public place search."
+            ]
+          : [])
       );
       continue;
     }

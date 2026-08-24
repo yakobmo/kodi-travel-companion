@@ -67,6 +67,11 @@ export function validateAgentEvidenceClaims(reply: AgentMessageResponse, evidenc
     throw new Error("ai_reply_claims_unexecuted_route_tool");
   }
 
+  const claimsMeasuredTravel = /(?:\d[\d.,]*\s*(?:שעות?|דקות?|ק(?:י)?לומטר(?:ים)?|ק[״"]?מ|km|minutes?|hours?))/iu.test(text);
+  if (claimsMeasuredTravel && evidence.route.status !== "ready") {
+    throw new Error("ai_reply_unverified_route_measurement");
+  }
+
   const claimsACompletedCheck = /(?:בדקתי|אימתתי|וידאתי|מאומת(?:ת|ים|ות)?|נבדק(?:ה|ו)?)/iu.test(text);
   const hasCompletedEvidence =
     evidence.tripPlaces.status === "ready" ||
