@@ -26,6 +26,7 @@ function assertAgentFirstSourceGuards() {
   const serverSource = readRepoFile("apps/api/src/server.ts");
   const openAiSource = readRepoFile("apps/api/src/agent/kodiOrchestrator.ts");
   const toolSource = readRepoFile("apps/api/src/agent/agentTools.ts");
+  const kodiContextSource = readRepoFile("apps/api/src/agent/kodiContext.ts");
   const kodiTypesSource = readRepoFile("apps/api/src/agent/kodi.ts");
   const webSource = readRepoFile("apps/web/src/App.tsx");
   const localMessagesSource = readRepoFile("apps/api/src/data/localMessages.ts");
@@ -99,6 +100,12 @@ function assertAgentFirstSourceGuards() {
     serverSource.includes('lookupTripContext(tripState, "")') &&
       serverSource.includes("searchTripPlaces(tripState, agentTripSearchRequest)") &&
       !serverSource.includes("lookupTripContext(tripState, referenceMessage)")
+  );
+  assertCheck(
+    "agent understands the app surface without phrase cases",
+    kodiContextSource.includes("hamburger_menu") &&
+      kodiContextSource.includes('retrievalTool: "search_trip_places"') &&
+      !openAiSource.includes("בהמבורגר")
   );
   assertCheck("server owns persisted trip state", serverSource.includes("await buildAgentTripStateSnapshot()") && !webSource.includes("tripState: agentTripState"));
   assertCheck("no deterministic conversational brain", !kodiTypesSource.includes("buildKodiReplyFromContext") && !kodiTypesSource.includes("selectRecommendedPlace"));

@@ -357,3 +357,5 @@ A Kodi agent change is not done until:
 ## Saved Trip Retrieval
 
 Kodi receives a compact directory only for orientation. Detailed saved-point facts are retrieved through `search_trip_places`, which accepts natural search text, optional place types, and an optional saved reference point/radius. `places_search` is reserved for the public Google catalog. The server must not preselect private place details by matching words in the latest chat message.
+
+Kodi also receives a compact `appSurface` capability map. It describes the management menu and its canonical sections so the model can distinguish references to the application UI from similarly named real-world places without phrase-specific routing rules.

@@ -45,6 +45,8 @@ const context = buildKodiContext({
   tripState,
   tripLookupResult: { query: "לילה אחרון", matches: tripState.places, itinerary: [], stayCalendar: [] }
 });
+assert.equal(context.appSurface.managementMenu.kind, "hamburger_menu");
+assert.equal(context.appSurface.savedTripPoints.retrievalTool, "search_trip_places");
 assert.deepEqual(context.placeDirectory[0], {
   id: "athens-last-night",
   name: "לילה אחרון באתונה",

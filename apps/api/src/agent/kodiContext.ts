@@ -5,6 +5,17 @@ export function buildKodiContext(input: AgentMessageRequest) {
   if (!tripState) return undefined;
 
   return {
+    appSurface: {
+      managementMenu: {
+        kind: "hamburger_menu",
+        sections: ["נקודות הטיול", "ניהול סוכנים", "המסמכים של קודי", "מפות הטיול שלי", "חברי הקבוצה"]
+      },
+      savedTripPoints: {
+        label: "נקודות הטיול",
+        meaning: "the private Google Maps places saved for this trip",
+        retrievalTool: "search_trip_places"
+      }
+    },
     trip: tripState.trip,
     summary: tripState.summary,
     itinerary: input.tripLookupResult?.itinerary ?? [],
