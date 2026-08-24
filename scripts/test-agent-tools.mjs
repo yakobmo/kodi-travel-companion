@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseKodiToolRequest, parseOpenAiKodiToolCall } from "../apps/api/dist/agent/agentTools.js";
+import { parseKodiToolRequest, parseOpenAiKodiToolCall, parseOpenAiResponsesKodiToolCall } from "../apps/api/dist/agent/agentTools.js";
 
 assert.deepEqual(parseKodiToolRequest({
   type: "route",
@@ -52,6 +52,22 @@ assert.deepEqual(parseOpenAiKodiToolCall({
   query: "cafe",
   anchorPlaceId: undefined,
   radiusMeters: 1500
+});
+assert.deepEqual(parseOpenAiResponsesKodiToolCall({
+  type: "function_call",
+  name: "search_trip_places",
+  arguments: JSON.stringify({ query: "hotel", limit: 10 }),
+  call_id: "call_123"
+}), {
+  request: {
+    type: "search_trip_places",
+    query: "hotel",
+    placeTypes: undefined,
+    referencePlaceId: undefined,
+    radiusMeters: undefined,
+    limit: 10
+  },
+  callId: "call_123"
 });
 
 console.log("agent tool registry regression: ok");

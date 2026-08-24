@@ -4164,6 +4164,7 @@ app.post("/api/agent/message", async (req, res) => {
   const completedToolCalls = new Set<string>();
   let evidenceRetryIssued = false;
   let forceSynthesis = false;
+  let openAiContinuation: Parameters<typeof tryBuildKodiReply>[0]["openAiContinuation"];
 
   // One bounded agent loop: the model chooses when it needs private trip data or
   // Google evidence. The server only authorizes and executes those tools.
@@ -4187,8 +4188,17 @@ app.post("/api/agent/message", async (req, res) => {
       permissionPolicy,
       deadlineAt: agentDeadlineAt,
       rulesReply: activeRulesReply,
-      disableTools: forceSynthesis
+      disableTools: forceSynthesis,
+      openAiContinuation
     });
+
+    if (openAiReply.responseId && openAiReply.toolCallId && openAiReply.model?.startsWith("gpt-")) {
+      openAiContinuation = {
+        previousResponseId: openAiReply.responseId,
+        callId: openAiReply.toolCallId,
+        model: openAiReply.model
+      };
+    }
 
     const toolRequest = getKodiToolRequest(openAiReply.reply);
     const agentTripSearchRequest = toolRequest?.type === "search_trip_places" ? toolRequest : undefined;

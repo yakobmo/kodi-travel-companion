@@ -2,7 +2,12 @@ import OpenAI from "openai";
 import type { AgentMessageRequest, AgentMessageResponse } from "./kodi.js";
 import { buildKodiContext } from "./kodiContext.js";
 import { hasFreeFleetProvider, tryFreeProviderFleet } from "./providerFleet.js";
-import { KODI_OPENAI_TOOLS, KODI_TOOL_CONTRACT, parseKodiToolRequest, parseOpenAiKodiToolCall } from "./agentTools.js";
+import {
+  KODI_RESPONSES_TOOLS,
+  KODI_TOOL_CONTRACT,
+  parseKodiToolRequest,
+  parseOpenAiResponsesKodiToolCall
+} from "./agentTools.js";
 import type { KodiToolRequest } from "./agentTools.js";
 import { buildAgentToolEvidence, validateAgentEvidenceClaims } from "./toolEvidence.js";
 
@@ -21,6 +26,7 @@ export interface KodiReplyInput extends AgentMessageRequest {
   runtimeGuidance?: string[];
   requiredTool?: KodiToolRequest["type"];
   disableTools?: boolean;
+  openAiContinuation?: { previousResponseId: string; callId: string; model: string };
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
     canShareLiveLocation?: boolean;
@@ -33,6 +39,8 @@ export interface KodiReplyResult {
   model?: string;
   error?: string;
   providerAttempts?: string[];
+  responseId?: string;
+  toolCallId?: string;
 }
 
 type KodiProviderReadyReply = {
@@ -623,36 +631,28 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       reasoningMode,
       webSearchEnabled
     });
-
-    if (!webSearchEnabled) {
-      return withAiTimeout(
-        openAiClient.chat.completions.create({
-          model: modelName,
-          messages: [
-            { role: "system", content: buildInstructions() },
-            { role: "user", content: inputPayload }
-          ],
-          max_completion_tokens: reasoningMode ? 1100 : 900,
-          tools: input.disableTools ? undefined : (KODI_OPENAI_TOOLS as never),
-          tool_choice: input.disableTools
-            ? undefined
-            : input.requiredTool
-              ? ({ type: "function", function: { name: input.requiredTool } } as never)
-              : "auto"
-        }),
-        paidPrimaryTimeoutMs()
-      );
-    }
-
     return withAiTimeout(
       openAiClient.responses.create({
         model: modelName,
-        instructions: buildInstructions(),
+        instructions: input.openAiContinuation ? undefined : buildInstructions(),
+        previous_response_id: input.openAiContinuation?.previousResponseId,
         max_output_tokens: reasoningMode ? 1100 : 900,
         text: { format: { type: "json_object" } },
-        tools: webSearchEnabled ? ([{ type: "web_search" }] as never) : undefined,
-        input: inputPayload
-      }),
+        tools: input.disableTools ? undefined : (KODI_RESPONSES_TOOLS as never),
+        tool_choice: input.disableTools
+          ? "none"
+          : input.requiredTool
+            ? ({ type: "function", name: input.requiredTool } as never)
+            : "auto",
+        ...(modelName.startsWith("gpt-5") ? { reasoning: { effort: "medium" as const } } : {}),
+        input: input.openAiContinuation
+          ? ([{
+              type: "function_call_output",
+              call_id: input.openAiContinuation.callId,
+              output: inputPayload
+            }] as never)
+          : inputPayload
+      } as never),
       paidPrimaryTimeoutMs()
     );
   }
@@ -661,19 +661,24 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
   const providerAttempts: string[] = [...preOpenAiAttempts];
   let geminiFallbackAttempted = preferredProvider === "gemini";
 
-  for (const modelCandidate of modelCandidates) {
+  const activeModelCandidates = input.openAiContinuation
+    ? [input.openAiContinuation.model]
+    : modelCandidates;
+  for (const modelCandidate of activeModelCandidates) {
     try {
       const response = await createKodiResponse(modelCandidate, enableWebSearch);
-      const openAiToolRequest = "choices" in response
-        ? parseOpenAiKodiToolCall(response.choices[0]?.message?.tool_calls?.[0])
-        : undefined;
-      const outputText = "choices" in response ? response.choices[0]?.message?.content ?? "" : response.output_text ?? "";
+      const openAiToolCall = response.output
+        .map((item) => parseOpenAiResponsesKodiToolCall(item))
+        .find((item) => Boolean(item));
+      const outputText = response.output_text ?? "";
 
       return {
         status: "ready",
         model: modelCandidate,
-        reply: openAiToolRequest
-          ? toValidReply({ text: "tool request", intent: input.rulesReply.intent, toolRequest: openAiToolRequest })
+        responseId: response.id,
+        toolCallId: openAiToolCall?.callId,
+        reply: openAiToolCall
+          ? toValidReply({ text: "tool request", intent: input.rulesReply.intent, toolRequest: openAiToolCall.request })
           : validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input)
       };
     } catch (error) {
@@ -689,22 +694,24 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         break;
       }
 
-      if (!enableWebSearch) {
+      if (!enableWebSearch || input.openAiContinuation) {
         continue;
       }
 
       try {
         const response = await createKodiResponse(modelCandidate, false);
-        const openAiToolRequest = "choices" in response
-          ? parseOpenAiKodiToolCall(response.choices[0]?.message?.tool_calls?.[0])
-          : undefined;
-        const outputText = "choices" in response ? response.choices[0]?.message?.content ?? "" : response.output_text ?? "";
+        const openAiToolCall = response.output
+          .map((item) => parseOpenAiResponsesKodiToolCall(item))
+          .find((item) => Boolean(item));
+        const outputText = response.output_text ?? "";
 
         return {
           status: "ready",
           model: modelCandidate,
-          reply: openAiToolRequest
-            ? toValidReply({ text: "tool request", intent: input.rulesReply.intent, toolRequest: openAiToolRequest })
+          responseId: response.id,
+          toolCallId: openAiToolCall?.callId,
+          reply: openAiToolCall
+            ? toValidReply({ text: "tool request", intent: input.rulesReply.intent, toolRequest: openAiToolCall.request })
             : validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input),
           error: "web_search_retry_without_tool"
         };
@@ -733,6 +740,15 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       lastError = geminiError;
       providerAttempts.push(...((geminiError as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
     }
+  }
+
+  if (input.openAiContinuation) {
+    return {
+      status: "error",
+      model: input.openAiContinuation.model,
+      error: lastError instanceof Error ? lastError.message : "openai_continuation_failed",
+      providerAttempts
+    };
   }
 
   if (hasFreeFleetProvider() && Date.now() < deadlineAt - 500) {

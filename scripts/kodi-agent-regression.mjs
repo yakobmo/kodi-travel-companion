@@ -113,6 +113,13 @@ function assertAgentFirstSourceGuards() {
       serverSource.includes("disableTools: forceSynthesis") &&
       openAiSource.includes("input.disableTools ? undefined")
   );
+  assertCheck(
+    "OpenAI tool turns preserve native model state",
+    openAiSource.includes("responses.create") &&
+      openAiSource.includes("previous_response_id") &&
+      openAiSource.includes("function_call_output") &&
+      !openAiSource.includes("chat.completions.create")
+  );
   assertCheck("server owns persisted trip state", serverSource.includes("await buildAgentTripStateSnapshot()") && !webSource.includes("tripState: agentTripState"));
   assertCheck("no deterministic conversational brain", !kodiTypesSource.includes("buildKodiReplyFromContext") && !kodiTypesSource.includes("selectRecommendedPlace"));
   assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));

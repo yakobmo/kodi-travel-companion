@@ -417,7 +417,8 @@ if (
   -not $openAiAgentSource.Contains("buildKodiContext") -or
   -not $openAiAgentSource.Contains("ai_reply_unverified_route_measurement") -or
   -not $openAiAgentSource.Contains("shouldEnableWebSearch") -or
-  -not $openAiAgentSource.Contains("chat.completions.create") -or
+  -not $openAiAgentSource.Contains("responses.create") -or
+  -not $openAiAgentSource.Contains("previous_response_id") -or
   -not $openAiAgentSource.Contains("generateContent") -or
   -not $openAiAgentSource.Contains("openai_error_fallback_to_gemini") -or
   -not $openAiAgentSource.Contains("paid_primary_fallback_to_free_provider_fleet") -or
@@ -558,7 +559,7 @@ if (
   -not $webAppSource.Contains('getAgentMenuSummary(agentProviders, agentProvidersState)') -or
   -not $serverSource.Contains('paidConnection: {') -or
   -not $serverSource.Contains('provider_portal_only') -or
-  -not $openAiAgentSource.Contains('max_completion_tokens') -or
+  -not $openAiAgentSource.Contains('max_output_tokens') -or
   $openAiAgentSource.Contains('max_tokens: reasoningMode')
 ) {
   throw "Kodi paid-agent onboarding must put the working paid provider first and show free fallbacks separately."

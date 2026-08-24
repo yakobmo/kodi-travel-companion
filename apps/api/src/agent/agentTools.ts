@@ -112,6 +112,13 @@ export const KODI_OPENAI_TOOLS = [
   }
 ] as const;
 
+export const KODI_RESPONSES_TOOLS = KODI_OPENAI_TOOLS.map((tool) => ({
+  type: "function" as const,
+  name: tool.function.name,
+  description: tool.function.description,
+  parameters: tool.function.parameters
+}));
+
 export function parseOpenAiKodiToolCall(value: unknown): KodiToolRequest | undefined {
   if (!value || typeof value !== "object") return undefined;
   const call = value as { function?: { name?: unknown; arguments?: unknown } };
@@ -119,6 +126,26 @@ export function parseOpenAiKodiToolCall(value: unknown): KodiToolRequest | undef
   try {
     const args = JSON.parse(call.function.arguments) as Record<string, unknown>;
     return parseKodiToolRequest({ type: call.function.name, ...args });
+  } catch {
+    return undefined;
+  }
+}
+
+export function parseOpenAiResponsesKodiToolCall(value: unknown):
+  | { request: KodiToolRequest; callId: string }
+  | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const call = value as { type?: unknown; name?: unknown; arguments?: unknown; call_id?: unknown };
+  if (
+    call.type !== "function_call" ||
+    typeof call.name !== "string" ||
+    typeof call.arguments !== "string" ||
+    typeof call.call_id !== "string"
+  ) return undefined;
+  try {
+    const args = JSON.parse(call.arguments) as Record<string, unknown>;
+    const request = parseKodiToolRequest({ type: call.name, ...args });
+    return request ? { request, callId: call.call_id } : undefined;
   } catch {
     return undefined;
   }
