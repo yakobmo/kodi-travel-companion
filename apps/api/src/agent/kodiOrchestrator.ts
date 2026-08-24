@@ -677,7 +677,24 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         instructions: input.openAiContinuation ? undefined : buildInstructions(),
         previous_response_id: input.openAiContinuation?.previousResponseId,
         max_output_tokens: reasoningMode ? 5000 : 1800,
-        text: { format: { type: "json_object" } },
+        text: {
+          format: {
+            type: "json_schema",
+            name: "kodi_reply",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                text: { type: "string" },
+                intent: { type: "string", enum: allowedIntents },
+                requiresAdminApproval: { type: "boolean" },
+                toolRequest: { type: "null" }
+              },
+              required: ["text", "intent", "requiresAdminApproval", "toolRequest"],
+              additionalProperties: false
+            }
+          }
+        },
         tools: input.disableTools ? undefined : (KODI_RESPONSES_TOOLS as never),
         parallel_tool_calls: false,
         tool_choice: input.disableTools
