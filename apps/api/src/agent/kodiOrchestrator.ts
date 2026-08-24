@@ -637,7 +637,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         model: modelName,
         instructions: input.openAiContinuation ? undefined : buildInstructions(),
         previous_response_id: input.openAiContinuation?.previousResponseId,
-        max_output_tokens: reasoningMode ? 1100 : 900,
+        max_output_tokens: reasoningMode ? 5000 : 1800,
         text: { format: { type: "json_object" } },
         tools: input.disableTools ? undefined : (KODI_RESPONSES_TOOLS as never),
         tool_choice: input.disableTools
@@ -727,6 +727,15 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
     }
   }
 
+  if (input.openAiContinuation) {
+    return {
+      status: "error",
+      model: input.openAiContinuation.model,
+      error: lastError instanceof Error ? lastError.message : "openai_continuation_failed",
+      providerAttempts
+    };
+  }
+
   if (!geminiFallbackAttempted) {
     try {
       const geminiReply = await tryBuildKodiReplyWithGemini(input, { reasoningMode, timeoutMs: geminiFallbackTimeoutMs() });
@@ -741,15 +750,6 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       lastError = geminiError;
       providerAttempts.push(...((geminiError as Error & { providerAttempts?: string[] })?.providerAttempts ?? []));
     }
-  }
-
-  if (input.openAiContinuation) {
-    return {
-      status: "error",
-      model: input.openAiContinuation.model,
-      error: lastError instanceof Error ? lastError.message : "openai_continuation_failed",
-      providerAttempts
-    };
   }
 
   if (hasFreeFleetProvider() && Date.now() < deadlineAt - 500) {
