@@ -946,3 +946,9 @@ Decision:
 - The server validates permissions, IDs, evidence, and execution. It no longer rejects a semantically reasonable route merely because a keyword-grounding layer selected different endpoints.
 - Tool failures return to Kodi for recovery inside the bounded loop. User-facing exhaustion messages remain human and never expose internal error identifiers.
 - This is the canonical direction: expand truthful capabilities around the model instead of encoding incident-specific conversational behavior.
+
+## 41. Reduce model load before adding behavior
+
+- The always-present place directory contains only `id`, `name`, and `type`; full notes and addresses remain available through relevant trip lookup results.
+- Google Places results are annotated server-side with `alreadySaved` and `savedMatch`, using normalized names or coordinates within 150 meters.
+- This moves mechanical comparison out of the model without adding a conversational rule, tool, or extra model turn.

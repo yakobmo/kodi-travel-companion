@@ -1767,6 +1767,56 @@ function buildFreshCurrentLocationRequiredReply(memberName?: string): AgentMessa
   };
 }
 
+function normalizePlaceIdentity(value: string | undefined) {
+  return (value ?? "")
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function annotateSavedPlaces(
+  result: GooglePlacesTextSearchResult,
+  savedPlaces: TripPlace[]
+): GooglePlacesTextSearchResult {
+  if (result.status !== "ready") return result;
+
+  return {
+    ...result,
+    places: result.places.map((place) => {
+      const normalizedName = normalizePlaceIdentity(place.displayName);
+      const nameMatch = normalizedName
+        ? savedPlaces.find((saved) => normalizePlaceIdentity(saved.name) === normalizedName)
+        : undefined;
+      const coordinateMatch =
+        typeof place.lat === "number" && typeof place.lng === "number"
+          ? savedPlaces.find(
+              (saved) =>
+                typeof saved.lat === "number" &&
+                typeof saved.lng === "number" &&
+                distanceMetersBetween(
+                  { lat: place.lat as number, lng: place.lng as number },
+                  { lat: saved.lat as number, lng: saved.lng as number }
+                ) <= 150
+            )
+          : undefined;
+      const savedMatch = nameMatch ?? coordinateMatch;
+      return {
+        ...place,
+        alreadySaved: Boolean(savedMatch),
+        savedMatch: savedMatch
+          ? {
+              id: savedMatch.id,
+              name: savedMatch.name,
+              matchedBy: nameMatch ? "name" : "coordinates"
+            }
+          : undefined
+      };
+    })
+  };
+}
+
 function buildKodiFallbackEnvelope(): AgentMessageResponse {
   return {
     author: "קודי",
@@ -4315,14 +4365,17 @@ app.post("/api/agent/message", async (req, res) => {
         triggeringMember: { id: normalizedMember.id, role: normalizedMember.role }
       });
       if (!placesUsageGate.allowed) break;
-      externalPlacesSearch = await searchGooglePlacesText({
-        query: agentPlacesToolRequest.query,
-        ...(searchLocation ? { lat: searchLocation.lat, lng: searchLocation.lng } : {}),
-        radiusMeters: agentPlacesToolRequest.radiusMeters,
-        restrictToLocation: Boolean(searchLocation),
-        languageCode: "he",
-        ...(searchLocation ? {} : { regionCode: "GR" })
-      });
+      externalPlacesSearch = annotateSavedPlaces(
+        await searchGooglePlacesText({
+          query: agentPlacesToolRequest.query,
+          ...(searchLocation ? { lat: searchLocation.lat, lng: searchLocation.lng } : {}),
+          radiusMeters: agentPlacesToolRequest.radiusMeters,
+          restrictToLocation: Boolean(searchLocation),
+          languageCode: "he",
+          ...(searchLocation ? {} : { regionCode: "GR" })
+        }),
+        tripState.places
+      );
       void safeRecordUsageGateEvent({
         usageGate: placesUsageGate,
         actorName: String(normalizedMember.displayName),

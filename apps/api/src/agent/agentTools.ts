@@ -49,7 +49,7 @@ export const KODI_OPENAI_TOOLS = [
     function: {
       name: "places_search",
       description:
-        "Search live Google Places results, including nearby venues, ratings, reviews, and current place facts. For a nearby search, the server anchors this tool to the request payload's verified currentLocation or to anchorPlaceId.",
+        "Search live Google Places results, including nearby venues, ratings, reviews, and current place facts. Results include alreadySaved and savedMatch computed by the server against the trip map. For a nearby search, the server anchors this tool to the request payload's verified currentLocation or to anchorPlaceId.",
       parameters: {
         type: "object",
         properties: {

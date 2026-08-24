@@ -282,6 +282,7 @@ if (
 
 $webStylesSource = Get-Content (Join-Path $root "apps\web\src\styles.css") -Raw
 $webAppEarlySource = Get-Content (Join-Path $root "apps\web\src\App.tsx") -Raw
+$compactKodiContextSource = Get-Content (Join-Path $root "apps\api\src\agent\kodiContext.ts") -Raw -Encoding utf8
 if (
   -not $webStylesSource.Contains("height: var(--kodi-app-height, 100dvh)") -or
   -not $webStylesSource.Contains("grid-template-rows: clamp(170px, 32vh, 260px) minmax(0, 1fr)") -or
@@ -1670,6 +1671,18 @@ if (
   -not $serverSource.Contains("Treat every returned place as geographically verified")
 ) {
   throw "Kodi here-and-now requests must retry evidence selection and geographically restrict anchored Places searches."
+}
+
+if (
+  -not $serverSource.Contains("function annotateSavedPlaces") -or
+  -not $serverSource.Contains("alreadySaved: Boolean(savedMatch)") -or
+  -not $serverSource.Contains("matchedBy: nameMatch ?") -or
+  -not $agentToolsSource.Contains("Results include alreadySaved and savedMatch") -or
+  -not $compactKodiContextSource.Contains("placeDirectory") -or
+  $compactKodiContextSource.Contains("sourceIndex: place.sourceIndex") -or
+  $compactKodiContextSource.Contains("note: place.note")
+) {
+  throw "Kodi must receive a compact place directory and server-annotated saved-place matches."
 }
 
 if (

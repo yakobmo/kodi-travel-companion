@@ -25,10 +25,18 @@ const tripState = {
   agentContext: { visibleLiveLocationMemberIds: [] }
 };
 
-const context = buildKodiContext({ message: "מהמלון ביום האחרון לשדה?", tripState });
-assert.equal(context.placeDirectory[0].note, "9.9-10.9, יציאה לשדה התעופה");
-assert.equal(context.placeDirectory[0].address, "Kalamiotou 19-23");
-assert.deepEqual(context.placeDirectory[0].tags, ["לינה", "יום אחרון"]);
+const context = buildKodiContext({
+  message: "מהמלון ביום האחרון לשדה?",
+  tripState,
+  tripLookupResult: { query: "לילה אחרון", matches: tripState.places, itinerary: [], stayCalendar: [] }
+});
+assert.deepEqual(context.placeDirectory[0], {
+  id: "athens-last-night",
+  name: "לילה אחרון באתונה",
+  type: "lodging"
+});
+assert.equal(context.relevantPlaceDetails[0].note, "9.9-10.9, יציאה לשדה התעופה");
+assert.equal(context.relevantPlaceDetails[0].address, "Kalamiotou 19-23");
 
 const noTools = buildAgentToolEvidence({ message: "כמה זמן נסיעה?" });
 assert.throws(

@@ -20,6 +20,12 @@ export interface GooglePlacesTextSearchPlace {
   rating?: number;
   userRatingCount?: number;
   types: string[];
+  alreadySaved?: boolean;
+  savedMatch?: {
+    id: string;
+    name: string;
+    matchedBy: "name" | "coordinates";
+  };
 }
 
 export interface GooglePlacesTextSearchResult {

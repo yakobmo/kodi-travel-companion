@@ -12,11 +12,7 @@ export function buildKodiContext(input: AgentMessageRequest) {
     placeDirectory: tripState.places.map((place) => ({
       id: place.id,
       name: place.name,
-      type: place.type,
-      address: place.address,
-      note: place.note,
-      tags: place.tags,
-      sourceIndex: place.sourceIndex
+      type: place.type
     })),
     relevantPlaceDetails: input.tripLookupResult?.matches ?? [],
     selectedPlace: input.selectedPlace,
