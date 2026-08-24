@@ -741,7 +741,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       } catch (error) {
         if (!openAiToolCall && outputText) {
           throw new Error(
-            `openai_response_parse_failed:${error instanceof Error ? error.message : "unknown"}:${outputText.slice(0, 320)}`
+            `openai_response_parse_failed:${error instanceof Error ? error.message : "unknown"}`
           );
         }
         throw error;
