@@ -69,7 +69,12 @@ export function validateAgentEvidenceClaims(reply: AgentMessageResponse, evidenc
 
   const claimsMeasuredDuration = /(?:\d[\d.,]*\s*(?:שעות?|דקות?|minutes?|hours?))/iu.test(text);
   const claimsMeasuredDistance = /(?:\d[\d.,]*\s*(?:ק(?:י)?לומטר(?:ים)?|ק[״"]?מ|km))/iu.test(text);
-  const characterizesTravelDistance = /(?:נסיעה|כביש|דרך|הליכה|driving|walking|road)/iu.test(text);
+  const distanceValuePattern = String.raw`\d[\d.,]*\s*(?:ק(?:י)?לומטר(?:ים)?|ק[״"]?מ|km)`;
+  const travelQualifierPattern = String.raw`(?:נסיעה|כביש|הליכה|driving|walking|road)`;
+  const characterizesTravelDistance = new RegExp(
+    `(?:${travelQualifierPattern}.{0,30}${distanceValuePattern}|${distanceValuePattern}.{0,30}${travelQualifierPattern})`,
+    "iu"
+  ).test(text);
   const hasGeometricDistanceEvidence = evidence.tripPlaces.status === "ready";
   if (
     evidence.route.status !== "ready" &&
