@@ -353,6 +353,7 @@ function sanitizeRecentMessagesForAgent(messages: AgentMessageRequest["recentMes
 
 function buildAgentPayload(input: KodiReplyInput, options: { reasoningMode: boolean; webSearchEnabled: boolean }) {
   return JSON.stringify({
+    responseFormat: "json",
     member: input.member,
     message: input.message,
     recentMessages: sanitizeRecentMessagesForAgent(input.recentMessages),
