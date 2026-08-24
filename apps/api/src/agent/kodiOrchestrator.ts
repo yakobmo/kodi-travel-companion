@@ -740,8 +740,25 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
           : validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input);
       } catch (error) {
         if (!openAiToolCall && outputText) {
+          const rejectionReason = error instanceof Error ? error.message : "unknown";
+          if (rejectionReason.startsWith("ai_reply_") && remainingTimeoutMs() > 4_000) {
+            const repairedResponse = await repairRejectedKodiResponse(modelCandidate, response.id, rejectionReason);
+            const repairedOutputText = extractResponsesOutputText(repairedResponse);
+            if (repairedOutputText) {
+              const repairedReply = validateKodiProviderReply(
+                toReplyFromProviderOutput(repairedOutputText, input.rulesReply.intent),
+                input
+              );
+              return {
+                status: "ready",
+                model: modelCandidate,
+                responseId: repairedResponse.id,
+                reply: repairedReply
+              };
+            }
+          }
           throw new Error(
-            `openai_response_parse_failed:${error instanceof Error ? error.message : "unknown"}`
+            `openai_response_parse_failed:${rejectionReason}`
           );
         }
         throw error;
@@ -809,6 +826,39 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       error: lastError instanceof Error ? lastError.message : "openai_continuation_failed",
       providerAttempts
     };
+  }
+
+  async function repairRejectedKodiResponse(modelName: string, responseId: string, rejectionReason: string) {
+    return withAiTimeout(
+      openAiClient.responses.create({
+        model: modelName,
+        previous_response_id: responseId,
+        max_output_tokens: reasoningMode ? 2600 : 1400,
+        text: {
+          format: {
+            type: "json_schema",
+            name: "kodi_reply",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                text: { type: "string" },
+                intent: { type: "string", enum: allowedIntents },
+                requiresAdminApproval: { type: "boolean" },
+                toolRequest: { type: "null" }
+              },
+              required: ["text", "intent", "requiresAdminApproval", "toolRequest"],
+              additionalProperties: false
+            }
+          }
+        },
+        parallel_tool_calls: false,
+        tool_choice: "none",
+        ...(modelName.startsWith("gpt-5") ? { reasoning: { effort: "low" as const } } : {}),
+        input: `Your answer was rejected by the server evidence validator (${rejectionReason}). Revise only the final answer using the evidence already gathered. Preserve the useful answer, remove or qualify only unsupported claims, do not run another tool, and do not mention this validation.`
+      } as never),
+      Math.min(paidPrimaryTimeoutMs(), Math.max(4_000, remainingTimeoutMs()))
+    );
   }
 
   if (!geminiFallbackAttempted) {
