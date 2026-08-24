@@ -69,11 +69,14 @@ export function validateAgentEvidenceClaims(reply: AgentMessageResponse, evidenc
 
   const claimsMeasuredDuration = /(?:\d[\d.,]*\s*(?:שעות?|דקות?|minutes?|hours?))/iu.test(text);
   const claimsMeasuredDistance = /(?:\d[\d.,]*\s*(?:ק(?:י)?לומטר(?:ים)?|ק[״"]?מ|km))/iu.test(text);
-  const identifiesStraightLineDistance = /(?:קו\s+אווירי|מרחק\s+אווירי|straight[- ]line)/iu.test(text);
-  const hasStraightLineEvidence = identifiesStraightLineDistance && evidence.tripPlaces.status === "ready";
+  const characterizesTravelDistance = /(?:נסיעה|כביש|דרך|הליכה|driving|walking|road)/iu.test(text);
+  const hasGeometricDistanceEvidence = evidence.tripPlaces.status === "ready";
   if (
     evidence.route.status !== "ready" &&
-    (claimsMeasuredDuration || (claimsMeasuredDistance && !hasStraightLineEvidence))
+    (
+      claimsMeasuredDuration ||
+      (claimsMeasuredDistance && (!hasGeometricDistanceEvidence || characterizesTravelDistance))
+    )
   ) {
     throw new Error("ai_reply_unverified_route_measurement");
   }
