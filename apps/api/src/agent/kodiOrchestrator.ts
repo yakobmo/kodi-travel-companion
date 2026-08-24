@@ -313,6 +313,25 @@ function extractResponsesOutputText(response: { output_text?: string; output?: u
     .trim();
 }
 
+function describeResponsesOutput(output: unknown[]) {
+  return output.slice(0, 4).map((item) => {
+    if (!item || typeof item !== "object") return { type: typeof item };
+    const value = item as { type?: unknown; name?: unknown; status?: unknown; content?: unknown[] };
+    return {
+      type: typeof value.type === "string" ? value.type : "unknown",
+      name: typeof value.name === "string" ? value.name : undefined,
+      status: typeof value.status === "string" ? value.status : undefined,
+      contentTypes: Array.isArray(value.content)
+        ? value.content.map((part) =>
+            part && typeof part === "object" && typeof (part as { type?: unknown }).type === "string"
+              ? (part as { type: string }).type
+              : "unknown"
+          )
+        : undefined
+    };
+  });
+}
+
 function buildInstructions() {
   return [
     "You are Kodi, an intelligent, warm Hebrew travel agent participating in an ongoing group conversation.",
@@ -692,6 +711,9 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         .map((item) => parseOpenAiResponsesKodiToolCall(item))
         .find((item) => Boolean(item));
       const outputText = extractResponsesOutputText(response);
+      if (!openAiToolCall && !outputText) {
+        throw new Error(`openai_response_empty_output:${JSON.stringify(describeResponsesOutput(response.output)).slice(0, 500)}`);
+      }
 
       return {
         status: "ready",
@@ -725,6 +747,9 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
           .map((item) => parseOpenAiResponsesKodiToolCall(item))
           .find((item) => Boolean(item));
         const outputText = extractResponsesOutputText(response);
+        if (!openAiToolCall && !outputText) {
+          throw new Error(`openai_response_empty_output:${JSON.stringify(describeResponsesOutput(response.output)).slice(0, 500)}`);
+        }
 
         return {
           status: "ready",
