@@ -101,15 +101,15 @@ function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
   if (!Number.isFinite(value) || value <= 0) {
-    return 12_000;
+    return 15_000;
   }
 
   return Math.min(Math.max(Math.round(value), 4_000), 18_000);
 }
 
 function getAgentTotalBudgetMs() {
-  const value = Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 20_000);
-  return Number.isFinite(value) ? Math.min(Math.max(Math.round(value), 10_000), 24_000) : 20_000;
+  const value = Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 30_000);
+  return Number.isFinite(value) ? Math.min(Math.max(Math.round(value), 12_000), 35_000) : 30_000;
 }
 
 function isAiTimeout(error: unknown) {
@@ -312,7 +312,7 @@ function shouldUseReasoningModel(input: KodiReplyInput) {
 function getAgentModel(input: KodiReplyInput) {
   const fastModel = process.env.OPENAI_AGENT_FAST_MODEL?.trim() || "gpt-4.1-mini";
   const reasoningModel =
-    process.env.OPENAI_AGENT_REASONING_MODEL?.trim() || process.env.OPENAI_AGENT_MODEL?.trim() || "gpt-5.4-mini";
+    process.env.OPENAI_AGENT_PRIMARY_MODEL?.trim() || "gpt-5.5";
 
   return shouldUseReasoningModel(input) ? reasoningModel : fastModel;
 }
@@ -322,7 +322,10 @@ function getAgentModelCandidates(primaryModel: string) {
     process.env.OPENAI_AGENT_FALLBACK_MODELS?.split(",")
       .map((model) => model.trim())
       .filter(Boolean) ?? [];
-  const defaultFallbacks = ["gpt-4o-mini", "gpt-5.4-mini", "gpt-5.5"];
+  const legacyConfiguredModel = process.env.OPENAI_AGENT_REASONING_MODEL?.trim() || process.env.OPENAI_AGENT_MODEL?.trim();
+  const defaultFallbacks = [legacyConfiguredModel, "gpt-5.4-mini", "gpt-4o-mini"].filter(
+    (candidate): candidate is string => Boolean(candidate)
+  );
 
   return Array.from(new Set([primaryModel, ...configuredFallbacks, ...defaultFallbacks]));
 }
@@ -492,7 +495,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
   const preferredProvider = getPreferredAgentProvider();
   const deadlineAt = input.deadlineAt ?? Date.now() + getAgentTotalBudgetMs();
   const remainingTimeoutMs = () => Math.max(Math.min(timeoutMs, deadlineAt - Date.now()), 500);
-  const paidPrimaryTimeoutMs = () => Math.max(Math.min(8_000, remainingTimeoutMs()), 500);
+  const paidPrimaryTimeoutMs = () => Math.max(Math.min(15_000, remainingTimeoutMs()), 500);
   const geminiFallbackTimeoutMs = () => Math.max(Math.min(5_500, remainingTimeoutMs()), 500);
   let geminiPrimaryAttempted = preferredProvider === "gemini" && hasGeminiProvider();
   const preOpenAiAttempts: string[] = [];

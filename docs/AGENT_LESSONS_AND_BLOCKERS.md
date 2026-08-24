@@ -968,3 +968,4 @@ Decision:
 - Start each request with the itinerary overview but no server-selected place matches. The model, not a keyword pre-router, decides when and how to retrieve saved details.
 - Record saved-place search as executed evidence only after the tool actually runs. A generic claim such as “checked” or “verified” is rejected when no tool evidence exists.
 - Keep public Google discovery (`places_search`) and private trip retrieval (`search_trip_places`) as separate capabilities.
+- Use the paid frontier model (`gpt-5.5` by default) as the primary conversational agent. Legacy Mini model settings are fallback candidates, not primary overrides.
