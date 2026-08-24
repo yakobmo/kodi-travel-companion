@@ -679,6 +679,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         max_output_tokens: reasoningMode ? 5000 : 1800,
         text: { format: { type: "json_object" } },
         tools: input.disableTools ? undefined : (KODI_RESPONSES_TOOLS as never),
+        parallel_tool_calls: false,
         tool_choice: input.disableTools
           ? "none"
           : input.requiredTool
