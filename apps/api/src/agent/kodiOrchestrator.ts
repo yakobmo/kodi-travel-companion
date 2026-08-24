@@ -715,14 +715,26 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         throw new Error(`openai_response_empty_output:${JSON.stringify(describeResponsesOutput(response.output)).slice(0, 500)}`);
       }
 
+      let parsedReply: AgentMessageResponse;
+      try {
+        parsedReply = openAiToolCall
+          ? toValidReply({ text: "tool request", intent: input.rulesReply.intent, toolRequest: openAiToolCall.request })
+          : validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input);
+      } catch (error) {
+        if (!openAiToolCall && outputText) {
+          throw new Error(
+            `openai_response_parse_failed:${error instanceof Error ? error.message : "unknown"}:${outputText.slice(0, 320)}`
+          );
+        }
+        throw error;
+      }
+
       return {
         status: "ready",
         model: modelCandidate,
         responseId: response.id,
         toolCallId: openAiToolCall?.callId,
-        reply: openAiToolCall
-          ? toValidReply({ text: "tool request", intent: input.rulesReply.intent, toolRequest: openAiToolCall.request })
-          : validateKodiProviderReply(toReplyFromProviderOutput(outputText, input.rulesReply.intent), input)
+        reply: parsedReply
       };
     } catch (error) {
       lastError = error;
