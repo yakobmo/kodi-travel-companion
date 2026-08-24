@@ -14,7 +14,9 @@ export interface TripLookupResult {
     nights: number;
   }>;
   stayCalendar: TripStayNight[];
-  matches: Array<Pick<TripPlace, "id" | "name" | "type" | "address" | "lat" | "lng" | "note" | "tags" | "sourceIndex">>;
+  matches: Array<Pick<TripPlace, "id" | "name" | "type" | "address" | "lat" | "lng" | "note" | "tags" | "sourceIndex"> & {
+    distanceFromReferenceMeters?: number;
+  }>;
   totalMatches?: number;
   referencePlace?: Pick<TripPlace, "id" | "name" | "lat" | "lng">;
 }
@@ -145,7 +147,7 @@ export function searchTripPlaces(tripState: TripState, options: TripPlaceSearchO
   const base = lookupTripContext(tripState, query || "saved trip places");
   return {
     ...base,
-    matches: ranked.slice(0, limit).map(({ place }) => ({
+    matches: ranked.slice(0, limit).map(({ place, distance }) => ({
       id: place.id,
       name: place.name,
       type: place.type,
@@ -154,7 +156,8 @@ export function searchTripPlaces(tripState: TripState, options: TripPlaceSearchO
       lng: place.lng,
       note: place.note,
       tags: place.tags,
-      sourceIndex: place.sourceIndex
+      sourceIndex: place.sourceIndex,
+      distanceFromReferenceMeters: distance === undefined ? undefined : Math.round(distance)
     })),
     totalMatches: ranked.length,
     referencePlace: hasReference

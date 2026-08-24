@@ -64,6 +64,8 @@ const nearLodging = searchTripPlaces(tripState, {
   limit: 20
 });
 assert.deepEqual(nearLodging.matches.map((place) => place.id), ["athens-last-night", "nearby-cafe"]);
+assert.equal(nearLodging.matches[0].distanceFromReferenceMeters, 0);
+assert.ok(nearLodging.matches[1].distanceFromReferenceMeters > 0);
 const cafes = searchTripPlaces(tripState, { query: "קפה", limit: 20 });
 assert.deepEqual(cafes.matches.map((place) => place.id), ["nearby-cafe"]);
 

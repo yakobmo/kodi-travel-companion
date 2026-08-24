@@ -101,15 +101,15 @@ function getAgentTimeoutMs() {
   const value = Number(process.env.OPENAI_AGENT_TIMEOUT_MS);
 
   if (!Number.isFinite(value) || value <= 0) {
-    return 15_000;
+    return 45_000;
   }
 
-  return Math.min(Math.max(Math.round(value), 4_000), 18_000);
+  return Math.min(Math.max(Math.round(value), 30_000), 50_000);
 }
 
 function getAgentTotalBudgetMs() {
-  const value = Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 30_000);
-  return Number.isFinite(value) ? Math.min(Math.max(Math.round(value), 12_000), 35_000) : 30_000;
+  const value = Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 60_000);
+  return Number.isFinite(value) ? Math.min(Math.max(Math.round(value), 45_000), 70_000) : 60_000;
 }
 
 function isAiTimeout(error: unknown) {
@@ -495,7 +495,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
   const preferredProvider = getPreferredAgentProvider();
   const deadlineAt = input.deadlineAt ?? Date.now() + getAgentTotalBudgetMs();
   const remainingTimeoutMs = () => Math.max(Math.min(timeoutMs, deadlineAt - Date.now()), 500);
-  const paidPrimaryTimeoutMs = () => Math.max(Math.min(15_000, remainingTimeoutMs()), 500);
+  const paidPrimaryTimeoutMs = () => Math.max(Math.min(45_000, remainingTimeoutMs()), 500);
   const geminiFallbackTimeoutMs = () => Math.max(Math.min(5_500, remainingTimeoutMs()), 500);
   let geminiPrimaryAttempted = preferredProvider === "gemini" && hasGeminiProvider();
   const preOpenAiAttempts: string[] = [];

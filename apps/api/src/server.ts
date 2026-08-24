@@ -4041,8 +4041,8 @@ app.get("/api/trips/demo/agent-providers", async (req, res) => {
 
 app.post("/api/agent/message", async (req, res) => {
   const agentStartedAt = Date.now();
-  const configuredAgentBudgetMs = Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 30_000);
-  const agentDeadlineAt = agentStartedAt + Math.min(Math.max(configuredAgentBudgetMs, 12_000), 35_000);
+  const configuredAgentBudgetMs = Number(process.env.KODI_AGENT_TOTAL_BUDGET_MS ?? 60_000);
+  const agentDeadlineAt = agentStartedAt + Math.min(Math.max(configuredAgentBudgetMs, 45_000), 70_000);
   const { message, member, recentMessages, context, tripGroupId } = req.body ?? {};
 
   if (typeof message !== "string" || message.trim().length === 0) {

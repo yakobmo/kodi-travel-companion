@@ -26,7 +26,7 @@ export const KODI_OPENAI_TOOLS = [
     function: {
       name: "search_trip_places",
       description:
-        "Search or list the trip's private saved Google Maps points. Use this for saved points, itinerary places, lodging, notes, or comparisons against what the group already marked. The query is natural language and may be omitted to inspect the collection. referencePlaceId and radiusMeters rank/filter saved points around a known saved place. This never searches the public Google catalog.",
+        "Search or list the trip's private saved Google Maps points. Use this for saved points, itinerary places, lodging, notes, or comparisons against what the group already marked. The query is natural language and may be omitted to inspect the collection. referencePlaceId ranks results by straight-line proximity and adds distanceFromReferenceMeters; radiusMeters optionally filters them. This never searches the public Google catalog.",
       parameters: {
         type: "object",
         properties: {
