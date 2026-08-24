@@ -293,6 +293,26 @@ function validateKodiProviderReply(reply: AgentMessageResponse, input: KodiReply
   return reply;
 }
 
+function extractResponsesOutputText(response: { output_text?: string; output?: unknown[] }) {
+  if (typeof response.output_text === "string" && response.output_text.trim()) {
+    return response.output_text;
+  }
+
+  return (response.output ?? [])
+    .flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const content = (item as { content?: unknown }).content;
+      if (!Array.isArray(content)) return [];
+      return content.flatMap((part) => {
+        if (!part || typeof part !== "object") return [];
+        const text = (part as { text?: unknown }).text;
+        return typeof text === "string" ? [text] : [];
+      });
+    })
+    .join("")
+    .trim();
+}
+
 function buildInstructions() {
   return [
     "You are Kodi, an intelligent, warm Hebrew travel agent participating in an ongoing group conversation.",
@@ -671,7 +691,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
       const openAiToolCall = response.output
         .map((item) => parseOpenAiResponsesKodiToolCall(item))
         .find((item) => Boolean(item));
-      const outputText = response.output_text ?? "";
+      const outputText = extractResponsesOutputText(response);
 
       return {
         status: "ready",
@@ -704,7 +724,7 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
         const openAiToolCall = response.output
           .map((item) => parseOpenAiResponsesKodiToolCall(item))
           .find((item) => Boolean(item));
-        const outputText = response.output_text ?? "";
+        const outputText = extractResponsesOutputText(response);
 
         return {
           status: "ready",
