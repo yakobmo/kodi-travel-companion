@@ -67,8 +67,14 @@ export function validateAgentEvidenceClaims(reply: AgentMessageResponse, evidenc
     throw new Error("ai_reply_claims_unexecuted_route_tool");
   }
 
-  const claimsMeasuredTravel = /(?:\d[\d.,]*\s*(?:שעות?|דקות?|ק(?:י)?לומטר(?:ים)?|ק[״"]?מ|km|minutes?|hours?))/iu.test(text);
-  if (claimsMeasuredTravel && evidence.route.status !== "ready") {
+  const claimsMeasuredDuration = /(?:\d[\d.,]*\s*(?:שעות?|דקות?|minutes?|hours?))/iu.test(text);
+  const claimsMeasuredDistance = /(?:\d[\d.,]*\s*(?:ק(?:י)?לומטר(?:ים)?|ק[״"]?מ|km))/iu.test(text);
+  const identifiesStraightLineDistance = /(?:קו\s+אווירי|מרחק\s+אווירי|straight[- ]line)/iu.test(text);
+  const hasStraightLineEvidence = identifiesStraightLineDistance && evidence.tripPlaces.status === "ready";
+  if (
+    evidence.route.status !== "ready" &&
+    (claimsMeasuredDuration || (claimsMeasuredDistance && !hasStraightLineEvidence))
+  ) {
     throw new Error("ai_reply_unverified_route_measurement");
   }
 

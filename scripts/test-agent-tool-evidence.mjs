@@ -117,6 +117,13 @@ assert.equal(withTripSearch.tripPlaces.status, "ready");
 assert.doesNotThrow(() =>
   validateAgentEvidenceClaims({ author: "קודי", text: "בדקתי בנקודות הטיול", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, withTripSearch)
 );
+assert.doesNotThrow(() =>
+  validateAgentEvidenceClaims({ author: "קודי", text: "הגשר נמצא במרחק 5.7 ק״מ בקו אווירי", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, withTripSearch)
+);
+assert.throws(
+  () => validateAgentEvidenceClaims({ author: "קודי", text: "הגשר נמצא במרחק 5.7 ק״מ נסיעה", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, withTripSearch),
+  /ai_reply_unverified_route_measurement/
+);
 
 const withMutation = buildAgentToolEvidence({
   message: "סמן במפה",
