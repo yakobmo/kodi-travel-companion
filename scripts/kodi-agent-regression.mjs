@@ -54,7 +54,10 @@ function assertAgentFirstSourceGuards() {
     countOccurrences(openAiSource, "shouldPreferFastPlacesAnswer") <= 1
   );
   assertCheck("agent-first current message in provider payload", openAiSource.includes("message: input.message"));
-  assertCheck("agent-first saved trip points are working memory", openAiSource.includes("Saved Google Maps points") && openAiSource.includes("working memory—not a script"));
+  assertCheck(
+    "agent-first saved trip points are model-searchable private context",
+    openAiSource.includes("compact index of this trip") && openAiSource.includes("search_trip_places")
+  );
   assertCheck("agent-first includes execution receipts", openAiSource.includes("toolEvidence: buildAgentToolEvidence(input)"));
   assertCheck("agent-first blocks fictional tool claims", openAiSource.includes("validateAgentEvidenceClaims"));
   assertCheck(
@@ -85,6 +88,18 @@ function assertAgentFirstSourceGuards() {
       !serverSource.includes("resolveConversationFocus")
   );
   assertCheck("agent tools have one parser", toolSource.includes("parseKodiToolRequest") && openAiSource.includes("KODI_TOOL_CONTRACT"));
+  assertCheck(
+    "saved-trip search accepts natural queries instead of preselected IDs",
+    toolSource.includes('type: "search_trip_places"') &&
+      toolSource.includes("The query is natural language") &&
+      !toolSource.includes('type: "trip_memory"')
+  );
+  assertCheck(
+    "saved-trip details are model-retrieved rather than preselected by message tokens",
+    serverSource.includes('lookupTripContext(tripState, "")') &&
+      serverSource.includes("searchTripPlaces(tripState, agentTripSearchRequest)") &&
+      !serverSource.includes("lookupTripContext(tripState, referenceMessage)")
+  );
   assertCheck("server owns persisted trip state", serverSource.includes("await buildAgentTripStateSnapshot()") && !webSource.includes("tripState: agentTripState"));
   assertCheck("no deterministic conversational brain", !kodiTypesSource.includes("buildKodiReplyFromContext") && !kodiTypesSource.includes("selectRecommendedPlace"));
   assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));

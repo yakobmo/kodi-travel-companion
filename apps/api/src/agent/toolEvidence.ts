@@ -1,7 +1,7 @@
 import type { AgentMessageRequest, AgentMessageResponse } from "./kodi.js";
 
 export interface AgentToolEvidence {
-  tripMemory: {
+  tripPlaces: {
     status: "not_run" | "ready";
     query?: string;
     matchedPlaceIds: string[];
@@ -25,8 +25,8 @@ export interface AgentToolEvidence {
 
 export function buildAgentToolEvidence(input: AgentMessageRequest): AgentToolEvidence {
   return {
-    tripMemory: {
-      status: input.tripLookupResult ? "ready" : "not_run",
+    tripPlaces: {
+      status: input.tripSearchExecuted ? "ready" : "not_run",
       query: input.tripLookupResult?.query,
       matchedPlaceIds: input.tripLookupResult?.matches.map((place) => place.id) ?? []
     },
@@ -65,6 +65,17 @@ export function validateAgentEvidenceClaims(reply: AgentMessageResponse, evidenc
     /(?:google\s*(?:maps|routes)|גוגל\s*מפות)\s+(?:מראה|מראה ש|נתן|החזיר)/iu.test(text);
   if (claimsRouteWasChecked && evidence.route.status !== "ready") {
     throw new Error("ai_reply_claims_unexecuted_route_tool");
+  }
+
+  const claimsACompletedCheck = /(?:בדקתי|אימתתי|וידאתי|מאומת(?:ת|ים|ות)?|נבדק(?:ה|ו)?)/iu.test(text);
+  const hasCompletedEvidence =
+    evidence.tripPlaces.status === "ready" ||
+    evidence.route.status === "ready" ||
+    evidence.placesSearch.status === "ready" ||
+    evidence.memberLocations.status === "ready" ||
+    evidence.stateMutation.status === "ready";
+  if (claimsACompletedCheck && !hasCompletedEvidence) {
+    throw new Error("ai_reply_claims_unexecuted_check");
   }
 
   const claimsPersistentMemory =

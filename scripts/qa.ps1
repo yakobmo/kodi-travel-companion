@@ -409,7 +409,7 @@ if (
   -not $openAiAgentSource.Contains("intelligent, warm Hebrew travel agent") -or
   -not $openAiAgentSource.Contains("Reason freely and answer directly") -or
   -not $agentToolsSource.Contains('type: "places_search"') -or
-  -not $agentToolsSource.Contains('type: "trip_memory"') -or
+  -not $agentToolsSource.Contains('type: "search_trip_places"') -or
   -not $agentToolsSource.Contains('type: "route"') -or
   -not $agentToolsSource.Contains('type: "member_locations"') -or
   -not $agentToolsSource.Contains('type: "map_action"') -or
@@ -536,7 +536,8 @@ if (
 }
 
 if (
-  -not $openAiAgentSource.Contains("kodiContext is authoritative for this trip") -or
+  -not $openAiAgentSource.Contains("kodiContext is the compact index of this trip") -or
+  -not $openAiAgentSource.Contains("Use search_trip_places to inspect private saved points") -or
   -not $openAiAgentSource.Contains("only when toolEvidence confirms it") -or
   -not $serverSource.Contains("freshCurrentLocationRequired") -or
   -not $serverSource.Contains("normalizeKodiProviderReply") -or

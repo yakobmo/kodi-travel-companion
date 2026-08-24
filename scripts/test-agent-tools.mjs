@@ -11,9 +11,21 @@ assert.deepEqual(parseKodiToolRequest({
   travelMode: "WALK"
 });
 assert.equal(parseKodiToolRequest({ type: "route", originPlaceId: "same", destinationPlaceId: "same" }), undefined);
-assert.deepEqual(parseKodiToolRequest({ type: "trip_memory", placeIds: ["a", 4, "b"] }), {
-  type: "trip_memory",
-  placeIds: ["a", "b"]
+assert.deepEqual(parseKodiToolRequest({ type: "search_trip_places", query: "  lodging tomorrow  ", placeTypes: ["lodging", "lodging"], limit: 100 }), {
+  type: "search_trip_places",
+  query: "lodging tomorrow",
+  placeTypes: ["lodging"],
+  referencePlaceId: undefined,
+  radiusMeters: undefined,
+  limit: 60
+});
+assert.deepEqual(parseKodiToolRequest({ type: "search_trip_places" }), {
+  type: "search_trip_places",
+  query: undefined,
+  placeTypes: undefined,
+  referencePlaceId: undefined,
+  radiusMeters: undefined,
+  limit: 20
 });
 assert.deepEqual(parseKodiToolRequest({ type: "places_search", query: "  cafe nearby  ", radiusMeters: 100_000 }), {
   type: "places_search",

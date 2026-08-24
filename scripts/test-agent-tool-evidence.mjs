@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { buildKodiContext } from "../apps/api/dist/agent/kodiContext.js";
 import { buildAgentToolEvidence, validateAgentEvidenceClaims } from "../apps/api/dist/agent/toolEvidence.js";
+import { searchTripPlaces } from "../apps/api/dist/agent/tripLookup.js";
 
 const tripState = {
   trip: { id: "trip", groupId: "group", name: "טיול" },
@@ -18,6 +19,20 @@ const tripState = {
       sourceIndex: 106,
       lat: 37.98,
       lng: 23.72,
+      visitState: "unvisited"
+    },
+    {
+      id: "nearby-cafe",
+      tripId: "trip",
+      tripGroupId: "group",
+      name: "קפה ליד המלון",
+      type: "food",
+      address: "Athens",
+      note: "ארוחת בוקר",
+      tags: ["קפה"],
+      sourceIndex: 107,
+      lat: 37.981,
+      lng: 23.721,
       visitState: "unvisited"
     }
   ],
@@ -38,7 +53,24 @@ assert.deepEqual(context.placeDirectory[0], {
 assert.equal(context.relevantPlaceDetails[0].note, "9.9-10.9, יציאה לשדה התעופה");
 assert.equal(context.relevantPlaceDetails[0].address, "Kalamiotou 19-23");
 
+const allSaved = searchTripPlaces(tripState, { limit: 60 });
+assert.equal(allSaved.totalMatches, 2);
+assert.equal(allSaved.matches.length, 2);
+const nearLodging = searchTripPlaces(tripState, {
+  referencePlaceId: "athens-last-night",
+  radiusMeters: 500,
+  limit: 20
+});
+assert.deepEqual(nearLodging.matches.map((place) => place.id), ["athens-last-night", "nearby-cafe"]);
+const cafes = searchTripPlaces(tripState, { query: "קפה", limit: 20 });
+assert.deepEqual(cafes.matches.map((place) => place.id), ["nearby-cafe"]);
+
 const noTools = buildAgentToolEvidence({ message: "כמה זמן נסיעה?" });
+assert.equal(noTools.tripPlaces.status, "not_run");
+assert.throws(
+  () => validateAgentEvidenceClaims({ author: "קודי", text: "בדקתי וזה מאומת", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, noTools),
+  /ai_reply_claims_unexecuted_check/
+);
 assert.throws(
   () => validateAgentEvidenceClaims({ author: "קודי", text: "בדקתי עכשיו במסלול וזה לוקח שעה", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, noTools),
   /ai_reply_claims_unexecuted_route_tool/
@@ -66,6 +98,16 @@ const withRoute = buildAgentToolEvidence({
 });
 assert.doesNotThrow(() =>
   validateAgentEvidenceClaims({ author: "קודי", text: "בדקתי במסלול: עשר דקות", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, withRoute)
+);
+
+const withTripSearch = buildAgentToolEvidence({
+  message: "מה שמור?",
+  tripSearchExecuted: true,
+  tripLookupResult: { query: "", matches: [], itinerary: [], stayCalendar: [] }
+});
+assert.equal(withTripSearch.tripPlaces.status, "ready");
+assert.doesNotThrow(() =>
+  validateAgentEvidenceClaims({ author: "קודי", text: "בדקתי בנקודות הטיול", intent: "general", requiresAdminApproval: false, source: "ai_provider" }, withTripSearch)
 );
 
 const withMutation = buildAgentToolEvidence({

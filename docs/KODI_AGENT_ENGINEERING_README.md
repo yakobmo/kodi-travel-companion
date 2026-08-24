@@ -353,3 +353,7 @@ A Kodi agent change is not done until:
 - at least one relevant regression case passes
 - public smoke passes after deploy when production behavior changed
 - no fake local Kodi answer can be persisted as agent memory
+
+## Saved Trip Retrieval
+
+Kodi receives a compact directory only for orientation. Detailed saved-point facts are retrieved through `search_trip_places`, which accepts natural search text, optional place types, and an optional saved reference point/radius. `places_search` is reserved for the public Google catalog. The server must not preselect private place details by matching words in the latest chat message.

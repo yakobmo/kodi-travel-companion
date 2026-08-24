@@ -952,3 +952,19 @@ Decision:
 - The always-present place directory contains only `id`, `name`, and `type`; full notes and addresses remain available through relevant trip lookup results.
 - Google Places results are annotated server-side with `alreadySaved` and `savedMatch`, using normalized names or coordinates within 150 meters.
 - This moves mechanical comparison out of the model without adding a conversational rule, tool, or extra model turn.
+
+## 42. A compact index still needs a real retrieval tool
+
+What failed:
+
+- `trip_memory` required Kodi to select saved-place IDs before it could inspect their details.
+- The server preselected details with token matching against the latest message, so UI language could be mistaken for a public place query.
+- Kodi could therefore claim it checked saved points while never retrieving the relevant private collection.
+
+Decision:
+
+- Keep the compact `id`/`name`/`type` directory as orientation only.
+- Replace `trip_memory` with `search_trip_places`, which accepts a natural query or lists the saved collection, supports type filters, and can rank/filter around a saved reference point.
+- Start each request with the itinerary overview but no server-selected place matches. The model, not a keyword pre-router, decides when and how to retrieve saved details.
+- Record saved-place search as executed evidence only after the tool actually runs. A generic claim such as “checked” or “verified” is rejected when no tool evidence exists.
+- Keep public Google discovery (`places_search`) and private trip retrieval (`search_trip_places`) as separate capabilities.

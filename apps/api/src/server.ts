@@ -94,7 +94,7 @@ import { buildDemoTripState, buildDemoTripStateAsync } from "./data/localTripSta
 import { createNavigationLinks } from "./navigation/links.js";
 import type { AgentMessageRequest, AgentMessageResponse, ConversationMessage } from "./agent/kodi.js";
 import { getKodiToolRequest } from "./agent/agentTools.js";
-import { lookupTripContext } from "./agent/tripLookup.js";
+import { lookupTripContext, searchTripPlaces } from "./agent/tripLookup.js";
 import { tryBuildKodiReply, type KodiReplyResult } from "./agent/kodiOrchestrator.js";
 import { getFreeProviderFleetReadiness } from "./agent/providerFleet.js";
 import { createKodiSpeechAudio } from "./agent/openaiSpeech.js";
@@ -4150,7 +4150,10 @@ app.post("/api/agent/message", async (req, res) => {
   });
   const shouldCallAgentProvider = openAiUsageGate.allowed && openAiUsageGate.providerConfigured;
   let openAiReply: Awaited<ReturnType<typeof tryBuildKodiReply>> | undefined;
-  let tripLookupResult = lookupTripContext(tripState, referenceMessage);
+  // Start with the itinerary overview only. Private saved-place details are
+  // retrieved explicitly by the model through search_trip_places.
+  let tripLookupResult = lookupTripContext(tripState, "");
+  let tripSearchExecuted = false;
   let memberLocationResult: AgentMessageRequest["memberLocationResult"];
   let mapActionResult:
     | { status: "completed"; kind: "destination" | "route"; placeNames: string[]; googleMapsUrl: string }
@@ -4170,6 +4173,7 @@ app.post("/api/agent/message", async (req, res) => {
       tripState,
       externalPlacesSearch,
       tripLookupResult,
+      tripSearchExecuted,
       memberLocationResult,
       stateMutationResult: mapActionResult,
       reverseGeocodedLocation,
@@ -4183,13 +4187,13 @@ app.post("/api/agent/message", async (req, res) => {
     });
 
     const toolRequest = getKodiToolRequest(openAiReply.reply);
-    const agentTripMemoryRequest = toolRequest?.type === "trip_memory" ? toolRequest : undefined;
+    const agentTripSearchRequest = toolRequest?.type === "search_trip_places" ? toolRequest : undefined;
     const agentPlacesToolRequest = toolRequest?.type === "places_search" ? toolRequest : undefined;
     const agentRouteToolRequest = toolRequest?.type === "route" ? toolRequest : undefined;
     const agentMemberLocationsRequest = toolRequest?.type === "member_locations" ? toolRequest : undefined;
     const agentMapActionRequest = toolRequest?.type === "map_action" ? toolRequest : undefined;
     if (
-      !agentTripMemoryRequest &&
+      !agentTripSearchRequest &&
       !agentPlacesToolRequest &&
       !agentRouteToolRequest &&
       !agentMemberLocationsRequest &&
@@ -4208,7 +4212,7 @@ app.post("/api/agent/message", async (req, res) => {
     }
 
     const toolSignature = JSON.stringify(
-      agentTripMemoryRequest ??
+      agentTripSearchRequest ??
         agentPlacesToolRequest ??
         agentRouteToolRequest ??
         agentMemberLocationsRequest ??
@@ -4328,8 +4332,13 @@ app.post("/api/agent/message", async (req, res) => {
       continue;
     }
 
-    if (agentTripMemoryRequest) {
-      tripLookupResult = lookupTripContext(tripState, referenceMessage, agentTripMemoryRequest.placeIds);
+    if (agentTripSearchRequest) {
+      tripLookupResult = searchTripPlaces(tripState, agentTripSearchRequest);
+      tripSearchExecuted = true;
+      runtimeGuidance = appendRuntimeGuidance(
+        runtimeGuidance,
+        `The private saved-trip search completed. It returned ${tripLookupResult.matches.length} of ${tripLookupResult.totalMatches ?? tripLookupResult.matches.length} matching saved points${tripLookupResult.referencePlace ? ` around ${tripLookupResult.referencePlace.name}` : ""}. Answer from relevantPlaceDetails and distinguish these saved points from public Google Places results.`
+      );
       continue;
     }
 

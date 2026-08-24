@@ -1,7 +1,14 @@
 import type { AgentMessageResponse } from "./kodi.js";
 
 export type KodiToolRequest =
-  | { type: "trip_memory"; placeIds: string[] }
+  | {
+      type: "search_trip_places";
+      query?: string;
+      placeTypes?: string[];
+      referencePlaceId?: string;
+      radiusMeters?: number;
+      limit: number;
+    }
   | { type: "route"; stops: string[]; travelMode: "DRIVE" | "WALK" }
   | { type: "places_search"; query: string; anchorPlaceId?: string; radiusMeters: number }
   | { type: "member_locations"; scope: "all" | "member"; memberName?: string }
@@ -9,7 +16,7 @@ export type KodiToolRequest =
 
 export const KODI_TOOL_CONTRACT =
   "Use the available tools whenever an answer depends on saved trip details, geographic facts, live place data, route comparison, member location, or a map action. " +
-  "Choose tools from their descriptions, use IDs exposed by placeDirectory or prior tool results, and continue through as many tool steps as the task genuinely needs before answering. " +
+  "Choose tools from their descriptions and continue through as many tool steps as the task genuinely needs before answering. Search the private saved-trip collection with search_trip_places; search the public Google catalog with places_search. " +
   "The request payload's currentLocation is already the active requester's verified location; use it as the anchor for a nearby places_search and never try to rediscover it through member_locations. " +
   "General knowledge is not evidence for measurements, current facts, private state, or completed actions.";
 
@@ -17,12 +24,19 @@ export const KODI_OPENAI_TOOLS = [
   {
     type: "function",
     function: {
-      name: "trip_memory",
-      description: "Retrieve full saved details for selected trip places.",
+      name: "search_trip_places",
+      description:
+        "Search or list the trip's private saved Google Maps points. Use this for saved points, itinerary places, lodging, notes, or comparisons against what the group already marked. The query is natural language and may be omitted to inspect the collection. referencePlaceId and radiusMeters rank/filter saved points around a known saved place. This never searches the public Google catalog.",
       parameters: {
         type: "object",
-        properties: { placeIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 12 } },
-        required: ["placeIds"],
+        properties: {
+          query: { type: "string", maxLength: 240 },
+          placeTypes: { type: "array", items: { type: "string" }, maxItems: 8 },
+          referencePlaceId: { type: "string" },
+          radiusMeters: { type: "number", minimum: 100, maximum: 200000 },
+          limit: { type: "integer", minimum: 1, maximum: 60 }
+        },
+        required: [],
         additionalProperties: false
       }
     }
@@ -143,11 +157,25 @@ export function parseKodiToolRequest(value: unknown): KodiToolRequest | undefine
     };
   }
 
-  if (candidate.type === "trip_memory" && Array.isArray(candidate.placeIds)) {
-    const placeIds = candidate.placeIds
-      .filter((id): id is string => typeof id === "string" && id.length > 0)
-      .slice(0, 12);
-    return placeIds.length > 0 ? { type: "trip_memory", placeIds } : undefined;
+  if (candidate.type === "search_trip_places") {
+    const query = typeof candidate.query === "string" && candidate.query.trim()
+      ? candidate.query.trim().slice(0, 240)
+      : undefined;
+    const placeTypes = Array.isArray(candidate.placeTypes)
+      ? Array.from(new Set(candidate.placeTypes.filter((value): value is string => typeof value === "string" && value.trim().length > 0)))
+          .map((value) => value.trim())
+          .slice(0, 8)
+      : undefined;
+    const referencePlaceId = typeof candidate.referencePlaceId === "string" && candidate.referencePlaceId.trim()
+      ? candidate.referencePlaceId.trim()
+      : undefined;
+    const radiusMeters = typeof candidate.radiusMeters === "number" && Number.isFinite(candidate.radiusMeters)
+      ? Math.min(Math.max(Math.round(candidate.radiusMeters), 100), 200_000)
+      : undefined;
+    const limit = typeof candidate.limit === "number" && Number.isFinite(candidate.limit)
+      ? Math.min(Math.max(Math.round(candidate.limit), 1), 60)
+      : 20;
+    return { type: "search_trip_places", query, placeTypes, referencePlaceId, radiusMeters, limit };
   }
 
   if (candidate.type === "member_locations") {
