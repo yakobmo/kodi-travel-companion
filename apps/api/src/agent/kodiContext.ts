@@ -26,6 +26,12 @@ export function buildKodiContext(input: AgentMessageRequest) {
       type: place.type
     })),
     relevantPlaceDetails: input.tripLookupResult?.matches ?? [],
+    savedTripSearchResults: (input.tripSearchResults ?? []).map((result) => ({
+      query: result.query,
+      referencePlace: result.referencePlace,
+      totalMatches: result.totalMatches,
+      matches: result.matches
+    })),
     selectedPlace: input.selectedPlace,
     currentGroupState: {
       destination: tripState.groupDestination,

@@ -20,6 +20,7 @@ export interface KodiReplyInput extends AgentMessageRequest {
   deadlineAt?: number;
   runtimeGuidance?: string[];
   requiredTool?: KodiToolRequest["type"];
+  disableTools?: boolean;
   permissionPolicy?: {
     operationalChangesRequireAdmin?: boolean;
     canShareLiveLocation?: boolean;
@@ -632,10 +633,12 @@ export async function tryBuildKodiReply(input: KodiReplyInput): Promise<KodiRepl
             { role: "user", content: inputPayload }
           ],
           max_completion_tokens: reasoningMode ? 1100 : 900,
-          tools: KODI_OPENAI_TOOLS as never,
-          tool_choice: input.requiredTool
-            ? ({ type: "function", function: { name: input.requiredTool } } as never)
-            : "auto"
+          tools: input.disableTools ? undefined : (KODI_OPENAI_TOOLS as never),
+          tool_choice: input.disableTools
+            ? undefined
+            : input.requiredTool
+              ? ({ type: "function", function: { name: input.requiredTool } } as never)
+              : "auto"
         }),
         paidPrimaryTimeoutMs()
       );

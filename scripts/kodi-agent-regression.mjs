@@ -107,6 +107,12 @@ function assertAgentFirstSourceGuards() {
       kodiContextSource.includes('retrievalTool: "search_trip_places"') &&
       !openAiSource.includes("בהמבורגר")
   );
+  assertCheck(
+    "multi-step saved searches preserve working evidence and repeated calls synthesize",
+    serverSource.includes("tripSearchResults.push(tripLookupResult)") &&
+      serverSource.includes("disableTools: forceSynthesis") &&
+      openAiSource.includes("input.disableTools ? undefined")
+  );
   assertCheck("server owns persisted trip state", serverSource.includes("await buildAgentTripStateSnapshot()") && !webSource.includes("tripState: agentTripState"));
   assertCheck("no deterministic conversational brain", !kodiTypesSource.includes("buildKodiReplyFromContext") && !kodiTypesSource.includes("selectRecommendedPlace"));
   assertCheck("agent-first app wakes Kodi on every chat message", webSource.includes("function shouldWakeKodi") && webSource.includes("return true;"));

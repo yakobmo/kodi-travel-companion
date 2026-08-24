@@ -4153,6 +4153,7 @@ app.post("/api/agent/message", async (req, res) => {
   // Start with the itinerary overview only. Private saved-place details are
   // retrieved explicitly by the model through search_trip_places.
   let tripLookupResult = lookupTripContext(tripState, "");
+  const tripSearchResults: AgentMessageRequest["tripSearchResults"] = [];
   let tripSearchExecuted = false;
   let memberLocationResult: AgentMessageRequest["memberLocationResult"];
   let mapActionResult:
@@ -4162,10 +4163,11 @@ app.post("/api/agent/message", async (req, res) => {
   const activeRulesReply = rulesReply;
   const completedToolCalls = new Set<string>();
   let evidenceRetryIssued = false;
+  let forceSynthesis = false;
 
   // One bounded agent loop: the model chooses when it needs private trip data or
   // Google evidence. The server only authorizes and executes those tools.
-  for (let turn = 0; shouldCallAgentProvider && turn < 5 && Date.now() < agentDeadlineAt - 500; turn += 1) {
+  for (let turn = 0; shouldCallAgentProvider && turn < 6 && Date.now() < agentDeadlineAt - 500; turn += 1) {
     openAiReply = await tryBuildKodiReply({
       ...req.body,
       message: currentMessage,
@@ -4173,6 +4175,7 @@ app.post("/api/agent/message", async (req, res) => {
       tripState,
       externalPlacesSearch,
       tripLookupResult,
+      tripSearchResults,
       tripSearchExecuted,
       memberLocationResult,
       stateMutationResult: mapActionResult,
@@ -4183,7 +4186,8 @@ app.post("/api/agent/message", async (req, res) => {
       runtimeGuidance,
       permissionPolicy,
       deadlineAt: agentDeadlineAt,
-      rulesReply: activeRulesReply
+      rulesReply: activeRulesReply,
+      disableTools: forceSynthesis
     });
 
     const toolRequest = getKodiToolRequest(openAiReply.reply);
@@ -4219,8 +4223,13 @@ app.post("/api/agent/message", async (req, res) => {
         agentMapActionRequest
     );
     if (completedToolCalls.has(toolSignature)) {
-      openAiReply = { ...openAiReply, reply: undefined, status: "error", error: "agent_repeated_tool_call" };
-      break;
+      forceSynthesis = true;
+      runtimeGuidance = appendRuntimeGuidance(
+        runtimeGuidance,
+        "This tool call already completed in the current task. The available evidence is sufficient for the best grounded answer possible. Synthesize the result now without requesting another tool."
+      );
+      openAiReply = undefined;
+      continue;
     }
     completedToolCalls.add(toolSignature);
 
@@ -4334,6 +4343,8 @@ app.post("/api/agent/message", async (req, res) => {
 
     if (agentTripSearchRequest) {
       tripLookupResult = searchTripPlaces(tripState, agentTripSearchRequest);
+      tripSearchResults.push(tripLookupResult);
+      if (tripSearchResults.length > 4) tripSearchResults.shift();
       tripSearchExecuted = true;
       runtimeGuidance = appendRuntimeGuidance(
         runtimeGuidance,

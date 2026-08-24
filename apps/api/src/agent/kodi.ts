@@ -43,6 +43,7 @@ export interface AgentMessageRequest {
     totalDistanceMeters: number;
   };
   tripLookupResult?: TripLookupResult;
+  tripSearchResults?: TripLookupResult[];
   tripSearchExecuted?: boolean;
   tripContextClarification?: string;
   memberLocationResult?: {
